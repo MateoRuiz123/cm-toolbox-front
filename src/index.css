@@ -1,0 +1,296 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* SIGO Droop Design System - Design Tokens Coordinadora */
+:root {
+  /* ── Brand base ─────────────────────────────────────────────── */
+  --azul-coordinadora: #0066cc; /* primary.main */
+  --azul-logo: #1063ac;
+  --naranja-coordinadora: #eb5d2c; /* secondary.main / commit actions */
+
+  /* Ramps */
+  --azul-light: #3385d6;
+  --azul-dark: #0052a3;
+  --naranja-light: #ef7d56;
+  --naranja-dark: #bc4a23;
+
+  /* Blue tint scale */
+  --azul-50: #e3f2fd;
+  --azul-100: #bbdefb;
+  --azul-200: #90caf9;
+  --azul-400: #64b5f6;
+  --azul-500: #42a5f5;
+  --azul-700: #1976d2;
+
+  /* ── Neutrals ───────────────────────────────────────────────── */
+  --gris-app: #f5f5f5;
+  --gris-panel: #f8f9fa;
+  --gris-barra: #f9f9f9;
+  --gris-borde: #e0e0e0;
+  --gris-desactivado: #9e9e9e;
+  --blanco: #ffffff;
+  --tinta: #333333;
+  --tinta-suave: #666666;
+
+  /* ── Semantic ───────────────────────────────────────────────── */
+  --rojo-error: #d32f2f;
+  --rojo-error-dark: #b71c1c;
+  --verde-exito: #2e7d32;
+  --ambar-aviso: #ed6c02;
+
+  /* ── Code surface (dialog de detalle del fallo/JSON) ────────── */
+  --code-bg: #0d1117;
+  --code-fg: #e6edf3;
+
+  /* ── Semantic aliases ───────────────────────────────────────── */
+  --color-primary: var(--azul-coordinadora);
+  --color-primary-hover: var(--azul-dark);
+  --color-primary-soft: var(--azul-50);
+  --color-primary-contrast: var(--blanco);
+
+  --color-accent: var(--naranja-coordinadora);
+  --color-accent-hover: var(--naranja-dark);
+  --color-accent-contrast: var(--blanco);
+
+  --surface-app: var(--gris-app);
+  --surface-card: var(--blanco);
+  --surface-sunken: var(--gris-panel);
+  --surface-bar: var(--gris-barra);
+  --surface-header: var(--blanco);
+
+  --text-body: var(--tinta);
+  --text-muted: var(--tinta-suave);
+  --text-disabled: var(--gris-desactivado);
+  --text-on-primary: var(--blanco);
+  --text-link: var(--azul-coordinadora);
+  --text-link-hover: var(--azul-dark);
+
+  --border-default: var(--gris-borde);
+  --border-focus: var(--azul-coordinadora);
+
+  --state-error: var(--rojo-error);
+  --state-success: var(--verde-exito);
+  --state-warning: var(--ambar-aviso);
+
+  /* Alert fills */
+  --alert-error-bg: #fdeded;
+  --alert-error-fg: #5f2120;
+  --alert-warning-bg: #fff4e5;
+  --alert-warning-fg: #663c00;
+  --alert-success-bg: #edf7ed;
+  --alert-success-fg: #1e4620;
+  --alert-info-bg: #e5f6fd;
+  --alert-info-fg: #014361;
+
+  /* ── Radii ──────────────────────────────────────────────────── */
+  --radius-1: 4px;   /* inputs, textareas, controls */
+  --radius-2: 8px;   /* cards, papers, containers */
+  --radius-3: 12px;  /* search field, modals */
+  --radius-4: 16px;  /* chips, badges */
+  --radius-pill: 32px; /* primary CTAs */
+  --radius-circle: 50%;
+
+  /* ── Elevation ──────────────────────────────────────────────── */
+  --shadow-1: 0px 2px 1px -1px rgba(0,0,0,0.12), 0px 1px 1px 0px rgba(0,0,0,0.08), 0px 1px 3px 0px rgba(0,0,0,0.08);
+  --shadow-3: 0px 3px 3px -2px rgba(0,0,0,0.15), 0px 3px 4px 0px rgba(0,0,0,0.1), 0px 1px 8px 0px rgba(0,0,0,0.08);
+  --shadow-24: 0px 11px 15px -7px rgba(0,0,0,0.2), 0px 24px 38px 3px rgba(0,0,0,0.14), 0px 9px 46px 8px rgba(0,0,0,0.12);
+  --shadow-panel: 0 2px 4px rgba(0,0,0,0.05);
+
+  --elevation-card: var(--shadow-1);
+  --elevation-card-hover: var(--shadow-3);
+  --elevation-raised: var(--shadow-3);
+  --elevation-modal: var(--shadow-24);
+
+  /* ── Login: scrim, vidrio y anchos de tarjeta ───────────────── */
+  --scrim-login: rgba(0, 0, 0, 0.4);
+  --blur-glass: blur(10px);
+  --surface-glass: rgba(255, 255, 255, 0.95);
+  --card-max-narrow: 450px;
+  --card-max-confirm: 500px;
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --duration-fast: 0.2s;
+  --duration-base: 0.25s;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+
+  /* Compatibility mappings with existing classes */
+  --bg: var(--surface-app);
+  --surface: var(--surface-card);
+  --text: var(--text-body);
+  --muted: var(--text-muted);
+  --line: var(--border-default);
+  --accent: var(--color-primary);
+  --accent-fg: var(--color-primary-contrast);
+  --shadow-card: var(--elevation-card);
+
+  --ok: var(--verde-exito);
+  --parcial: var(--ambar-aviso);
+  --nomigrada: #616161;
+  --bloqueada: var(--rojo-error);
+  --noencontrada: #7b1fa2;
+}
+
+.dark {
+  --gris-app: #121212;
+  --gris-panel: #1a1c22;
+  --gris-barra: #1e2026;
+  --gris-borde: #2c303b;
+  --gris-desactivado: #6e7382;
+  --blanco: #1e212a;
+  --tinta: #e8ecf4;
+  --tinta-suave: #9ba3b4;
+
+  --surface-app: #121212;
+  --surface-card: #1e212a;
+  --surface-sunken: #16181f;
+  --surface-bar: #1a1c24;
+  --surface-header: #1a1c24;
+
+  --text-body: #e8ecf4;
+  --text-muted: #9ba3b4;
+  --text-disabled: #6e7382;
+  --border-default: #2c303b;
+
+  --azul-50: rgba(0, 102, 204, 0.25);
+  --color-primary: #3385d6;
+  --color-primary-hover: #5ba3eb;
+  --color-primary-soft: rgba(0, 102, 204, 0.25);
+  --color-accent: #ef7d56;
+  --color-accent-hover: #eb5d2c;
+
+  --scrim-login: rgba(0, 0, 0, 0.62);
+  --surface-glass: rgba(30, 33, 42, 0.95);
+
+  --alert-error-bg: #2b1414;
+  --alert-error-fg: #f87171;
+  --alert-warning-bg: #2d1e0c;
+  --alert-warning-fg: #fbbf24;
+  --alert-success-bg: #122617;
+  --alert-success-fg: #4ade80;
+  --alert-info-bg: #0f2438;
+  --alert-info-fg: #60a5fa;
+
+  --shadow-1: 0px 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0px 4px 8px rgba(0, 0, 0, 0.5);
+  --shadow-panel: 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  --ok: #4caf50;
+  --parcial: #ffa726;
+  --nomigrada: #9e9e9e;
+  --bloqueada: #ef5350;
+  --noencontrada: #ba68c8;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-body);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--surface-app);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Superficie sólida de tarjeta institucional SIGO */
+.surface {
+  background-color: var(--surface-card);
+}
+
+/* Animaciones suaves funcionales para diálogos y acordeones */
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes view-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes accordion-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modal-backdrop-in 180ms var(--ease-out) forwards;
+}
+
+.animate-modal-dialog {
+  animation: modal-dialog-in 200ms var(--ease-out) forwards;
+}
+
+.animate-view-fade {
+  animation: view-fade-slide 200ms var(--ease-out) forwards;
+}
+
+.animate-accordion-content {
+  animation: accordion-expand 180ms var(--ease-out) forwards;
+}
+
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Transición suave entre tema claro y oscuro (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+    transition: none !important;
+  }
+}

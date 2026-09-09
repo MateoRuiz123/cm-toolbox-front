@@ -1,0 +1,50 @@
+---
+description: Mantener package.json y sonar-project.properties sincronizados con SemVer
+alwaysApply: true
+---
+
+# Versionamiento semántico
+
+Al completar un cambio de producto (código, contratos, config de runtime), actualizar la versión en **ambos** archivos y dejarlas idénticas:
+
+-   `package.json` → `"version"`
+-   `sonar-project.properties` → `sonar.projectVersion`
+
+Formato: `MAJOR.MINOR.PATCH` (SemVer). No usar prefijo `v`.
+
+## Cuándo subir versión
+
+| Tipo de cambio (conventional commit)                                                     | Bump                                                 |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `feat` — funcionalidad nueva compatible                                                  | MINOR (`1.2.0` → `1.3.0`); reset PATCH a `0`         |
+| `fix` — corrección de bug compatible                                                     | PATCH (`1.2.3` → `1.2.4`)                            |
+| `perf` — mejora de rendimiento compatible                                                | PATCH                                                |
+| Breaking change (`BREAKING CHANGE` / `!`)                                                | MAJOR (`1.x.y` → `2.0.0`); reset MINOR y PATCH a `0` |
+| `refactor` / `chore` / `docs` / `style` / `test` / `ci` / `build` sin impacto observable | **no** bumpear                                       |
+
+Si en la misma sesión hay varios cambios, aplicar **un solo bump** con el mayor impacto (MAJOR > MINOR > PATCH).
+
+## Cuándo no bumpear
+
+-   Solo reglas Cursor, docs internas, comentarios, formato
+-   Cambios que el usuario pida explícitamente sin release
+-   Si la versión ya se subió en esta sesión para el mismo cambio
+
+## Procedimiento
+
+1. Leer la versión actual en `package.json`.
+2. Calcular la nueva según la tabla.
+3. Actualizar `package.json` y `sonar-project.properties` en el mismo turno.
+4. No tocar `CHANGELOG.md` ni ejecutar `standard-version` / `release` salvo que el usuario lo pida.
+
+## Ejemplo
+
+```json
+// package.json — feat compatible
+"version": "1.1.0"
+```
+
+```properties
+# sonar-project.properties
+sonar.projectVersion=1.1.0
+```
