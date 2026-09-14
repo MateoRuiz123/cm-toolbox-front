@@ -68,7 +68,7 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
         <div className="flex justify-center mb-6">
           <img
             src="/logo-coordinadora.png"
-            alt="Coordinadora"
+            alt="Logotipo de Coordinadora Mercantil - Inicio de sesión"
             className="max-w-[280px] w-full h-auto object-contain dark:brightness-0 dark:invert"
           />
         </div>

@@ -3,6 +3,7 @@ import { diagnosticarMigracion } from '../../shared/api/diagnostico-api'
 import type { DiagnosticoOutput } from '../../shared/api/types'
 import { parseDespachos, splitCodigos } from '../../shared/lib/split-codigos'
 import { JsonModal } from '../../shared/ui/json-modal'
+import { DeleteButton } from '../../shared/ui/rare/delete-button'
 import { DiagnosticoSkeleton } from './diagnostico-skeleton'
 import { ResultadoDiagnostico } from './resultado-diagnostico'
 
@@ -105,13 +106,10 @@ export const DiagnosticoPage = () => {
                 Parámetros de Entrada
               </span>
               {tieneContenido && !loading && (
-                <button
-                  type="button"
-                  onClick={handleLimpiarFormulario}
-                  className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] hover:underline transition-colors"
-                >
-                  Limpiar
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[var(--text-muted)]">Limpiar:</span>
+                  <DeleteButton onConfirm={handleLimpiarFormulario} />
+                </div>
               )}
             </div>
 
@@ -123,10 +121,19 @@ export const DiagnosticoPage = () => {
                 </div>
                 <textarea
                   value={remisionesRaw}
-                  onChange={(event) => setRemisionesRaw(event.target.value)}
+                  onChange={(event) => {
+                    setRemisionesRaw(event.target.value)
+                    if (error) setError(null)
+                  }}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? 'form-error-msg' : undefined}
                   placeholder={'20018012531\n20018012532'}
                   rows={5}
-                  className="mt-1.5 w-full resize-y rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
+                    error
+                      ? 'border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]'
+                      : 'border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                  }`}
                 />
               </label>
 
@@ -137,16 +144,26 @@ export const DiagnosticoPage = () => {
                 </div>
                 <textarea
                   value={despachosRaw}
-                  onChange={(event) => setDespachosRaw(event.target.value)}
+                  onChange={(event) => {
+                    setDespachosRaw(event.target.value)
+                    if (error) setError(null)
+                  }}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? 'form-error-msg' : undefined}
                   placeholder={'56727471\n56727472'}
                   rows={4}
-                  className="mt-1.5 w-full resize-y rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
+                    error
+                      ? 'border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]'
+                      : 'border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                  }`}
                 />
               </label>
             </div>
 
             {error && (
               <div
+                id="form-error-msg"
                 role="alert"
                 className="mt-4 flex items-start gap-2.5 rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] p-3 text-xs leading-relaxed text-[var(--alert-error-fg)]"
               >

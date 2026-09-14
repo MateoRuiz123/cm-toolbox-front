@@ -28,7 +28,7 @@ export const ErrorAuthScreen = ({
         <div className="flex justify-center mb-6">
           <img
             src="/logo-coordinadora.png"
-            alt="Coordinadora"
+            alt="Logotipo de Coordinadora Mercantil - Error de autenticación"
             className="max-w-[220px] w-full h-auto object-contain dark:brightness-0 dark:invert"
           />
         </div>

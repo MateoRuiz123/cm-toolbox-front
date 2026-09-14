@@ -1,0 +1,62 @@
+---
+description: Regla de diseño corporativo Coordinadora y SIGO Droop para cm-toolbox-front
+alwaysApply: true
+---
+
+# Regla de Diseño Corporativo Coordinadora & SIGO Droop
+
+Cualquier componente nuevo, vista, modal o modificación en este repositorio debe respetar estrictamente el sistema de diseño institucional de Coordinadora Mercantil (SIGO Droop Design System).
+
+## 1. Tokens de Color Oficiales
+
+Utilizar SIEMPRE las variables CSS definidas en `src/index.css` a través de clases de Tailwind con valores arbitrarios como `bg-[var(--color-primary)]`, `text-[var(--text-body)]`, `border-[var(--border-default)]`:
+
+- **Primario Corporativo:**
+  - `var(--azul-coordinadora)` / `var(--color-primary)` (`#0066cc`)
+  - Hover: `var(--color-primary-hover)` (`#0052a3`)
+  - Fondo suave: `var(--color-primary-soft)` (`#e3f2fd`)
+  - Contraste: `var(--color-primary-contrast)` (`#ffffff`)
+- **Acento / Acciones de Compromiso:**
+  - `var(--naranja-coordinadora)` / `var(--color-accent)` (`#eb5d2c`)
+  - Hover: `var(--color-accent-hover)` (`#bc4a23`)
+  - Contraste: `var(--color-accent-contrast)` (`#ffffff`)
+- **Superficies y Fondos:**
+  - Fondo de app: `var(--surface-app)`
+  - Fondo de tarjeta: `var(--surface-card)`
+  - Paneles hundidos / inputs: `var(--surface-sunken)`
+  - Encabezados: `var(--surface-header)`
+- **Bordes y Separadores:**
+  - Borde por defecto: `var(--border-default)`
+  - Borde de foco: `var(--border-focus)` / `var(--color-primary)`
+- **Estados Semánticos:**
+  - Éxito: `var(--state-success)` (`#2e7d32`) / Fondo: `var(--alert-success-bg)`
+  - Error: `var(--state-error)` (`#d32f2f`) / Fondo: `var(--alert-error-bg)`
+  - Advertencia: `var(--state-warning)` (`#ed6c02`) / Fondo: `var(--alert-warning-bg)`
+
+PROHIBIDO hardcodear colores HEX arbitrarios (`#3b82f6`, `#f97316`, etc.) que rompan la paleta corporativa.
+
+## 2. Radios y Elevaciones
+
+- Inputs, botones secundarios y controles pequeños: `rounded-[var(--radius-1)]` (4px).
+- Tarjetas, contenedores y paneles estándar: `rounded-[var(--radius-2)]` (8px).
+- Modales, campos de búsqueda y tarjetas destacadas: `rounded-[var(--radius-3)]` (12px).
+- Botones de acción principal (CTAs), badges y chips: `rounded-[var(--radius-pill)]` (32px).
+- Sombras: `style={{ boxShadow: 'var(--shadow-1)' }}` o `var(--shadow-24)` para modales.
+
+## 3. Modo Oscuro Obligatorio
+
+Toda interfaz debe funcionar tanto en modo claro como en modo oscuro mediante la clase `.dark` en la raíz.
+- No asumir fondos blancos o texto negro estático.
+- Usar siempre tokens semánticos (`text-[var(--text-body)]`, `text-[var(--text-muted)]`).
+- Imágenes institucionales (como el logo de Coordinadora) deben usar `dark:brightness-0 dark:invert` para visualizarse sobre fondos oscuros.
+
+## 4. Tipografía y Accesibilidad
+
+- No usar títulos en mayúsculas sostenidas (`uppercase`) con tracking excesivo salvo en badges o etiquetas de categoría muy pequeñas (`text-[10px]` o `text-[11px]`).
+- Todo elemento interactivo (`button`, `a`, `input`) debe tener atributos accesibles (`aria-label`, `title`, estados de foco visibles `focus-visible:ring-2`).
+- Toda etiqueta `<img>` debe contar obligatoriamente con un atributo `alt` descriptivo y contextual.
+
+## 5. Responsividad Móvil
+
+- Diseñar siempre pensando en dispositivos móviles desde 360px de ancho (`sm:`, `md:`, `lg:`).
+- Paneles laterales deben ser apilables en móvil y sticky solo en pantallas grandes (`lg:sticky`).

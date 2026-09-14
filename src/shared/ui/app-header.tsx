@@ -1,4 +1,5 @@
 import { ThemeToggle } from './theme-toggle'
+import { NotificationBell } from './rare/notification-bell'
 import { useAuth } from '../auth/use-auth'
 import { Link } from '../router/router-context'
 import { useRouter } from '../router/use-router'
@@ -10,7 +11,16 @@ import { useRouter } from '../router/use-router'
 export const AppHeader = () => {
   const { email, terminal, cerrarSesion } = useAuth()
   const { path } = useRouter()
-  const enDiagnostico = path.startsWith('/diagnostico')
+  const esHome = path === '/' || path === '/hub'
+
+  const obtenerTituloRuta = () => {
+    if (path.startsWith('/diagnostico')) return 'Diagnóstico de migración'
+    if (path.startsWith('/privacidad')) return 'Política de Privacidad'
+    if (path.startsWith('/terminos')) return 'Términos y Condiciones'
+    if (path.startsWith('/contacto')) return 'Contacto y Soporte'
+    if (path.startsWith('/gracias')) return 'Confirmación'
+    return 'Página'
+  }
 
   return (
     <header
@@ -25,7 +35,7 @@ export const AppHeader = () => {
         >
           <img
             src="/logo-coordinadora.png"
-            alt="Coordinadora"
+            alt="Logotipo oficial de Coordinadora Mercantil"
             className="h-6 w-auto object-contain shrink-0 dark:brightness-0 dark:invert"
           />
         </Link>
@@ -33,29 +43,29 @@ export const AppHeader = () => {
         <div className="h-4 w-px bg-[var(--border-default)] shrink-0 hidden sm:block" />
 
         <div className="flex items-center gap-2 min-w-0 text-xs sm:text-sm">
-          {enDiagnostico ? (
+          {!esHome ? (
             <div className="flex items-center gap-2 truncate">
               <Link
                 href="/"
                 className="hidden sm:inline-block font-medium text-[var(--text-muted)] hover:text-[var(--color-primary)] transition-colors truncate"
               >
-                Apps de Apoyo
+                Portal
               </Link>
               <span className="hidden sm:inline-block text-[var(--text-muted)]">/</span>
               <span className="font-bold tracking-tight text-[var(--text-body)] truncate">
-                Diagnóstico de migración
+                {obtenerTituloRuta()}
               </span>
             </div>
           ) : (
             <span className="font-bold tracking-tight text-[var(--text-body)] truncate">
-              Apps de Apoyo (API Internos)
+              Toolbox de Apoyo (API Internos)
             </span>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        {enDiagnostico && (
+        {!esHome && (
           <Link
             href="/"
             className="hidden md:flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--color-primary)]"
@@ -64,7 +74,7 @@ export const AppHeader = () => {
             <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            <span>Otras apps</span>
+            <span>Volver al portal</span>
           </Link>
         )}
 
@@ -84,6 +94,12 @@ export const AppHeader = () => {
             )}
           </div>
         )}
+
+        <NotificationBell
+          count={0}
+          size={36}
+          title="Notificaciones operativas"
+        />
 
         <button
           type="button"

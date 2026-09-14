@@ -1,0 +1,10 @@
+# Robots.txt - Coordinadora Toolbox
+User-agent: *
+Allow: /
+Allow: /diagnostico
+Allow: /contacto
+Allow: /privacidad
+Allow: /terminos
+Disallow: /api/
+
+Sitemap: https://toolbox.coordinadora.com/sitemap.xml

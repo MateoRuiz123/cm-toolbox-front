@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { safeStorage } from '../shared/lib/safe-storage'
+import { guardarPreferenciaTema, obtenerPreferenciaTema } from '../shared/lib/ui-preferences'
 import { ThemeContext, type Theme } from './theme-context'
 
 const getInitialTheme = (): Theme => {
-  const savedTheme = safeStorage.getItem('theme')
-  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+  const savedTheme = obtenerPreferenciaTema()
+  if (savedTheme) return savedTheme
   return globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -15,7 +15,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
-    safeStorage.setItem('theme', theme)
+    guardarPreferenciaTema(theme)
   }, [theme])
 
   const toggleTheme = useCallback(() => {

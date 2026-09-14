@@ -2,7 +2,7 @@
   "name": "cm-toolbox-front",
   "description": "Portal y Hub de herramientas de apoyo y diagnóstico",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
@@ -14,9 +14,12 @@
   },
   "dependencies": {
     "@itcoordinadora/cm-sigoo-temp-ui": "^1.0.14",
+    "clsx": "^2.1.1",
     "keycloak-js": "26.1.5",
+    "motion": "^13.2.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -1,4 +1,5 @@
 import { Link } from '../../shared/router/router-context'
+import { FolderComponent } from '../../shared/ui/rare/folder-component'
 
 interface AppCardProps {
   readonly titulo: string
@@ -114,17 +115,40 @@ const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProp
 export const HubPage = () => {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-8 sm:mb-10 text-center sm:text-left">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] shadow-2xs mb-3">
-          <span className="size-2 rounded-full bg-[var(--state-success)]" />
-          <span>Ecosistema de Migración CM</span>
+      <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-xs">
+        <div className="max-w-xl text-center md:text-left">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] mb-3">
+            <span className="size-2 rounded-full bg-[var(--state-success)]" />
+            <span>Ecosistema de Migración CM</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-body)] mb-3">
+            Portal de Aplicaciones de Apoyo
+          </h1>
+          <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)] mb-6">
+            Herramientas operativas y utilitarios para diagnóstico, supervisión y soporte técnico en la migración de guías y despachos entre AGW y CM.
+          </p>
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+            <Link
+              href="/diagnostico"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)]"
+            >
+              <span>Abrir Diagnóstico</span>
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </Link>
+            <Link
+              href="/contacto"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
+            >
+              <span>Contacto y Soporte</span>
+            </Link>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-body)] mb-3">
-          Portal de Aplicaciones de Apoyo
-        </h1>
-        <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-[var(--text-muted)]">
-          Herramientas operativas y utilitarios para diagnóstico, supervisión y soporte técnico en la migración de guías y despachos.
-        </p>
+
+        <div className="hidden md:flex shrink-0 items-center justify-center py-4">
+          <FolderComponent size="sm" color="blue" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

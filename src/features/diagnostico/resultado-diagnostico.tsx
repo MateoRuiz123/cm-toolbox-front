@@ -1,6 +1,10 @@
 import { useId, useMemo, useState } from 'react'
 import { reintentarMigracionGuia } from '../../shared/api/diagnostico-api'
-import { safeStorage } from '../../shared/lib/safe-storage'
+import {
+  guardarPreferenciaVista,
+  obtenerPreferenciaVista,
+  type ModoVista,
+} from '../../shared/lib/ui-preferences'
 import type {
   DiagnosticoOutput,
   GuiaDiagnostico,
@@ -9,6 +13,7 @@ import type {
 } from '../../shared/api/types'
 import { VeredictoBadge } from '../../shared/ui/veredicto-badge'
 import { CopyButton } from '../../shared/ui/copy-button'
+import { AnimatedCounter } from '../../shared/ui/rare/animated-counter'
 import { CheckRow } from './check-row'
 import { GuiaDetalleModal } from './guia-detalle-modal'
 import { GuiaGalleryCard } from './guia-gallery-card'
@@ -17,11 +22,6 @@ const idGuia = (itemIndex: number, guia: GuiaDiagnostico) => `${itemIndex}:${gui
 
 const etiquetaItem = (item: ItemDiagnostico) =>
   item.origen === 'despacho' ? `Despacho ${item.codigo_despacho}` : `Remisión ${item.codigo_remision}`
-
-const getInitialViewMode = (): 'list' | 'grid' => {
-  const saved = safeStorage.getItem('diagnostico_view_mode')
-  return saved === 'grid' ? 'grid' : 'list'
-}
 
 /** Abre por defecto guías con falla o resultado único en la vista lista. */
 const guiasAbiertasPorDefecto = (data: DiagnosticoOutput): Set<string> => {
@@ -226,7 +226,7 @@ interface ResultadoDiagnosticoProps {
 export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagnosticoProps) => {
   const searchInputId = useId()
   const [searchQuery, setSearchQuery] = useState('')
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(getInitialViewMode)
+  const [viewMode, setViewMode] = useState<ModoVista>(obtenerPreferenciaVista)
   const [abiertas, setAbiertas] = useState(() => guiasAbiertasPorDefecto(data))
   const [selectedCodigos, setSelectedCodigos] = useState<Set<string>>(new Set())
   const [reintentosState, setReintentosState] = useState<Record<string, ReintentoItemState>>({})
@@ -234,9 +234,9 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
   const [modalGuia, setModalGuia] = useState<{ guia: GuiaDiagnostico; item: ItemDiagnostico } | null>(null)
   const [copiandoFallidas, setCopiandoFallidas] = useState(false)
 
-  const handleViewChange = (mode: 'list' | 'grid') => {
+  const handleViewChange = (mode: ModoVista) => {
     setViewMode(mode)
-    safeStorage.setItem('diagnostico_view_mode', mode)
+    guardarPreferenciaVista(mode)
   }
 
   // Filtrado reactivo en tiempo real por remisión o despacho
@@ -380,6 +380,23 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
 
   const exitoTotalCount = Object.values(reintentosState).filter((s) => s.status === 'success').length
 
+  const stats = useMemo(() => {
+    let total = 0
+    let ok = 0
+    let bloqueadas = 0
+    let parciales = 0
+
+    for (const item of data.items) {
+      for (const g of item.guias) {
+        total++
+        if (g.veredicto === 'OK') ok++
+        else if (g.veredicto === 'BLOQUEADA') bloqueadas++
+        else parciales++
+      }
+    }
+    return { total, ok, bloqueadas, parciales }
+  }, [data])
+
   return (
     <section aria-live="polite" className="space-y-4 sm:space-y-5">
       {/* Título de la sección y veredicto general */}
@@ -393,6 +410,61 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           </h2>
         </div>
         <VeredictoBadge veredicto={data.veredicto} />
+      </div>
+
+      {/* Tarjetas de Estadísticas con Contadores Animados Rare UI */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div
+          style={{ boxShadow: 'var(--shadow-panel)' }}
+          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--border-default)] p-3.5"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Total Evaluadas
+          </span>
+          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--text-body)]">
+            <AnimatedCounter value={stats.total} />
+            <span className="text-xs font-normal text-[var(--text-muted)]">guías</span>
+          </div>
+        </div>
+
+        <div
+          style={{ boxShadow: 'var(--shadow-panel)' }}
+          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)]/40 p-3.5"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-success)]">
+            Conformes (OK)
+          </span>
+          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-success)]">
+            <AnimatedCounter value={stats.ok} />
+            <span className="text-xs font-normal opacity-80">listas</span>
+          </div>
+        </div>
+
+        <div
+          style={{ boxShadow: 'var(--shadow-panel)' }}
+          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)]/40 p-3.5"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-error)]">
+            Bloqueadas
+          </span>
+          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-error)]">
+            <AnimatedCounter value={stats.bloqueadas} />
+            <span className="text-xs font-normal opacity-80">fallos</span>
+          </div>
+        </div>
+
+        <div
+          style={{ boxShadow: 'var(--shadow-panel)' }}
+          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)]/40 p-3.5"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
+            Parciales / Obs.
+          </span>
+          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-warning)]">
+            <AnimatedCounter value={stats.parciales} />
+            <span className="text-xs font-normal opacity-80">atención</span>
+          </div>
+        </div>
       </div>
 
       {/* Barra de Búsqueda estilo SearchField y Alternador de Vista */}
