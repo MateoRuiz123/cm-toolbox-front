@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type Keycloak from "keycloak-js";
-import { ensureKeycloakInit } from "./keycloak-init";
+import { ensureKeycloakInit } from "../../../src/shared/auth/keycloak-init";
 
 describe("ensureKeycloakInit", () => {
   it("retorna autenticado inmediatamente si keycloak ya fue inicializado", async () => {

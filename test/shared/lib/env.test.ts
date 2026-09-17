@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { env, getEnv } from "./env";
+import { env, getEnv } from "../../../src/shared/lib/env";
 
 describe("env", () => {
   it("resuelve migrarGuiaUrl a partir de diagnosticoUrl si no está definida explícitamente", () => {

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Carga los defaults de runtime horneados en el build desde env/azure.env, que
+# el pipeline rellena con la Azure DevOps Library. Hace falta porque el template
+# corporativo despliega en Cloud Run sin variables de entorno.
+#
+# Una variable ya presente en el entorno del contenedor siempre gana, así que
+# Cloud Run o docker-compose pueden sobreescribir sin reconstruir la imagen.
+
+set -eu
+
+archivo=/etc/nginx/runtime.env
+
+[ -f "$archivo" ] || return 0
+
+while IFS= read -r linea; do
+  case "$linea" in
+    '' | \#*) continue ;;
+  esac
+
+  clave="${linea%%=*}"
+  valor="${linea#*=}"
+
+  [ "$clave" != "$linea" ] || continue
+
+  eval "actual=\${$clave:-}"
+  [ -z "$actual" ] || continue
+
+  export "$clave=$valor"
+done < "$archivo"
+
+# El CSP referencia esta variable siempre: sin valor, nginx aborta al parsear
+# add_header por variable desconocida. El comodín es el comportamiento histórico.
+[ -n "${KEYCLOAK_UPSTREAM:-}" ] || export KEYCLOAK_UPSTREAM="https://*"

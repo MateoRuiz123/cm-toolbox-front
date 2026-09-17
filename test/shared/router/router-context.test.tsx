@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { RouterProvider, Link } from './router-context'
-import { useRouter } from './use-router'
+import { RouterProvider, Link } from '../../../src/shared/router/router-context'
+import { useRouter } from '../../../src/shared/router/use-router'
 
 describe('Router Context', () => {
   it('arroja un error si useRouter se usa fuera de RouterProvider', () => {

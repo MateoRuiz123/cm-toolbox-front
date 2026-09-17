@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeStorage } from './safe-storage'
+import { safeStorage } from '../../../src/shared/lib/safe-storage'
 
 describe('safeStorage', () => {
   it('guarda y recupera valores correctamente', () => {

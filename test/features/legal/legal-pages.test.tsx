@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { RouterProvider } from '../../shared/router/router-context'
-import { PrivacyPage } from './privacy-page'
-import { TermsPage } from './terms-page'
-import { ContactPage } from '../contact/contact-page'
-import { NotFoundPage } from '../not-found/not-found-page'
-import { ThankYouPage } from '../feedback/thank-you-page'
+import { RouterProvider } from '../../../src/shared/router/router-context'
+import { PrivacyPage } from '../../../src/features/legal/privacy-page'
+import { TermsPage } from '../../../src/features/legal/terms-page'
+import { ContactPage } from '../../../src/features/contact/contact-page'
+import { NotFoundPage } from '../../../src/features/not-found/not-found-page'
+import { ThankYouPage } from '../../../src/features/feedback/thank-you-page'
 
 describe('Páginas Legales y de Estado', () => {
   it('renderiza PrivacyPage con información de la Ley 1581 de 2012', () => {

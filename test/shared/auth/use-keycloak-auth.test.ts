@@ -1,6 +1,6 @@
 import type Keycloak from "keycloak-js";
 import { describe, expect, it } from "vitest";
-import { extraerIdentidadToken } from "./use-keycloak-auth";
+import { extraerIdentidadToken } from "../../../src/shared/auth/use-keycloak-auth";
 
 describe("extraerIdentidadToken — autenticación directa Keycloak", () => {
   it("autentica directamente con el email del idToken", () => {

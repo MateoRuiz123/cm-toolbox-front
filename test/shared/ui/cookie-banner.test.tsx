@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { RouterProvider } from '../router/router-context'
-import { CookieBanner } from './cookie-banner'
-import { safeStorage } from '../lib/safe-storage'
+import { RouterProvider } from '../../../src/shared/router/router-context'
+import { CookieBanner } from '../../../src/shared/ui/cookie-banner'
+import { safeStorage } from '../../../src/shared/lib/safe-storage'
 
 describe('CookieBanner', () => {
   beforeEach(() => {

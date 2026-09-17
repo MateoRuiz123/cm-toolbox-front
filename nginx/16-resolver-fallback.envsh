@@ -1,0 +1,12 @@
+#!/bin/sh
+# El script 15-local-resolvers.envsh de la imagen base lee los nameserver de
+# /etc/resolv.conf. Si el runtime no expone ninguno, nginx no arranca porque
+# `resolver` queda vacío. Este fallback garantiza un valor válido.
+
+set -eu
+
+if [ -z "${NGINX_LOCAL_RESOLVERS:-}" ]; then
+  NGINX_LOCAL_RESOLVERS="8.8.8.8"
+fi
+
+export NGINX_LOCAL_RESOLVERS

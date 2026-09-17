@@ -313,7 +313,7 @@ flowchart TD
 | Tarjeta en cuadrícula                       | `src/features/diagnostico/guia-gallery-card.tsx`                 |
 | Modal de detalle de una guía                | `src/features/diagnostico/guia-detalle-modal.tsx`                |
 | Fila de cada check                          | `src/features/diagnostico/check-row.tsx`                         |
-| Lógica de llamada y timeout de reintento    | `src/shared/api/diagnostico-api.ts`                              |
+| Lógica de llamada y timeout de reintento    | `src/features/diagnostico/api/diagnostico-api.ts`                |
 | URL del API (dev)                           | `.env`                                                           |
 | URL del API (Docker / proxy nginx)          | `docker-compose.yml` (`DIAGNOSTICO_API_UPSTREAM`)                |
 | Imagen y nginx                              | `Dockerfile`, `nginx/default.conf.template`                      |

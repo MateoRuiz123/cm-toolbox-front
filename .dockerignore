@@ -6,8 +6,8 @@ dist-ssr
 .cursor
 .vscode
 .idea
-.env
-.env.*
+.env.local
+.env.*.local
 *.local
 coverage
 graphify-out

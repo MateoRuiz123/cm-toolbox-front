@@ -5,8 +5,8 @@ import {
   limpiarToken,
   obtenerSesionTokens,
   obtenerToken,
-} from "./token";
-import { safeStorage } from "../lib/safe-storage";
+} from "../../../src/shared/auth/token";
+import { safeStorage } from "../../../src/shared/lib/safe-storage";
 
 describe("token auth storage", () => {
   it("guarda, obtiene y limpia el token corporativo correctamente", () => {

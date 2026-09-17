@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { trackPageView, trackEvent } from './analytics'
+import { trackPageView, trackEvent } from '../../../src/shared/lib/analytics'
 
 describe('Analytics Utility', () => {
   const originalWindow = globalThis.window

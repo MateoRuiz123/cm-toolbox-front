@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describirErrorAuth } from "./auth-errors";
+import { describirErrorAuth } from "../../../src/shared/auth/auth-errors";
 
 describe("describirErrorAuth", () => {
   it("identifica el bloqueo de cookies de terceros del navegador", () => {

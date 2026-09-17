@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { HubPage } from './hub-page'
-import { RouterProvider } from '../../shared/router/router-context'
+import { HubPage } from '../../../src/features/hub/hub-page'
+import { RouterProvider } from '../../../src/shared/router/router-context'
 
 describe('HubPage', () => {
   it('renderiza la tarjeta de Diagnóstico de Migración con enlace hacia /diagnostico', () => {

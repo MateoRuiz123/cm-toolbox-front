@@ -7,8 +7,8 @@ import {
   obtenerPreferenciaVista,
   obtenerSnapshotPreferencias,
   restaurarSnapshotPreferencias,
-} from './ui-preferences'
-import { safeStorage } from './safe-storage'
+} from '../../../src/shared/lib/ui-preferences'
+import { safeStorage } from '../../../src/shared/lib/safe-storage'
 
 describe('ui-preferences', () => {
   beforeEach(() => {

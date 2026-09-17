@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   diagnosticarMigracion,
   reintentarMigracionGuia,
-} from "./diagnostico-api";
+} from "../../../../src/features/diagnostico/api/diagnostico-api";
 
 describe("reintentarMigracionGuia", () => {
   const originalFetch = globalThis.fetch;

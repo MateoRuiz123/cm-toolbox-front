@@ -1,10 +1,10 @@
 # Coordinadora Toolbox (`cm-toolbox-front`)
 
-Portal interno de herramientas de apoyo para migración de guías y despachos (AGW → CM). El hub en `/` agrupa apps; la primera disponible es Diagnóstico de migración.
+Portal interno de herramientas de apoyo para migración de guias y despachos (AGW → CM). El hub en `/` agrupa apps; la primera disponible es Diagnóstico de migración.
 
 Stack: React 19, Vite, TypeScript, Tailwind CSS v4, Keycloak (`keycloak-js` 26.1.5), SIGO Droop Design System.
 
-Versión: `1.1.0`.
+Versión: `1.3.1`.
 
 ## Arquitectura
 
@@ -32,7 +32,7 @@ flowchart LR
 | `/gracias`     | Confirmación del formulario de contacto                          |
 | cualquier otra | 404                                                              |
 
-El enrutado es nativo (`history` API), sin React Router.
+El enrutado es nativo (`history` API), sin React Router. Las páginas de herramienta y legales cargan con `lazy()`.
 
 ## Inicio local
 
@@ -44,17 +44,23 @@ pnpm dev
 
 Vite sirve en `http://localhost:3000`. No subas `.env` a Git.
 
+En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_KEYCLOAK=true` en `.env`. El `pnpm build` de deploy siempre exige auth.
+
 ### Variables
 
 | Variable                   | Uso                                                                     |
 | -------------------------- | ----------------------------------------------------------------------- |
+| `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                 |
 | `VITE_DIAGNOSTICO_URL`     | URL completa de `POST .../migracion/diagnostico`                        |
 | `VITE_MIGRAR_GUIA_URL`     | Opcional. Si no está, se deriva reemplazando `/diagnostico` por `/guia` |
 | `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)              |
-| `VITE_KEYCLOAK_URL`        | Issuer Keycloak                                                         |
-| `VITE_KEYCLOAK_REALM`      | Realm                                                                   |
-| `VITE_KEYCLOAK_CLIENT_ID`  | Client del SPA                                                          |
+| `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo       |
+| `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                           |
+| `VITE_KEYCLOAK_CLIENT_ID`  | Opcional. Client del SPA; solo junto con las otras dos                  |
 | `VITE_KEYCLOAK_ENV`        | `dev` \| `test` \| `prod` (default `dev`)                               |
+| `VITE_AUTH_FORCE_KEYCLOAK` | Solo local. `true` fuerza Keycloak en `pnpm dev`                        |
+
+Las tres variables Keycloak opcionales solo aplican si se definen **las tres**; si no, `@itcoordinadora/cm-sigoo-temp-ui` resuelve el issuer según `VITE_KEYCLOAK_ENV`. Por eso no están en `env/azure.env`: un token `#{...}#` sin variable en la Library quedaría literal y construiría un cliente Keycloak inválido.
 
 Ejemplo con prefijo URI del API:
 
@@ -62,25 +68,36 @@ Ejemplo con prefijo URI del API:
 VITE_DIAGNOSTICO_URL=http://localhost:8080/cm-api-internos/migracion/diagnostico
 ```
 
-El timeout de diagnóstico es 120 s; el de re-migración de una guía es 30 s.
+Timeout de diagnóstico: 120 s. Timeout de re-migración de una guía: 30 s.
 
 ## Auth
 
-Keycloak con IdP Google (`idpHint: google`). Los tokens van en `sessionStorage`. El tema y el modo lista/cuadrícula se guardan en `localStorage` y sobreviven al logout.
+Keycloak con IdP Google (`idpHint: google`). Access token (`token_sigoo`) en `localStorage`; tokens de reanudación Keycloak en `sessionStorage`. Tema claro/oscuro y vista lista/cuadrícula en `localStorage`; sobreviven al logout.
 
-Si Keycloak no está configurado, usa los valores por defecto de `@itcoordinadora/cm-sigoo-temp-ui` según `VITE_KEYCLOAK_ENV`.
+Si no hay variables Keycloak, se usan los defaults de `@itcoordinadora/cm-sigoo-temp-ui` según `VITE_KEYCLOAK_ENV`.
 
 ## Docker
 
-El build genera `dist`; nginx (usuario no root) sirve el SPA y hace proxy a `/migracion/` hacia el API.
+Vite genera `dist`; nginx (usuario no root) sirve el SPA y proxea `/migracion/` al API.
 
 ```bash
 docker compose up --build
 ```
 
-Abre `http://localhost:4173`. El API debe estar en el host en el puerto 8080.
+Abre `http://localhost:4173`. El contenedor escucha `PORT` (default `8080`, el mismo que Cloud Run). El API debe estar en el host en el puerto 8080.
 
-`DIAGNOSTICO_API_UPSTREAM` default: `http://host.docker.internal:8080/cm-api-internos` (nginx concatena `/migracion/`).
+`DIAGNOSTICO_API_UPSTREAM` es el host del API **incluyendo su prefijo URI y sin `/migracion`**; nginx le concatena el path de la petición. No hay ninguna URL de ambiente en el repo: el valor sale de la Azure DevOps Library.
+
+Resolución del valor, de mayor a menor prioridad:
+
+1. Variable de entorno del contenedor (Cloud Run o `docker-compose.yml`, que en local usa `http://host.docker.internal:8080/cm-api-internos`).
+2. Default horneado en `/etc/nginx/runtime.env` durante el build y cargado por `nginx/04-load-runtime-env.envsh`.
+
+El paso 2 existe porque el template corporativo despliega en Cloud Run **sin** variables de entorno. El pipeline copia `env/azure.env` a un `.env` en la raíz y resuelve ahí los tokens contra la Library (`env/azure.env` conserva los `#{...}#`), así que el `Dockerfile` extrae de ese `.env` únicamente `DIAGNOSTICO_API_UPSTREAM` y `KEYCLOAK_UPSTREAM`. Cada token de `env/azure.env` debe tener su variable en la Library del ambiente.
+
+`.dockerignore` no excluye `.env`. Solo esas dos claves se extraen y solo `runtime.env` llega a la imagen final.
+
+`nginx/05-validate-env.sh` aborta el arranque si la variable falta, no trae esquema `http(s)://`, termina en `/migracion` o apunta al propio contenedor (proxy recursivo → `502`).
 
 `VITE_DIAGNOSTICO_URL` y las variables Keycloak se hornean en el build. Si cambian, reconstruye la imagen.
 
@@ -88,6 +105,7 @@ Abre `http://localhost:4173`. El API debe estar en el host en el puerto 8080.
 
 ```bash
 pnpm test
+pnpm coverage
 pnpm lint
 pnpm build
 ```
@@ -96,21 +114,23 @@ pnpm build
 
 ```text
 src/
-├── app/                    Composición, tema claro/oscuro
+├── app/                    Composición, tema, rutas lazy
 ├── features/
 │   ├── auth/               Login, error de auth, sin acceso
 │   ├── hub/                Portal de apps
-│   ├── diagnostico/        Formulario, resultados, modal de guía
+│   ├── diagnostico/        UI de la herramienta + api/
 │   ├── legal/              Privacidad y términos
 │   ├── contact/            Contacto
 │   ├── feedback/           Página de gracias
 │   └── not-found/          404
 └── shared/
-    ├── auth/               Keycloak, tokens, gate
-    ├── api/                Cliente de diagnóstico y re-migración
+    ├── auth/               Keycloak, tokens, gate, bypass local
     ├── router/             Router nativo
     ├── lib/                env, preferencias, analytics, títulos SEO
-    └── ui/                 Header, footer, cookies, Rare UI (motion)
+    └── ui/                 Header, footer, cookies
+test/                       Vitest, espeja src/
+env/azure.env               Tokens de Azure DevOps Library
+nginx/                      Template + scripts de runtime
 ```
 
 Tokens de marca: `src/index.css`. Regla Cursor: `.cursor/rules/diseno-coordinadora-sigo.mdc`.

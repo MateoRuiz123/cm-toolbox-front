@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esAuthBypassActivo } from "./auth-bypass";
+import { esAuthBypassActivo } from "../../../src/shared/auth/auth-bypass";
 
 describe("esAuthBypassActivo", () => {
   it("activa el bypass en DEV sin forzar Keycloak", () => {
@@ -17,5 +17,9 @@ describe("esAuthBypassActivo", () => {
     expect(
       esAuthBypassActivo({ DEV: false, VITE_AUTH_FORCE_KEYCLOAK: "true" }),
     ).toBe(false);
+  });
+
+  it("lee import.meta.env cuando no se pasa env", () => {
+    expect(typeof esAuthBypassActivo()).toBe("boolean");
   });
 });

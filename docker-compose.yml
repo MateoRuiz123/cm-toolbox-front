@@ -1,5 +1,5 @@
 services:
-  diagnostico-front:
+  toolbox-front:
     build:
       context: .
       args:
@@ -7,6 +7,7 @@ services:
     ports:
       - "4173:8080"
     environment:
+      PORT: ${PORT:-8080}
       DIAGNOSTICO_API_UPSTREAM: ${DIAGNOSTICO_API_UPSTREAM:-http://host.docker.internal:8080/cm-api-internos}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -16,4 +17,4 @@ services:
       options:
         max-size: 50m
         max-file: "5"
-        labels: diagnostico-front
+        labels: toolbox-front
