@@ -1,4 +1,4 @@
-import type { Veredicto } from '../api/types'
+import type { Veredicto } from './api/types'
 
 interface VeredictoStyle {
   bg: string

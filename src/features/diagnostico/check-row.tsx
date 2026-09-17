@@ -1,4 +1,4 @@
-import type { CheckResultado } from '../../shared/api/types'
+import type { CheckResultado } from './api/types'
 
 interface CheckRowProps {
   check: CheckResultado

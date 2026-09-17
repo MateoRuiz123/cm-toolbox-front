@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { reintentarMigracionGuia } from '../../shared/api/diagnostico-api'
+import { reintentarMigracionGuia } from './api/diagnostico-api'
 import {
   guardarPreferenciaVista,
   obtenerPreferenciaVista,
@@ -10,10 +10,10 @@ import type {
   GuiaDiagnostico,
   ItemDiagnostico,
   ReintentoItemState,
-} from '../../shared/api/types'
-import { VeredictoBadge } from '../../shared/ui/veredicto-badge'
+} from './api/types'
+import { VeredictoBadge } from './veredicto-badge'
 import { CopyButton } from '../../shared/ui/copy-button'
-import { AnimatedCounter } from '../../shared/ui/rare/animated-counter'
+import { AnimatedCounter } from './animated-counter'
 import { CheckRow } from './check-row'
 import { GuiaDetalleModal } from './guia-detalle-modal'
 import { GuiaGalleryCard } from './guia-gallery-card'

@@ -1,0 +1,41 @@
+---
+description: Estructura del monorepo y code-splitting al agregar nuevas herramientas al toolbox
+alwaysApply: true
+---
+
+# Arquitectura de herramientas en cm-toolbox-front
+
+Este proyecto es un **monorepo con separación por feature**: cada herramienta vive en su propia carpeta dentro de `src/features/`, y comparte infraestructura (auth, router, UI, cliente API) desde `src/shared/`. No crear repos independientes por herramienta — ver "Cuándo romper esta regla" al final.
+
+## Dónde va cada cosa
+
+-   `src/features/<herramienta>/` — todo lo específico de una herramienta: páginas, componentes que solo ella usa, skeletons, modales propios.
+-   `src/shared/api/` — clientes HTTP y tipos reutilizables entre herramientas. Si una llamada API solo la usa una herramienta, vive en `src/features/<herramienta>/`, no en `shared`.
+-   `src/shared/auth/` — todo lo de Keycloak/sesión. Nunca reimplementar auth dentro de una feature.
+-   `src/shared/ui/` — componentes de UI genéricos (botones, badges, modales base). Un componente pasa de `features/<x>/` a `shared/ui/` solo cuando una **segunda** herramienta lo necesita, no antes.
+-   `src/shared/router/` y `src/app/app.tsx` — el único lugar donde se registran rutas nuevas.
+
+## Code-splitting por ruta (obligatorio para toda herramienta nueva)
+
+`app.tsx` resuelve rutas con `path.startsWith(...)`. Las páginas de herramienta **deben** importarse con `lazy()`, nunca de forma estática, para que el bundle inicial no crezca con cada herramienta agregada:
+
+```tsx
+const DiagnosticoPage = lazy(() =>
+  import('../features/diagnostico/diagnostico-page').then((m) => ({ default: m.DiagnosticoPage })),
+)
+```
+
+y envolver el bloque de rutas en `<Suspense fallback={...}>`. Páginas estructurales (`HubPage`, `NotFoundPage`, páginas legales) pueden seguir siendo import estático porque cargan siempre.
+
+## Checklist al agregar una herramienta nueva
+
+1. Crear `src/features/<nombre>/` con su página principal (`<nombre>-page.tsx`) y subcomponentes propios ahí adentro.
+2. Si necesita llamadas API, agregarlas en `src/shared/api/<nombre>-api.ts` siguiendo el patrón de `diagnostico-api.ts`.
+3. Registrar la ruta en `app.tsx` con `lazy()` + `Suspense`, no import estático.
+4. Agregar la entrada correspondiente en `HubPage` para que sea descubrible.
+5. Tests co-ubicados junto al archivo que prueban (`*.test.ts(x)` en la misma carpeta), como ya se hace en `diagnostico-api.test.ts` y `hub-page.test.tsx`.
+6. Reusar `AuthGate`, `AppHeader`/`AppFooter` y el design system (`SIGO Droop Design System`) — no crear variantes propias de layout o estilos.
+
+## Cuándo romper esta regla (extraer a repo aparte)
+
+Solo si una herramienta pasa a tener **dueño de equipo distinto** o **ciclo de release independiente** del resto del toolbox. Mientras todas las herramientas las mantenga el mismo equipo/persona con el mismo pipeline, se quedan en este repo.

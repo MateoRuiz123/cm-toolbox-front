@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { GuiaDiagnostico, ItemDiagnostico, ReintentoItemState } from '../../shared/api/types'
-import { VeredictoBadge } from '../../shared/ui/veredicto-badge'
+import type { GuiaDiagnostico, ItemDiagnostico, ReintentoItemState } from './api/types'
+import { VeredictoBadge } from './veredicto-badge'
 import { CopyButton } from '../../shared/ui/copy-button'
 import { CheckRow } from './check-row'
 

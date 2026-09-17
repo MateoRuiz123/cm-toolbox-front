@@ -1,5 +1,5 @@
 import { Link } from '../../shared/router/router-context'
-import { FolderComponent } from '../../shared/ui/rare/folder-component'
+import { FolderComponent } from './folder-component'
 
 interface AppCardProps {
   readonly titulo: string

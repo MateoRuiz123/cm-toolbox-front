@@ -1,9 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { diagnosticarMigracion } from '../../shared/api/diagnostico-api'
-import type { DiagnosticoOutput } from '../../shared/api/types'
+import { diagnosticarMigracion } from './api/diagnostico-api'
+import type { DiagnosticoOutput } from './api/types'
 import { parseDespachos, splitCodigos } from '../../shared/lib/split-codigos'
 import { JsonModal } from '../../shared/ui/json-modal'
-import { DeleteButton } from '../../shared/ui/rare/delete-button'
+import { DeleteButton } from './delete-button'
 import { DiagnosticoSkeleton } from './diagnostico-skeleton'
 import { ResultadoDiagnostico } from './resultado-diagnostico'
 
