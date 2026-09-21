@@ -1,0 +1,145 @@
+---
+description: Complementos SmoothUI (motion) subordinados a SIGO Droop; fuentes, instalación y límites para features y UI nueva
+alwaysApply: true
+---
+
+# SmoothUI como complemento (no design system principal)
+
+## Jerarquía con otras reglas (obligatorio)
+
+1. **[diseno-coordinadora-sigo.mdc](diseno-coordinadora-sigo.mdc)** — autoridad máxima en color, superficies, bordes, tipografía, modo oscuro, responsividad y accesibilidad visual. Si SmoothUI sugiere otra cosa, **prevalece SIGO**.
+2. **[arquitectura-toolbox.mdc](arquitectura-toolbox.mdc)** — estructura de features, rutas, lazy loading.
+3. **Esta regla** — cuándo y cómo añadir piezas SmoothUI **sin** reemplazar componentes SIGO ni romper tokens.
+
+Ante duda: no instalar SmoothUI en ese elemento; usar solo Tailwind + tokens SIGO.
+
+El design system obligatorio sigue siendo **SIGO Droop**. **SmoothUI** ([smoothui.dev](https://smoothui.dev/), MIT, [GitHub](https://github.com/educlopez/smoothui)) es **capa decorativa opcional** en páginas, herramientas nuevas y estados vacíos.
+
+## Fuentes oficiales (consultar antes de inventar componentes)
+
+| Recurso          | URL                                   | Uso                                                             |
+| ---------------- | ------------------------------------- | --------------------------------------------------------------- |
+| Sitio y catálogo | https://smoothui.dev/                 | Descubrir componentes y demos                                   |
+| Playground       | https://smoothui.dev/playground       | Probar props e interacción                                      |
+| Componentes      | https://smoothui.dev/docs/components  | API, props, ejemplos                                            |
+| Guías            | https://smoothui.dev/docs/guides      | Instalación, patrones, MCP                                      |
+| Plantillas       | https://smoothui.dev/docs/templates   | **No** copiar layouts enteros al toolbox (solo ideas puntuales) |
+| Repositorio      | https://github.com/educlopez/smoothui | Código fuente, licencia MIT, issues                             |
+| Registry shadcn  | `https://smoothui.dev/r/{name}.json`  | Instalación vía CLI                                             |
+| MCP (opcional)   | Ver guía en smoothui.dev              | Descubrir/instalar desde el asistente                           |
+
+## Dónde viven los componentes en este repo
+
+- **Copias instaladas:** `src/shared/ui/smoothui/` (una carpeta por componente, vía CLI).
+- **Helpers del toolbox (obligatorios en features):** `src/shared/ui/smooth-title-accent.tsx` — `SmoothTitleAccent`, `SmoothLinkScramble`, `splitTitleForAccent`.
+- **Barrel:** `import { SmoothTitleAccent, SmoothLinkScramble } from '@/shared/ui/smoothui'`.
+- **Utilidad `cn`:** `src/shared/lib/utils.ts` (alias `@/shared/lib/utils` o `@/lib/utils` según `components.json`).
+- **Config CLI:** `components.json` en la raíz (registro `@smoothui`).
+- **No** importar desde `node_modules/smoothui` (no existe paquete único; es copy-paste/registry).
+- **No** importar `WaveText` / `ScrambleHover` directamente en `src/features/**` salvo excepción documentada; usar los helpers.
+
+## Cómo instalar un componente nuevo
+
+Preferir **SmoothUI CLI** (resuelve deps y rutas):
+
+```bash
+npx smoothui-cli add <nombre-kebab>
+# ejemplos: wave-text, scramble-hover, button-copy
+npx smoothui-cli list
+```
+
+Alternativa compatible con shadcn:
+
+```bash
+npx shadcn@latest add @smoothui/<nombre-kebab>
+```
+
+Tras instalar:
+
+1. Quitar `"use client"` si el archivo lo trae (Vite no lo necesita).
+2. Verificar imports (`cn`, `motion/react`).
+3. Revisar `registryDependencies` en https://smoothui.dev/r/<nombre>.json — instalar dependencias de registry (ej. `ai-core` para `siri-orb`) solo si el producto lo justifica.
+4. Ejecutar `pnpm lint` y `pnpm test`; medir bundle con `pnpm analyze:bundle` si el componente es grande.
+
+## Cuándo SÍ usar SmoothUI
+
+- **Hero / marketing interno** del hub o login: texto animado (`WaveText`, `TypewriterText`), hover decorativo (`ScrambleHover`) **dentro** de un `Link` o botón ya accesible.
+- **Estados vacíos** o mensajes de bienvenida en una herramienta nueva (`!data && !loading`).
+- **Micro-interacciones** que no existen en SIGO y no justifican un componente corporativo nuevo.
+- **Cada pantalla principal** del toolbox: **un acento de título** (`SmoothTitleAccent` en h1/h2 hero) + **como mucho un CTA** con `SmoothLinkScramble`; estados vacíos pueden repetir el patrón en h2 (ver diagnóstico).
+
+## Cuándo NO usar SmoothUI
+
+- **Sustituir** header, footer, `AppCard`, formularios de diagnóstico/contacto, badges de veredicto, modales de negocio o `@itcoordinadora/cm-sigoo-temp-ui`.
+- **CursorFollow**, overlays globales, o animaciones que bloqueen lectura operativa.
+- Componentes pesados (**SiriOrb**, **MatrixCard**, **FluidMorph**) sin revisión de bundle y sin aprobación explícita en la tarea.
+- Colores demo oklch/hex del registry sin mapear a tokens (`var(--color-primary)`, `var(--text-body)`, etc.).
+- Plantillas completas de smoothui.dev que ignoren la arquitectura por feature ([arquitectura-toolbox.mdc](arquitectura-toolbox.mdc)).
+
+## Reglas de integración con SIGO Droop
+
+1. **Tokens primero:** clases con `var(--…)` de `src/index.css`; prohibido hardcodear paletas ajenas a Coordinadora.
+2. **Accesibilidad:** conservar `aria-label`, roles y texto visible estable para tests E2E y RTL; la animación no puede ser la única señal de estado.
+3. **Reduced motion:** respetar `useReducedMotion` del componente o `prefers-reduced-motion` del theme provider; no forzar loops infinitos agresivos en vistas de trabajo prolongado (diagnóstico operativo).
+4. **Composición:** SmoothUI envuelve **texto o icono**, no reemplaza el contenedor `surface` / bordes / radios SIGO.
+5. **Auth y datos:** nunca animar tokens, PII ni respuestas JSON; SmoothUI solo en capa presentacional.
+
+## Componentes recomendados por defecto (bajo riesgo)
+
+| Componente        | Registry                    | Notas                                                      |
+| ----------------- | --------------------------- | ---------------------------------------------------------- |
+| `wave-text`       | `@smoothui/wave-text`       | Solo depende de `motion`                                   |
+| `scramble-hover`  | `@smoothui/scramble-hover`  | Solo hover; mantener control padre accesible               |
+| `typewriter-text` | `@smoothui/typewriter-text` | Títulos cortos, no párrafos largos                         |
+| `button-copy`     | `@smoothui/button-copy`     | Evaluar duplicado con `CopyButton` existente antes de usar |
+
+Componentes **fase 2** (deps extra o peso): `siri-orb` (+ `ai-core`), `scrollable-card-stack`, `rich-popover`.
+
+## Cobertura actual (referencia)
+
+| Ruta / área                                    | Motion                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| `/` hub                                        | Título + CTAs scramble (diagnóstico, contacto, tarjeta disponible) |
+| `/diagnostico`                                 | h1 panel + estado vacío h2                                         |
+| `/contacto`, legales, `/gracias`, 404          | Título con acento                                                  |
+| Login / sin acceso / error auth                | h1 con acento                                                      |
+| Resultados de diagnóstico, formularios, header | Sin SmoothUI                                                       |
+
+## Nueva herramienta (`src/features/<nombre>/`)
+
+| Paso | Acción                                                                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Layout SIGO; rutas `lazy` en `app.tsx`; entrada en hub si aplica                                                                |
+| 2    | `SmoothTitleAccent` en h1 de `<nombre>-page.tsx`; `accessibleTitle` = string exacto para `getByRole('heading', { name: /…/i })` |
+| 3    | Estado vacío opcional: segundo `SmoothTitleAccent` en h2                                                                        |
+| 4    | Tarjeta hub `disponible`: CTA con `SmoothLinkScramble` (“Abrir herramienta” o label acordado)                                   |
+| 5    | Tablas, JSON, badges de veredicto, modales de negocio: **sin** motion                                                           |
+| 6    | Tests en `test/features/<nombre>/` por heading accesible completo                                                               |
+| 7    | Nuevo componente registry: solo CLI → `src/shared/ui/smoothui/`; revisar `pnpm analyze:bundle`                                  |
+
+Snippet:
+
+```tsx
+import { SmoothTitleAccent } from "@/shared/ui/smoothui";
+
+<SmoothTitleAccent
+  as="h1"
+  className="mt-1 text-xl font-bold text-[var(--text-body)] sm:text-2xl"
+  accessibleTitle="Mi herramienta operativa"
+  before="Mi herramienta "
+  accent="operativa"
+  amplitude={3}
+/>;
+```
+
+## Checklist al agregar UI en una herramienta nueva
+
+1. Layout y rutas según [arquitectura-toolbox.mdc](arquitectura-toolbox.mdc) (React Router, `lazy`, `AuthGate`).
+2. Estilos SIGO Droop en estructura y formularios.
+3. Título y CTAs con helpers (`SmoothTitleAccent` / `SmoothLinkScramble`); no copiar markup `sr-only` a mano.
+4. ¿Componente registry nuevo? → https://smoothui.dev/docs/components ; instalar en `src/shared/ui/smoothui/`.
+5. Tests: assert del `accessibleTitle`; E2E con `getByRole('heading', { name: /…/i })`.
+
+## Licencia
+
+SmoothUI es **MIT** ([github.com/educlopez/smoothui](https://github.com/educlopez/smoothui)). Conservar atribución en comentarios solo si se copia código sustancial modificado; los archivos instalados por CLI ya traen autor en registry metadata.

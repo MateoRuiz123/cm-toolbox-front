@@ -22,3 +22,26 @@ export const diagnosticoEnvelopeFixture = {
 export const diagnosticoErrorFixture = {
   message: 'Error interno en BD',
 }
+
+export const diagnosticoOutputConGuiaParcial: DiagnosticoOutput = {
+  veredicto: 'PARCIAL',
+  items: [
+    {
+      origen: 'remision',
+      codigo_remision: '20018012531',
+      cuenta: 'cuenta-prueba',
+      veredicto: 'PARCIAL',
+      resumen: 'La remisión requiere reintento.',
+      solucion: [],
+      guias: [
+        {
+          codigo_remision: '20018012531',
+          veredicto: 'PARCIAL',
+          resumen: 'Guía con inconsistencias detectadas.',
+          solucion: [],
+          checks: [],
+        },
+      ],
+    },
+  ],
+}

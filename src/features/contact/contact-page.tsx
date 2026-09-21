@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 
 interface FormContactState {
   nombre: string
@@ -85,9 +86,15 @@ export const ContactPage = () => {
           <span className="size-2 rounded-full bg-[var(--color-primary)]" />
           <span>Atención y Soporte Institucional</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-body)] mb-2">
-          Contacto y Soporte de TI
-        </h1>
+        <SmoothTitleAccent
+          as="h1"
+          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-body)] mb-2"
+          accessibleTitle="Contacto y Soporte de TI"
+          before="Contacto y "
+          accent="Soporte"
+          after=" de TI"
+          amplitude={3}
+        />
         <p className="text-sm text-[var(--text-muted)]">
           Canales de atención directa para reportes, consultas técnicas y gestión operativa de Coordinadora Mercantil S.A.
         </p>

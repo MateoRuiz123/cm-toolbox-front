@@ -28,4 +28,7 @@ dist-ssr
 
 graphify-out/
 coverage/
+reports/
+playwright-report/
+test-results/
 .npmrc

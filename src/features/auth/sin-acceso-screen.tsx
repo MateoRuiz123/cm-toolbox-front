@@ -1,3 +1,4 @@
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 import { ThemeToggle } from '../../shared/ui/theme-toggle'
 import { env } from '../../shared/lib/env'
 
@@ -36,9 +37,14 @@ export const SinAccesoScreen = ({
           </svg>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2">
-          Acceso no autorizado
-        </h1>
+        <SmoothTitleAccent
+          as="h1"
+          className="text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2"
+          accessibleTitle="Acceso no autorizado"
+          before="Acceso no "
+          accent="autorizado"
+          amplitude={3}
+        />
 
         <p className="text-sm text-[var(--text-muted)] mb-4 leading-relaxed">
           El token de Keycloak no contiene una identidad de correo corporativo válida.

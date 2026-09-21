@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { diagnosticarMigracion } from './api/diagnostico-api'
 import type { DiagnosticoOutput } from './api/types'
 import { parseDespachos, splitCodigos } from '../../shared/lib/split-codigos'
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 import { JsonModal } from '../../shared/ui/json-modal'
 import { DeleteButton } from './delete-button'
 import { DiagnosticoSkeleton } from './diagnostico-skeleton'
@@ -88,9 +89,14 @@ export const DiagnosticoPage = () => {
             <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
               Panel de Consulta
             </span>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-body)] sm:text-2xl">
-              Diagnóstico de migración (api internos)
-            </h1>
+            <SmoothTitleAccent
+              as="h1"
+              className="mt-1 text-xl font-bold tracking-tight text-[var(--text-body)] sm:text-2xl"
+              accessibleTitle="Diagnóstico de migración"
+              before="Diagnóstico de "
+              accent="migración"
+              amplitude={3}
+            />
             <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Verifica el estado técnico, consistencia y posibles bloqueos de guías entre AGW y CM.
             </p>
@@ -255,9 +261,14 @@ export const DiagnosticoPage = () => {
                 </svg>
               </div>
 
-              <h2 className="mt-5 text-lg font-bold text-[var(--text-body)] sm:text-xl">
-                Listo para diagnosticar
-              </h2>
+              <SmoothTitleAccent
+                as="h2"
+                className="mt-5 text-lg font-bold text-[var(--text-body)] sm:text-xl"
+                accessibleTitle="Listo para diagnosticar"
+                before="Listo para "
+                accent="diagnosticar"
+                amplitude={3}
+              />
 
               <p className="mt-2 max-w-md text-xs sm:text-sm leading-relaxed text-[var(--text-muted)]">
                 Ingresa una o varias remisiones o números de despacho en el panel lateral y presiona{' '}

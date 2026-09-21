@@ -4,7 +4,7 @@ Portal interno de herramientas de apoyo para migración de guias y despachos (AG
 
 Stack: React 19, Vite, TypeScript, Tailwind CSS v4, Keycloak (`keycloak-js` 26.1.5), SIGO Droop Design System.
 
-Versión: `1.3.1`.
+Versión: `1.6.0`.
 
 ## Arquitectura
 
@@ -12,10 +12,10 @@ Versión: `1.3.1`.
 flowchart LR
   Browser --> AuthGate
   AuthGate -->|sin sesion| Login[Login Google Keycloak]
-  AuthGate -->|sesion| Router
-  Router --> Hub["/ Hub"]
-  Router --> Diag["/diagnostico"]
-  Router --> Legal["/privacidad /terminos /contacto"]
+  AuthGate -->|sesion| ReactRouter[React Router]
+  ReactRouter --> Hub["/ /hub"]
+  ReactRouter --> Diag["/diagnostico"]
+  ReactRouter --> Legal["/privacidad /terminos /contacto"]
   Diag -->|POST diagnostico| ApiInternos[cm-api-internos]
   Diag -->|POST migracion/guia| ApiInternos
 ```
@@ -25,6 +25,7 @@ flowchart LR
 | Ruta           | Pantalla                                                         |
 | -------------- | ---------------------------------------------------------------- |
 | `/`            | Hub de aplicaciones                                              |
+| `/hub`         | Alias del hub (misma pantalla que `/`)                           |
 | `/diagnostico` | Consulta de remisiones/despachos, re-migración, lista/cuadrícula |
 | `/privacidad`  | Política de datos (Ley 1581)                                     |
 | `/terminos`    | Términos de uso interno                                          |
@@ -32,7 +33,7 @@ flowchart LR
 | `/gracias`     | Confirmación del formulario de contacto                          |
 | cualquier otra | 404                                                              |
 
-El enrutado es nativo (`history` API), sin React Router. Las páginas de herramienta y legales cargan con `lazy()`.
+El enrutado usa [React Router](https://reactrouter.com/) en modo declarativo (`BrowserRouter`, `Routes`, `Route`). Las páginas de herramienta y legales cargan con `lazy()` y `Suspense`.
 
 ## Inicio local
 
@@ -74,6 +75,8 @@ Timeout de diagnóstico: 120 s. Timeout de re-migración de una guía: 30 s.
 
 Keycloak con IdP Google (`idpHint: google`). Access token (`token_sigoo`) en `localStorage`; tokens de reanudación Keycloak en `sessionStorage`. Tema claro/oscuro y vista lista/cuadrícula en `localStorage`; sobreviven al logout.
 
+Decisión de seguridad sobre tokens, CSP y riesgo XSS: [docs/seguridad-tokens-y-csp.md](docs/seguridad-tokens-y-csp.md).
+
 Si no hay variables Keycloak, se usan los defaults de `@itcoordinadora/cm-sigoo-temp-ui` según `VITE_KEYCLOAK_ENV`.
 
 ## Docker
@@ -110,6 +113,31 @@ pnpm lint
 pnpm build
 ```
 
+### Pruebas E2E (local)
+
+Instala el navegador una vez:
+
+```bash
+pnpm exec playwright install chromium
+```
+
+Ejecuta la suite E2E (arranca Vite con bypass de Keycloak y mocks de API):
+
+```bash
+pnpm test:e2e
+pnpm test:all
+```
+
+Contrato manual del API de diagnóstico: [docs/diagnostico-api-contrato.md](docs/diagnostico-api-contrato.md).
+
+### Tamaño de bundle
+
+```bash
+pnpm analyze:bundle
+```
+
+Genera `reports/bundle-size.txt` (ignorado por Git). Línea base de referencia local: total JS ~869 kB raw / ~264 kB gzip; CSS ~48 kB raw / ~9 kB gzip (build Vite actual).
+
 ## Estructura
 
 ```text
@@ -125,7 +153,6 @@ src/
 │   └── not-found/          404
 └── shared/
     ├── auth/               Keycloak, tokens, gate, bypass local
-    ├── router/             Router nativo
     ├── lib/                env, preferencias, analytics, títulos SEO
     └── ui/                 Header, footer, cookies
 test/                       Vitest, espeja src/
@@ -133,6 +160,6 @@ env/azure.env               Tokens de Azure DevOps Library
 nginx/                      Template + scripts de runtime
 ```
 
-Tokens de marca: `src/index.css`. Regla Cursor: `.cursor/rules/diseno-coordinadora-sigo.mdc`.
+Tokens de marca: `src/index.css`. Reglas Cursor: `.cursor/rules/diseno-coordinadora-sigo.mdc` (SIGO) y `.cursor/rules/smoothui-complementos.mdc` (motion opcional MIT en `src/shared/ui/smoothui/`).
 
 Guía de recorrido del diagnóstico: [docs/APRENDER_FRONT.md](docs/APRENDER_FRONT.md).

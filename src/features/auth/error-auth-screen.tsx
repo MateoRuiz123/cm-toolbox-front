@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  SmoothTitleAccent,
+  splitTitleForAccent,
+} from '@/shared/ui/smoothui'
 import { ThemeToggle } from '../../shared/ui/theme-toggle'
 import type { DetalleErrorAuth } from '../../shared/auth/types'
 
@@ -14,6 +18,7 @@ export const ErrorAuthScreen = ({
   onVolverAlLogin,
 }: ErrorAuthScreenProps) => {
   const [detalleVisible, setDetalleVisible] = useState(false)
+  const titleParts = splitTitleForAccent(error.titulo)
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-[var(--surface-app)] p-4">
@@ -39,9 +44,15 @@ export const ErrorAuthScreen = ({
           </svg>
         </div>
 
-        <h1 className="text-center text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2">
-          {error.titulo}
-        </h1>
+        <SmoothTitleAccent
+          as="h1"
+          className="text-center text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2"
+          accessibleTitle={error.titulo}
+          before={titleParts.before}
+          accent={titleParts.accent}
+          after={titleParts.after}
+          amplitude={3}
+        />
 
         <p className="text-center text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
           {error.descripcion}

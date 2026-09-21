@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 
 export const NotFoundPage = () => {
   return (
@@ -12,9 +13,14 @@ export const NotFoundPage = () => {
         404
       </h1>
 
-      <h2 className="text-lg sm:text-xl font-bold text-[var(--text-body)] mb-2">
-        La página solicitada no está disponible
-      </h2>
+      <SmoothTitleAccent
+        as="h2"
+        className="text-lg sm:text-xl font-bold text-[var(--text-body)] mb-2"
+        accessibleTitle="La página solicitada no está disponible"
+        before="La página solicitada no está "
+        accent="disponible"
+        amplitude={3}
+      />
 
       <p className="max-w-md text-sm text-[var(--text-muted)] leading-relaxed mb-8">
         El enlace puede estar roto, haber cambiado de ruta o requerir permisos adicionales dentro del ecosistema de Coordinadora Mercantil.

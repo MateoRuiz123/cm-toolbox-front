@@ -57,7 +57,7 @@ export const AppHeader = () => {
             </div>
           ) : (
             <span className="font-bold tracking-tight text-[var(--text-body)] truncate">
-              Toolbox de Apoyo (API Internos)
+              Toolbox de Apoyo
             </span>
           )}
         </div>

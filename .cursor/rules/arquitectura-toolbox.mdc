@@ -13,11 +13,11 @@ Este proyecto es un **monorepo con separación por feature**: cada herramienta v
 - `src/shared/api/` — clientes HTTP y tipos reutilizables entre herramientas. Si una llamada API solo la usa una herramienta, vive en `src/features/<herramienta>/`, no en `shared`.
 - `src/shared/auth/` — todo lo de Keycloak/sesión. Nunca reimplementar auth dentro de una feature.
 - `src/shared/ui/` — componentes de UI genéricos (botones, badges, modales base). Un componente pasa de `features/<x>/` a `shared/ui/` solo cuando una **segunda** herramienta lo necesita, no antes.
-- `src/shared/router/` y `src/app/app.tsx` — el único lugar donde se registran rutas nuevas.
+- `src/app/app.tsx` y `src/main.tsx` (`BrowserRouter`) — el único lugar donde se registran rutas nuevas con React Router (`Routes` / `Route`).
 
 ## Code-splitting por ruta (obligatorio para toda herramienta nueva)
 
-`app.tsx` resuelve rutas con `path.startsWith(...)`. Las páginas de herramienta **deben** importarse con `lazy()`, nunca de forma estática, para que el bundle inicial no crezca con cada herramienta agregada:
+`app.tsx` declara rutas con React Router. Las páginas de herramienta **deben** importarse con `lazy()`, nunca de forma estática, para que el bundle inicial no crezca con cada herramienta agregada:
 
 ```tsx
 const DiagnosticoPage = lazy(() =>
@@ -32,11 +32,12 @@ y envolver el bloque de rutas en `<Suspense fallback={...}>`. Páginas estructur
 ## Checklist al agregar una herramienta nueva
 
 1. Crear `src/features/<nombre>/` con su página principal (`<nombre>-page.tsx`) y subcomponentes propios ahí adentro.
-2. Si necesita llamadas API, agregarlas en `src/shared/api/<nombre>-api.ts` siguiendo el patrón de `diagnostico-api.ts`.
+2. Si necesita llamadas API, agregarlas en `src/features/<nombre>/api/` siguiendo el patrón de `diagnostico-api.ts`.
 3. Registrar la ruta en `app.tsx` con `lazy()` + `Suspense`, no import estático.
 4. Agregar la entrada correspondiente en `HubPage` para que sea descubrible.
 5. Tests en `test/` espejando la ruta de `src/` (ej. `src/features/hub/hub-page.tsx` → `test/features/hub/hub-page.test.tsx`).
 6. Reusar `AuthGate`, `AppHeader`/`AppFooter` y el design system (`SIGO Droop Design System`) — no crear variantes propias de layout o estilos.
+7. Motion decorativo (subordinado a SIGO): en `<nombre>-page.tsx` usar `SmoothTitleAccent` en el h1 (`accessibleTitle` alineado con tests); estado vacío opcional en h2; si la tarjeta del hub pasa a `disponible`, CTA con `SmoothLinkScramble`. Detalle y snippet en [smoothui-complementos.mdc](smoothui-complementos.mdc).
 
 ## Cuándo romper esta regla (extraer a repo aparte)
 

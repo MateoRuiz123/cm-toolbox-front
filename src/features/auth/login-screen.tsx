@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 import { ThemeToggle } from '../../shared/ui/theme-toggle'
 import { env } from '../../shared/lib/env'
 
@@ -75,9 +76,13 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
 
         <hr className="border-0 border-t border-[var(--border-default)] my-6" />
 
-        <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2">
-          Bienvenido
-        </h1>
+        <SmoothTitleAccent
+          as="h1"
+          className="text-xl sm:text-2xl font-bold text-[var(--text-body)] tracking-tight mb-2"
+          accessibleTitle="Bienvenido"
+          accent="Bienvenido"
+          amplitude={3}
+        />
         <p className="text-sm text-[var(--text-muted)] mb-8 leading-relaxed">
           Autentícate para acceder al diagnóstico de migración de despachos y remisiones.
         </p>

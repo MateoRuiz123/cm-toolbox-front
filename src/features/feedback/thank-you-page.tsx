@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { SmoothTitleAccent } from '@/shared/ui/smoothui'
 
 export const ThankYouPage = () => {
   return (
@@ -13,9 +14,15 @@ export const ThankYouPage = () => {
         <span>Radicado Satisfactoriamente</span>
       </div>
 
-      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-body)] mb-3">
-        ¡Mensaje Enviado con Éxito!
-      </h1>
+      <SmoothTitleAccent
+        as="h1"
+        className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-body)] mb-3"
+        accessibleTitle="¡Mensaje Enviado con Éxito!"
+        before="¡Mensaje Enviado con "
+        accent="Éxito"
+        after="!"
+        amplitude={3}
+      />
 
       <p className="text-sm text-[var(--text-muted)] leading-relaxed max-w-lg mb-8">
         Hemos recibido tu consulta o reporte técnico. Un ingeniero del equipo de soporte de integraciones y migración de Coordinadora Mercantil revisará tu requerimiento a la mayor brevedad.

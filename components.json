@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/index.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/shared/ui/smoothui",
+    "utils": "@/shared/lib/utils",
+    "lib": "@/shared/lib",
+    "ui": "@/shared/ui/smoothui"
+  },
+  "registries": {
+    "@smoothui": "https://smoothui.dev/r/{name}.json"
+  }
+}
