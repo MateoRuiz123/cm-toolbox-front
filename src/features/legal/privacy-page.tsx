@@ -1,11 +1,11 @@
-import { Link } from '../../shared/router/router-context'
+import { Link } from 'react-router'
 
 export const PrivacyPage = () => {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6">
         <Link
-          href="/"
+          to="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] hover:underline"
         >
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -83,7 +83,7 @@ export const PrivacyPage = () => {
             4. Derechos de los Titulares
           </h2>
           <p className="text-[var(--text-muted)]">
-            Conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013, los titulares de los datos tienen derecho a conocer, actualizar, rectificar y solicitar la supresión de sus datos personales. Para ejercer estos derechos, puede comunicarse a través de nuestro canal oficial <a href="mailto:habeasdata@coordinadora.com" className="font-semibold text-[var(--color-primary)] hover:underline">habeasdata@coordinadora.com</a> o consultar en nuestra página de <Link href="/contacto" className="font-semibold text-[var(--color-primary)] hover:underline">contacto</Link>.
+            Conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013, los titulares de los datos tienen derecho a conocer, actualizar, rectificar y solicitar la supresión de sus datos personales. Para ejercer estos derechos, puede comunicarse a través de nuestro canal oficial <a href="mailto:habeasdata@coordinadora.com" className="font-semibold text-[var(--color-primary)] hover:underline">habeasdata@coordinadora.com</a> o consultar en nuestra página de <Link to="/contacto" className="font-semibold text-[var(--color-primary)] hover:underline">contacto</Link>.
           </p>
         </section>
       </article>

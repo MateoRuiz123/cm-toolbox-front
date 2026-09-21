@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { KeycloakProvider } from '@itcoordinadora/cm-sigoo-temp-ui'
+import { Route, Routes } from 'react-router'
 import { HubPage } from '../features/hub/hub-page'
 import { NotFoundPage } from '../features/not-found/not-found-page'
 import { esAuthBypassActivo } from '../shared/auth/auth-bypass'
@@ -7,8 +8,6 @@ import { AuthProvider } from '../shared/auth/auth-context'
 import { AuthGate } from '../shared/auth/auth-gate'
 import { keycloakClient } from '../shared/auth/keycloak-client'
 import { usePageTitle } from '../shared/lib/use-page-title'
-import { RouterProvider } from '../shared/router/router-context'
-import { useRouter } from '../shared/router/use-router'
 import { AppFooter } from '../shared/ui/app-footer'
 import { AppHeader } from '../shared/ui/app-header'
 import { CookieBanner } from '../shared/ui/cookie-banner'
@@ -45,55 +44,39 @@ const RouteFallback = () => (
   </div>
 )
 
-const AppRoutes = () => {
-  const { path } = useRouter()
+export const AppRoutes = () => {
   usePageTitle()
 
-  if (path === '/' || path === '/hub') {
-    return <HubPage />
-  }
-
-  if (path.startsWith('/diagnostico')) {
-    return <DiagnosticoPage />
-  }
-
-  if (path.startsWith('/privacidad')) {
-    return <PrivacyPage />
-  }
-
-  if (path.startsWith('/terminos')) {
-    return <TermsPage />
-  }
-
-  if (path.startsWith('/contacto')) {
-    return <ContactPage />
-  }
-
-  if (path.startsWith('/gracias')) {
-    return <ThankYouPage />
-  }
-
-  return <NotFoundPage />
+  return (
+    <Routes>
+      <Route path="/" element={<HubPage />} />
+      <Route path="/hub" element={<HubPage />} />
+      <Route path="/diagnostico/*" element={<DiagnosticoPage />} />
+      <Route path="/privacidad" element={<PrivacyPage />} />
+      <Route path="/terminos" element={<TermsPage />} />
+      <Route path="/contacto" element={<ContactPage />} />
+      <Route path="/gracias" element={<ThankYouPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
 }
 
 const AppShell = () => (
   <AuthProvider>
-    <RouterProvider>
-      <AuthGate>
-        <div className="flex min-h-screen flex-col bg-[var(--surface-app)] text-[var(--text-body)]">
-          <AppHeader />
-          <main className="flex-1">
-            <ErrorBoundary>
-              <Suspense fallback={<RouteFallback />}>
-                <AppRoutes />
-              </Suspense>
-            </ErrorBoundary>
-          </main>
-          <AppFooter />
-          <CookieBanner />
-        </div>
-      </AuthGate>
-    </RouterProvider>
+    <AuthGate>
+      <div className="flex min-h-screen flex-col bg-[var(--surface-app)] text-[var(--text-body)]">
+        <AppHeader />
+        <main className="flex-1">
+          <ErrorBoundary>
+            <Suspense fallback={<RouteFallback />}>
+              <AppRoutes />
+            </Suspense>
+          </ErrorBoundary>
+        </main>
+        <AppFooter />
+        <CookieBanner />
+      </div>
+    </AuthGate>
   </AuthProvider>
 )
 

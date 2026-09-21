@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useRouter } from '../router/use-router'
+import { useLocation } from 'react-router'
 import { trackPageView } from './analytics'
 
 interface RouteMetadata {
@@ -9,6 +9,11 @@ interface RouteMetadata {
 
 const METADATA_MAP: Record<string, RouteMetadata> = {
   '/': {
+    title: 'Portal de Aplicaciones | Coordinadora Toolbox',
+    description:
+      'Portal centralizado de herramientas de apoyo, diagnóstico y supervisión para la migración de guías y despachos de Coordinadora Mercantil S.A.',
+  },
+  '/hub': {
     title: 'Portal de Aplicaciones | Coordinadora Toolbox',
     description:
       'Portal centralizado de herramientas de apoyo, diagnóstico y supervisión para la migración de guías y despachos de Coordinadora Mercantil S.A.',
@@ -45,10 +50,12 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
 }
 
 export const usePageTitle = () => {
-  const { path } = useRouter()
+  const { pathname } = useLocation()
 
   useEffect(() => {
-    const meta = METADATA_MAP[path] || METADATA_MAP['/404']
+    const meta = pathname.startsWith('/diagnostico')
+      ? METADATA_MAP['/diagnostico']
+      : METADATA_MAP[pathname] || METADATA_MAP['/404']
 
     document.title = meta.title
 
@@ -72,6 +79,6 @@ export const usePageTitle = () => {
     if (ogUrl) ogUrl.content = window.location.href
 
     // Registrar analítica de vista de página
-    trackPageView(path)
-  }, [path])
+    trackPageView(pathname)
+  }, [pathname])
 }

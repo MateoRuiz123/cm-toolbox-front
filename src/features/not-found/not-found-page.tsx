@@ -1,4 +1,4 @@
-import { Link } from '../../shared/router/router-context'
+import { Link } from 'react-router'
 
 export const NotFoundPage = () => {
   return (
@@ -22,7 +22,7 @@ export const NotFoundPage = () => {
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/"
+          to="/"
           className="flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
         >
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -32,7 +32,7 @@ export const NotFoundPage = () => {
         </Link>
 
         <Link
-          href="/diagnostico"
+          to="/diagnostico"
           className="flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
         >
           <span>Ir a Diagnóstico</span>
@@ -41,7 +41,7 @@ export const NotFoundPage = () => {
 
       <div className="mt-10 border-t border-[var(--border-default)] pt-6 text-xs text-[var(--text-muted)]">
         ¿Crees que se trata de un error del sistema?{' '}
-        <Link href="/contacto" className="font-semibold text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
+        <Link to="/contacto" className="font-semibold text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
           Contacta al equipo de TI
         </Link>
       </div>

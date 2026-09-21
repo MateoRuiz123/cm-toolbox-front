@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { RouterProvider } from '../../../src/shared/router/router-context'
+import { MemoryRouter } from 'react-router'
 import { CookieBanner } from '../../../src/shared/ui/cookie-banner'
 import { safeStorage } from '../../../src/shared/lib/safe-storage'
 
@@ -11,9 +11,9 @@ describe('CookieBanner', () => {
 
   it('renderiza el banner si no hay consentimiento previo', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/">
+      <MemoryRouter initialEntries={['/']}>
         <CookieBanner />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('Uso de Cookies y Almacenamiento Local')
@@ -25,9 +25,9 @@ describe('CookieBanner', () => {
     safeStorage.setItem('cm_cookie_consent', 'accepted')
 
     const html = renderToString(
-      <RouterProvider initialPath="/">
+      <MemoryRouter initialEntries={['/']}>
         <CookieBanner />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toBe('')

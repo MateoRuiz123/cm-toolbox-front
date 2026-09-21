@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { trackPageView, trackEvent } from '../../../src/shared/lib/analytics'
 

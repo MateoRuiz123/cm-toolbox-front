@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { RouterProvider } from '../../../src/shared/router/router-context'
+import { MemoryRouter } from 'react-router'
 import { PrivacyPage } from '../../../src/features/legal/privacy-page'
 import { TermsPage } from '../../../src/features/legal/terms-page'
 import { ContactPage } from '../../../src/features/contact/contact-page'
@@ -10,9 +10,9 @@ import { ThankYouPage } from '../../../src/features/feedback/thank-you-page'
 describe('Páginas Legales y de Estado', () => {
   it('renderiza PrivacyPage con información de la Ley 1581 de 2012', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/privacidad">
+      <MemoryRouter initialEntries={['/privacidad']}>
         <PrivacyPage />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('Política de Privacidad')
@@ -22,9 +22,9 @@ describe('Páginas Legales y de Estado', () => {
 
   it('renderiza TermsPage con condiciones de uso autorizado', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/terminos">
+      <MemoryRouter initialEntries={['/terminos']}>
         <TermsPage />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('Términos y Condiciones de Uso')
@@ -34,9 +34,9 @@ describe('Páginas Legales y de Estado', () => {
 
   it('renderiza ContactPage con sede principal y PBX', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/contacto">
+      <MemoryRouter initialEntries={['/contacto']}>
         <ContactPage />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('Contacto y Soporte de TI')
@@ -47,9 +47,9 @@ describe('Páginas Legales y de Estado', () => {
 
   it('renderiza NotFoundPage con código 404 y enlaces de retorno', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/ruta-inexistente">
+      <MemoryRouter initialEntries={['/ruta-inexistente']}>
         <NotFoundPage />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('404')
@@ -59,9 +59,9 @@ describe('Páginas Legales y de Estado', () => {
 
   it('renderiza ThankYouPage con confirmación de radicado', () => {
     const html = renderToString(
-      <RouterProvider initialPath="/gracias">
+      <MemoryRouter initialEntries={['/gracias']}>
         <ThankYouPage />
-      </RouterProvider>,
+      </MemoryRouter>,
     )
 
     expect(html).toContain('¡Mensaje Enviado con Éxito!')

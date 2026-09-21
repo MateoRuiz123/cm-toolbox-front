@@ -1,8 +1,7 @@
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './rare/notification-bell'
+import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/use-auth'
-import { Link } from '../router/router-context'
-import { useRouter } from '../router/use-router'
 
 /**
  * Cabecera institucional con marca Coordinadora, navegación contextual y datos de sesión.
@@ -10,7 +9,7 @@ import { useRouter } from '../router/use-router'
  */
 export const AppHeader = () => {
   const { email, terminal, cerrarSesion } = useAuth()
-  const { path } = useRouter()
+  const { pathname: path } = useLocation()
   const esHome = path === '/' || path === '/hub'
 
   const obtenerTituloRuta = () => {
@@ -29,7 +28,7 @@ export const AppHeader = () => {
     >
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <Link
-          href="/"
+          to="/"
           className="flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           title="Ir al portal de aplicaciones"
         >
@@ -46,7 +45,7 @@ export const AppHeader = () => {
           {!esHome ? (
             <div className="flex items-center gap-2 truncate">
               <Link
-                href="/"
+                to="/"
                 className="hidden sm:inline-block font-medium text-[var(--text-muted)] hover:text-[var(--color-primary)] transition-colors truncate"
               >
                 Portal
@@ -67,7 +66,7 @@ export const AppHeader = () => {
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         {!esHome && (
           <Link
-            href="/"
+            to="/"
             className="hidden md:flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--color-primary)]"
             title="Volver a la lista de aplicaciones"
           >

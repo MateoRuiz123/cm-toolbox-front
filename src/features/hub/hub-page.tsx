@@ -1,4 +1,4 @@
-import { Link } from '../../shared/router/router-context'
+import { Link } from 'react-router'
 import { FolderComponent } from './folder-component'
 
 interface AppCardProps {
@@ -90,7 +90,7 @@ const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProp
       <div className="pt-4 border-t border-[var(--border-default)]">
         {disponible && ruta ? (
           <Link
-            href={ruta}
+            to={ruta}
             className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           >
             <span>Abrir herramienta</span>
@@ -129,7 +129,7 @@ export const HubPage = () => {
           </p>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
             <Link
-              href="/diagnostico"
+              to="/diagnostico"
               className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)]"
             >
               <span>Abrir Diagnóstico</span>
@@ -138,7 +138,7 @@ export const HubPage = () => {
               </svg>
             </Link>
             <Link
-              href="/contacto"
+              to="/contacto"
               className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
             >
               <span>Contacto y Soporte</span>

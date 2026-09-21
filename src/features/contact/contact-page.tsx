@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from '../../shared/router/router-context'
-import { useRouter } from '../../shared/router/use-router'
+import { Link, useNavigate } from 'react-router'
 
 interface FormContactState {
   nombre: string
@@ -17,7 +16,7 @@ interface FormContactErrors {
 }
 
 export const ContactPage = () => {
-  const { navigate } = useRouter()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<FormContactState>({
     nombre: '',
     email: '',
@@ -71,7 +70,7 @@ export const ContactPage = () => {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6">
         <Link
-          href="/"
+          to="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] hover:underline"
         >
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">

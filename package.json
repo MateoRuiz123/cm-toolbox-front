@@ -11,6 +11,9 @@
     "lint": "oxlint src test",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm test && pnpm test:e2e",
+    "analyze:bundle": "pnpm build && node scripts/report-bundle-size.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,15 +23,21 @@
     "motion": "^13.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-router": "^8.4.0",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "5.0.0",
+    "jsdom": "^30.1.0",
     "oxlint": "^1.82.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",

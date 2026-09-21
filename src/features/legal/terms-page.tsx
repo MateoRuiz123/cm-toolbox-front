@@ -1,11 +1,11 @@
-import { Link } from '../../shared/router/router-context'
+import { Link } from 'react-router'
 
 export const TermsPage = () => {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6">
         <Link
-          href="/"
+          to="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] hover:underline"
         >
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">

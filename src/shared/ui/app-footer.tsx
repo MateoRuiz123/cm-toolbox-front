@@ -1,4 +1,4 @@
-import { Link } from '../router/router-context'
+import { Link } from 'react-router'
 
 export const AppFooter = () => {
   const currentYear = new Date().getFullYear()
@@ -22,19 +22,19 @@ export const AppFooter = () => {
           </div>
 
           <nav aria-label="Enlaces institucionales y legales" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-            <Link href="/" className="transition hover:text-[var(--color-primary)] hover:underline">
+            <Link to="/" className="transition hover:text-[var(--color-primary)] hover:underline">
               Inicio
             </Link>
-            <Link href="/diagnostico" className="transition hover:text-[var(--color-primary)] hover:underline">
+            <Link to="/diagnostico" className="transition hover:text-[var(--color-primary)] hover:underline">
               Diagnóstico
             </Link>
-            <Link href="/privacidad" className="transition hover:text-[var(--color-primary)] hover:underline">
+            <Link to="/privacidad" className="transition hover:text-[var(--color-primary)] hover:underline">
               Privacidad
             </Link>
-            <Link href="/terminos" className="transition hover:text-[var(--color-primary)] hover:underline">
+            <Link to="/terminos" className="transition hover:text-[var(--color-primary)] hover:underline">
               Términos
             </Link>
-            <Link href="/contacto" className="transition hover:text-[var(--color-primary)] hover:underline">
+            <Link to="/contacto" className="transition hover:text-[var(--color-primary)] hover:underline">
               Contacto
             </Link>
           </nav>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { safeStorage } from '../lib/safe-storage'
-import { Link } from '../router/router-context'
 
 const COOKIE_CONSENT_KEY = 'cm_cookie_consent'
 
@@ -33,7 +33,7 @@ export const CookieBanner = () => {
           </p>
           <p>
             Coordinadora utiliza cookies y almacenamiento local estrictamente necesarios para la sesión corporativa y el diagnóstico técnico. Puedes consultar nuestra{' '}
-            <Link href="/privacidad" className="font-semibold text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
+            <Link to="/privacidad" className="font-semibold text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
               Política de Privacidad
             </Link>.
           </p>

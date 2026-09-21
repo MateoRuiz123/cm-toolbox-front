@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
     test: {
       include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
       exclude: ["**/node_modules/**", "**/dist/**", "utils/**"],
+      environment: "jsdom",
+      setupFiles: ["./test/setup.ts"],
       coverage: {
         provider: "v8",
         reporter: ["text", "lcov", "json-summary"],

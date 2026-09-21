@@ -1,4 +1,4 @@
-import { Link } from '../../shared/router/router-context'
+import { Link } from 'react-router'
 
 export const ThankYouPage = () => {
   return (
@@ -23,14 +23,14 @@ export const ThankYouPage = () => {
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/"
+          to="/"
           className="flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
         >
           <span>Volver al Portal</span>
         </Link>
 
         <Link
-          href="/diagnostico"
+          to="/diagnostico"
           className="flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
         >
           <span>Ir a Diagnóstico</span>
