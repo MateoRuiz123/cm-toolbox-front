@@ -34,10 +34,10 @@ pnpm dev
 
 Abre la URL que imprime Vite (normalmente `http://localhost:5173`).
 
-En `.env`, configura la URL completa:
+En `.env`, configura el host del API (el navegador solo ve `/migracion/…`):
 
 ```bash
-VITE_DIAGNOSTICO_URL=http://localhost:8080/migracion/diagnostico
+DIAGNOSTICO_API_UPSTREAM=http://localhost:8080/cm-api-internos
 ```
 
 No subas `.env` a Git. `.env.example` documenta el nombre de la variable sin guardar datos de ambiente.
@@ -55,7 +55,7 @@ flowchart LR
 
 | Pieza                         | Rol                                              |
 | ----------------------------- | ------------------------------------------------ |
-| `Dockerfile` etapa `build`    | `pnpm build` con `VITE_DIAGNOSTICO_URL`          |
+| `Dockerfile` etapa `build`    | `pnpm build`; el API no se hornea en el JS       |
 | `Dockerfile` etapa final      | nginx-unprivileged, usuario no root, puerto 8080 |
 | `nginx/default.conf.template` | SPA fallback + proxy `/migracion/` + `/healthz`  |
 | `docker-compose.yml`          | Mapea `4173:8080` y el upstream del API          |
@@ -69,8 +69,7 @@ docker compose up --build
 
 | Variable                   | Cuándo          | Ejemplo                            |
 | -------------------------- | --------------- | ---------------------------------- |
-| `VITE_DIAGNOSTICO_URL`     | Build (ARG)     | `/migracion/diagnostico`           |
-| `DIAGNOSTICO_API_UPSTREAM` | Runtime (nginx) | `http://host.docker.internal:8080` |
+| `DIAGNOSTICO_API_UPSTREAM` | Runtime (nginx y `pnpm dev`) | `http://host.docker.internal:8080/cm-api-internos` |
 
 `host.docker.internal` apunta a tu máquina. En Linux el compose ya agrega `host-gateway`. Si el API corre en otra red Docker, usa el nombre del servicio (`http://api-internos:8080`).
 

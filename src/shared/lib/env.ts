@@ -14,25 +14,13 @@ interface EnvConfig {
   readonly keycloakClientId: string;
 }
 
-const resolveMigrarGuiaUrl = (
-  explicitUrl?: string,
-  diagnosticoUrl?: string,
-): string => {
-  if (explicitUrl?.trim()) {
-    return explicitUrl.trim();
-  }
-  if (diagnosticoUrl?.trim()) {
-    return diagnosticoUrl.trim().replace(/\/diagnostico\/?$/, "/guia");
-  }
-  return "";
-};
+/** Rutas same-origin. nginx (prod) y Vite (dev) las enrutan a DIAGNOSTICO_API_UPSTREAM. */
+const DIAGNOSTICO_PATH = "/migracion/diagnostico";
+const MIGRAR_GUIA_PATH = "/migracion/guia";
 
 export const getEnv = (): EnvConfig => ({
-  diagnosticoUrl: (import.meta.env.VITE_DIAGNOSTICO_URL ?? "").trim(),
-  migrarGuiaUrl: resolveMigrarGuiaUrl(
-    import.meta.env.VITE_MIGRAR_GUIA_URL,
-    import.meta.env.VITE_DIAGNOSTICO_URL,
-  ),
+  diagnosticoUrl: DIAGNOSTICO_PATH,
+  migrarGuiaUrl: MIGRAR_GUIA_PATH,
   pubsubSubscription:
     (import.meta.env.VITE_PUBSUB_SUBSCRIPTION ?? "").trim() ||
     DEFAULT_PUBSUB_SUBSCRIPTION,

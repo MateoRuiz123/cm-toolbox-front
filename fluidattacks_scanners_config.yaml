@@ -8,6 +8,22 @@ sast:
   exclude:
     - node_modules/
     - dist/
+    - graphify-out/
+sca:
+  include:
+    - package.json
+    - pnpm-lock.yaml
+    - src/
+strict: true
+working_dir: .
+language: EN
+
+sast:
+  include:
+    - src/
+  exclude:
+    - node_modules/
+    - dist/
 
 sca:
   include:

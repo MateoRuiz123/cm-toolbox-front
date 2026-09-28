@@ -24,10 +24,10 @@ ARG VITE_KEYCLOAK_CLIENT_ID
 # Library y deja el resultado en el .env de la raíz del contexto, no en
 # env/azure.env. De ahí salen los valores de runtime de nginx, porque el
 # template despliega en Cloud Run sin variables de entorno.
-# Se extraen solo estas dos claves: cualquier otro contenido del .env local
+# Se extraen solo estas claves: cualquier otro contenido del .env local
 # de un desarrollador se descarta y no llega a la imagen final.
 RUN touch runtime.env \
-    && grep -E '^(DIAGNOSTICO_API_UPSTREAM|KEYCLOAK_UPSTREAM)=[^#[:space:]]' .env >> runtime.env 2>/dev/null || : \
+    && grep -E '^(DIAGNOSTICO_API_UPSTREAM|KEYCLOAK_UPSTREAM|LOGS_API_UPSTREAM)=[^#[:space:]]' .env >> runtime.env 2>/dev/null || : \
     && cat runtime.env
 
 RUN if [ -f env/azure.env ] && ! grep -Fq '#{' env/azure.env; then \
@@ -54,7 +54,7 @@ ENV PORT=8080
 # la imagen no debe traer URLs de ningún ambiente. Los resuelve
 # 04-load-runtime-env.envsh y los valida 05-validate-env.sh.
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
-ENV NGINX_ENVSUBST_FILTER="DIAGNOSTICO_API_UPSTREAM|KEYCLOAK_UPSTREAM|NGINX_LOCAL_RESOLVERS"
+ENV NGINX_ENVSUBST_FILTER="DIAGNOSTICO_API_UPSTREAM|KEYCLOAK_UPSTREAM|LOGS_API_UPSTREAM|NGINX_LOCAL_RESOLVERS"
 
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/04-load-runtime-env.envsh /docker-entrypoint.d/04-load-runtime-env.envsh

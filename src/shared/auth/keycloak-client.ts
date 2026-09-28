@@ -14,10 +14,13 @@ const crearKeycloakClient = (): Keycloak => {
       realm: env.keycloakRealm,
       clientId: env.keycloakClientId,
     })
-    setKeycloakInstance(kc, envKeycloak)
+    setKeycloakInstance(
+      kc as unknown as Parameters<typeof setKeycloakInstance>[0],
+      envKeycloak,
+    )
     return kc
   }
-  return getLoginKeycloak(envKeycloak)
+  return getLoginKeycloak(envKeycloak) as unknown as Keycloak
 }
 
 export const keycloakClient: Keycloak = crearKeycloakClient()

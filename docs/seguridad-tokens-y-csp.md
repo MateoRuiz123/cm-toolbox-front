@@ -19,10 +19,10 @@ En producción, [`nginx/default.conf.template`](../nginx/default.conf.template) 
 - `default-src 'self'`
 - `script-src 'self'`
 - `style-src 'self' 'unsafe-inline'` (requerido por estilos en línea de componentes)
-- `connect-src 'self' ${DIAGNOSTICO_API_UPSTREAM} ${KEYCLOAK_UPSTREAM}`
+- `connect-src 'self' ${KEYCLOAK_UPSTREAM}`
 - Cabeceras complementarias: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`
 
-`DIAGNOSTICO_API_UPSTREAM` y `KEYCLOAK_UPSTREAM` deben apuntar solo a hosts corporativos válidos; la validación de arranque impide valores mal formados o proxy recursivo.
+Diagnóstico (`/migracion/`) y el visor (`/logs-api/`) salen del navegador al mismo origen. nginx los reenvía a `DIAGNOSTICO_API_UPSTREAM` y `LOGS_API_UPSTREAM`, que no aparecen en el CSP ni en el bundle. Keycloak sí queda en `connect-src`: el login redirige el navegador al IdP. La validación de arranque impide upstreams mal formados o un proxy recursivo.
 
 ## Condiciones para una migración futura
 

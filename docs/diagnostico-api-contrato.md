@@ -6,7 +6,7 @@ Este documento describe el contrato HTTP que consume el front en `src/features/d
 
 | Campo | Valor |
 | ----- | ----- |
-| URL | `VITE_DIAGNOSTICO_URL` (ej. `.../migracion/diagnostico`) |
+| URL | `/migracion/diagnostico` (same-origin; el proxy añade el host) |
 | Método | `POST` |
 | Headers | `Content-Type: application/json` |
 | Timeout cliente | 120 s |
@@ -50,7 +50,7 @@ Si falta `message`, el cliente usa un mensaje genérico.
 
 | Campo | Valor |
 | ----- | ----- |
-| URL | `VITE_MIGRAR_GUIA_URL` o derivada reemplazando `/diagnostico` por `/guia` |
+| URL | `/migracion/guia` |
 | Método | `POST` |
 | Timeout cliente | 30 s |
 

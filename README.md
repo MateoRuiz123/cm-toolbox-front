@@ -52,8 +52,7 @@ En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_
 | Variable                   | Uso                                                                     |
 | -------------------------- | ----------------------------------------------------------------------- |
 | `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                 |
-| `VITE_DIAGNOSTICO_URL`     | URL completa de `POST .../migracion/diagnostico`                        |
-| `VITE_MIGRAR_GUIA_URL`     | Opcional. Si no está, se deriva reemplazando `/diagnostico` por `/guia` |
+| `DIAGNOSTICO_API_UPSTREAM` | Host del API de migración, solo en el servidor (Vite/nginx). El navegador llama `/migracion/diagnostico` y `/migracion/guia` |
 | `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)              |
 | `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo       |
 | `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                           |
@@ -63,10 +62,10 @@ En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_
 
 Las tres variables Keycloak opcionales solo aplican si se definen **las tres**; si no, `@itcoordinadora/cm-sigoo-temp-ui` resuelve el issuer según `VITE_KEYCLOAK_ENV`. Por eso no están en `env/azure.env`: un token `#{...}#` sin variable en la Library quedaría literal y construiría un cliente Keycloak inválido.
 
-Ejemplo con prefijo URI del API:
+Ejemplo para `pnpm dev`, en `.env` (no entra al bundle):
 
 ```bash
-VITE_DIAGNOSTICO_URL=http://localhost:8080/cm-api-internos/migracion/diagnostico
+DIAGNOSTICO_API_UPSTREAM=http://localhost:8080/cm-api-internos
 ```
 
 Timeout de diagnóstico: 120 s. Timeout de re-migración de una guía: 30 s.
@@ -91,18 +90,20 @@ Abre `http://localhost:4173`. El contenedor escucha `PORT` (default `8080`, el m
 
 `DIAGNOSTICO_API_UPSTREAM` es el host del API **incluyendo su prefijo URI y sin `/migracion`**; nginx le concatena el path de la petición. No hay ninguna URL de ambiente en el repo: el valor sale de la Azure DevOps Library.
 
+`LOGS_API_UPSTREAM` (opcional) es `esquema://host[:puerto]` de cm-logs-ms, **sin path**. El navegador solo ve `/logs-api/` (REST y WebSocket same-origin) y nginx lo proxea quitando el prefijo; sin valor, `/logs-api/` responde 503. En cm-logs-ms, `CORS_ORIGINS` debe incluir el origen público del toolbox y `TRUST_PROXY=1`. En `pnpm dev`, Vite aplica el mismo proxy hacia `LOGS_API_UPSTREAM` (default `http://localhost:8081`).
+
 Resolución del valor, de mayor a menor prioridad:
 
 1. Variable de entorno del contenedor (Cloud Run o `docker-compose.yml`, que en local usa `http://host.docker.internal:8080/cm-api-internos`).
 2. Default horneado en `/etc/nginx/runtime.env` durante el build y cargado por `nginx/04-load-runtime-env.envsh`.
 
-El paso 2 existe porque el template corporativo despliega en Cloud Run **sin** variables de entorno. El pipeline copia `env/azure.env` a un `.env` en la raíz y resuelve ahí los tokens contra la Library (`env/azure.env` conserva los `#{...}#`), así que el `Dockerfile` extrae de ese `.env` únicamente `DIAGNOSTICO_API_UPSTREAM` y `KEYCLOAK_UPSTREAM`. Cada token de `env/azure.env` debe tener su variable en la Library del ambiente.
+El paso 2 existe porque el template corporativo despliega en Cloud Run **sin** variables de entorno. El pipeline copia `env/azure.env` a un `.env` en la raíz y resuelve ahí los tokens contra la Library (`env/azure.env` conserva los `#{...}#`), así que el `Dockerfile` extrae de ese `.env` únicamente `DIAGNOSTICO_API_UPSTREAM`, `KEYCLOAK_UPSTREAM` y `LOGS_API_UPSTREAM`. Cada token de `env/azure.env` debe tener su variable en la Library del ambiente.
 
 `.dockerignore` no excluye `.env`. Solo esas dos claves se extraen y solo `runtime.env` llega a la imagen final.
 
 `nginx/05-validate-env.sh` aborta el arranque si la variable falta, no trae esquema `http(s)://`, termina en `/migracion` o apunta al propio contenedor (proxy recursivo → `502`).
 
-`VITE_DIAGNOSTICO_URL` y las variables Keycloak se hornean en el build. Si cambian, reconstruye la imagen.
+Las variables Keycloak se hornean en el build porque el navegador redirige al IdP. `DIAGNOSTICO_API_UPSTREAM` y `LOGS_API_UPSTREAM` no: el JavaScript solo ve rutas del mismo origen.
 
 ## Validación
 

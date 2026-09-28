@@ -175,10 +175,11 @@ export const HubPage = () => {
         />
 
         <AppCard
-          titulo="Monitoreo Pub/Sub"
-          descripcion="Supervisión de tópicos, reintentos de mensajes y consumo de eventos en suscriptores de migración."
-          estado="proximamente"
-          tags={['Suscripciones', 'Colas', 'Reintentos']}
+          titulo="Visor de Logs GKE"
+          descripcion="Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test)."
+          ruta="/logs"
+          estado="disponible"
+          tags={['Kubernetes', 'Troubleshooting', 'GCP']}
           icono="pubsub"
         />
 

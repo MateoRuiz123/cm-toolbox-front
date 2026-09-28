@@ -20,11 +20,6 @@ export const diagnosticarMigracion = async (
   externalSignal?: AbortSignal,
 ): Promise<DiagnosticoOutput> => {
   const url = env.diagnosticoUrl;
-
-  if (!url) {
-    throw new DiagnosticoApiError("Falta configurar VITE_DIAGNOSTICO_URL.");
-  }
-
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -93,15 +88,6 @@ export const reintentarMigracionGuia = async (
   codigoRemision: string,
 ): Promise<ReintentoResultado> => {
   const url = env.migrarGuiaUrl;
-
-  if (!url) {
-    return {
-      codigo_remision: codigoRemision,
-      success: false,
-      message: "Falta configurar URL del servicio de migración.",
-    };
-  }
-
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(
     () => controller.abort(),

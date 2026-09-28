@@ -17,6 +17,17 @@ describe('HubPage', () => {
     expect(html).toContain('Abrir herramienta')
   })
 
+  it('renderiza la tarjeta Visor de Logs GKE con enlace hacia /logs', () => {
+    const html = renderToString(
+      <MemoryRouter initialEntries={['/']}>
+        <HubPage />
+      </MemoryRouter>,
+    )
+
+    expect(html).toContain('Visor de Logs GKE')
+    expect(html).toContain('href="/logs"')
+  })
+
   it('muestra tarjetas de próximas aplicaciones en estado deshabilitado', () => {
     const html = renderToString(
       <MemoryRouter initialEntries={['/']}>
@@ -24,7 +35,7 @@ describe('HubPage', () => {
       </MemoryRouter>,
     )
 
-    expect(html).toContain('Monitoreo Pub/Sub')
+    expect(html).toContain('Auditoría de Facturación')
     expect(html).toContain('Próximamente')
     expect(html).toContain('En construcción')
   })

@@ -1,15 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { env, getEnv } from "../../../src/shared/lib/env";
 
 describe("env", () => {
-  it("resuelve migrarGuiaUrl a partir de diagnosticoUrl si no está definida explícitamente", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("usa rutas same-origin aunque el entorno traiga el host del API", () => {
+    vi.stubEnv(
+      "VITE_DIAGNOSTICO_URL",
+      "https://api.example/cm-api-internos/migracion/diagnostico",
+    );
+    vi.stubEnv("VITE_MIGRAR_GUIA_URL", "https://api.example/migracion/guia");
+
     const config = getEnv();
-    expect(config.diagnosticoUrl).toBeDefined();
-    if (config.diagnosticoUrl) {
-      expect(config.migrarGuiaUrl).toBe(
-        config.diagnosticoUrl.replace(/\/diagnostico\/?$/, "/guia"),
-      );
-    }
+    expect(config.diagnosticoUrl).toBe("/migracion/diagnostico");
+    expect(config.migrarGuiaUrl).toBe("/migracion/guia");
   });
 
   it("cuenta con subscription de Pub/Sub por defecto", () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   diagnosticarMigracion,
   reintentarMigracionGuia,
@@ -10,13 +10,6 @@ import {
 
 describe("reintentarMigracionGuia", () => {
   const originalFetch = globalThis.fetch;
-
-  beforeEach(() => {
-    vi.stubEnv(
-      "VITE_DIAGNOSTICO_URL",
-      "http://localhost:8080/cm-api-internos/migracion/diagnostico",
-    );
-  });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
@@ -48,9 +41,7 @@ describe("reintentarMigracionGuia", () => {
 
     const resultado = await reintentarMigracionGuia("30930009346");
 
-    expect(capturedUrl).toBe(
-      "http://localhost:8080/cm-api-internos/migracion/guia",
-    );
+    expect(capturedUrl).toBe("/migracion/guia");
     expect(resultado.success).toBe(true);
     expect(resultado.codigo_remision).toBe("30930009346");
 
@@ -137,13 +128,6 @@ describe("reintentarMigracionGuia", () => {
 describe("diagnosticarMigracion", () => {
   const originalFetch = globalThis.fetch;
 
-  beforeEach(() => {
-    vi.stubEnv(
-      "VITE_DIAGNOSTICO_URL",
-      "http://localhost:8080/cm-api-internos/migracion/diagnostico",
-    );
-  });
-
   afterEach(() => {
     globalThis.fetch = originalFetch;
     vi.unstubAllEnvs();
@@ -171,9 +155,7 @@ describe("diagnosticarMigracion", () => {
       codigos_despacho: [56727471],
     });
 
-    expect(capturedUrl).toBe(
-      "http://localhost:8080/cm-api-internos/migracion/diagnostico",
-    );
+    expect(capturedUrl).toBe("/migracion/diagnostico");
     expect(capturedInit?.method).toBe("POST");
     expect(capturedInit?.headers).toEqual({ "Content-Type": "application/json" });
     expect(JSON.parse(String(capturedInit?.body))).toEqual({
@@ -181,15 +163,6 @@ describe("diagnosticarMigracion", () => {
       codigos_despacho: [56727471],
     });
     expect(result).toEqual(diagnosticoEnvelopeFixture.data);
-  });
-
-  it("reporta una configuración faltante antes de llamar al backend", async () => {
-    vi.stubEnv("VITE_DIAGNOSTICO_URL", "");
-
-    await expect(
-      diagnosticarMigracion({ codigos_remision: ["20018012531"], codigos_despacho: [] }),
-    ).rejects.toThrow("Falta configurar VITE_DIAGNOSTICO_URL.");
-    expect(globalThis.fetch).toBe(originalFetch);
   });
 
   it("propaga el mensaje del API cuando devuelve error HTTP", async () => {

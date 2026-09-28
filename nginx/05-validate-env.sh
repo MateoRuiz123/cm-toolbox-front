@@ -27,6 +27,17 @@ case "$upstream" in
     ;;
 esac
 
+logs_upstream="${LOGS_API_UPSTREAM:-}"
+if [ -n "$logs_upstream" ]; then
+  case "$logs_upstream" in
+    http://* | https://*) ;;
+    *) fallar "LOGS_API_UPSTREAM debe incluir el esquema http:// o https:// (valor: '$logs_upstream')." ;;
+  esac
+  case "${logs_upstream#*://}" in
+    */*) fallar "LOGS_API_UPSTREAM solo admite esquema://host[:puerto], sin path (valor: '$logs_upstream')." ;;
+  esac
+fi
+
 # nginx escucha en $PORT dentro de este mismo contenedor: apuntar el upstream ahí
 # genera un proxy recursivo que termina en 502.
 case "$upstream" in

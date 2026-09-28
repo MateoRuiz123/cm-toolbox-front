@@ -14,6 +14,7 @@ export const AppHeader = () => {
 
   const obtenerTituloRuta = () => {
     if (path.startsWith('/diagnostico')) return 'Diagnóstico de migración'
+    if (path.startsWith('/logs')) return 'Visor de Logs GKE'
     if (path.startsWith('/privacidad')) return 'Política de Privacidad'
     if (path.startsWith('/terminos')) return 'Términos y Condiciones'
     if (path.startsWith('/contacto')) return 'Contacto y Soporte'
