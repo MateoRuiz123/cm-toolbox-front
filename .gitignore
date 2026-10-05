@@ -26,6 +26,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Design system local / no versionar
+/utils/
+
 graphify-out/
 coverage/
 reports/
