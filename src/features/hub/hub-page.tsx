@@ -134,14 +134,26 @@ const AppCard = ({
 
       <div className="pt-4 border-t border-[var(--border-default)]">
         {disponible && ruta ? (
-          <SmoothLinkScramble
-            to={ruta}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            accessibleLabel="Abrir herramienta"
-            before="Abrir "
-            scrambleText="herramienta"
-            trailing={HubArrowIcon}
-          />
+          /^https?:\/\//i.test(ruta) ? (
+            <a
+              href={ruta}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            >
+              <span>Abrir herramienta</span>
+              {HubArrowIcon}
+            </a>
+          ) : (
+            <SmoothLinkScramble
+              to={ruta}
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              accessibleLabel="Abrir herramienta"
+              before="Abrir "
+              scrambleText="herramienta"
+              trailing={HubArrowIcon}
+            />
+          )
         ) : (
           <button
             type="button"

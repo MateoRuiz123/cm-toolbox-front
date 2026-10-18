@@ -4,8 +4,9 @@ import { Route, Routes, useLocation } from 'react-router'
 import { HubPage } from '../features/hub/hub-page'
 import { NotFoundPage } from '../features/not-found/not-found-page'
 import { esAuthBypassActivo } from '../shared/auth/auth-bypass'
-import { AccessProvider } from '../shared/auth/access-context'
+import { AccessProvider, useAccess } from '../shared/auth/access-context'
 import { AppAccessGuard } from '../shared/auth/app-access-guard'
+import { DynamicAppRoutePage } from '../shared/auth/dynamic-app-route-page'
 import { AuthProvider } from '../shared/auth/auth-context'
 import { AuthGate } from '../shared/auth/auth-gate'
 import { keycloakClient } from '../shared/auth/keycloak-client'
@@ -54,8 +55,14 @@ const RouteFallback = () => (
   </div>
 )
 
+const STATIC_TOOL_IDS = new Set(['diagnostico', 'logs'])
+
 export const AppRoutes = () => {
   usePageTitle()
+  const { apps } = useAccess()
+  const dynamicInternalApps = apps.filter(
+    (app) => !STATIC_TOOL_IDS.has(app.id) && app.route.startsWith('/'),
+  )
 
   return (
     <Routes>
@@ -77,6 +84,13 @@ export const AppRoutes = () => {
           </AppAccessGuard>
         }
       />
+      {dynamicInternalApps.map((app) => (
+        <Route
+          key={app.id}
+          path={`${app.route.replace(/\/$/, '')}/*`}
+          element={<DynamicAppRoutePage app={app} />}
+        />
+      ))}
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/privacidad" element={<PrivacyPage />} />
       <Route path="/terminos" element={<TermsPage />} />

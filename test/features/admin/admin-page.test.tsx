@@ -7,6 +7,7 @@ import {
   type AccessContextValue,
 } from "../../../src/shared/auth/access-context";
 import { AppAccessGuard } from "../../../src/shared/auth/app-access-guard";
+import { DynamicAppRoutePage } from "../../../src/shared/auth/dynamic-app-route-page";
 import { buildFallbackAccessProfile } from "../../../src/shared/auth/access-types";
 
 const buildMockContext = (
@@ -170,5 +171,38 @@ describe("AdminPage y AppAccessGuard", () => {
         name: /Permiso requerido para esta herramienta/i,
       }),
     ).toBeInTheDocument();
+  });
+
+  it("DynamicAppRoutePage renderiza automáticamente la vista protegida para una herramienta registrada en BD", () => {
+    const customApp = {
+      id: "validador-tarifas",
+      name: "Validador de Tarifas",
+      description: "Validación automática de fletes.",
+      route: "/validador-tarifas",
+      icon: "auditoria" as const,
+      tags: ["Fletes", "SAP"],
+      status: "active" as const,
+      displayOrder: 40,
+      canAccess: true,
+      allowedActions: ["view", "export_csv"],
+    };
+
+    const ctx = buildMockContext({
+      apps: [customApp],
+      canAccessApp: (id) => id === "validador-tarifas",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/validador-tarifas"]}>
+        <AccessContext.Provider value={ctx}>
+          <DynamicAppRoutePage app={customApp} />
+        </AccessContext.Provider>
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: /Validador de Tarifas/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/✓ export_csv/i)).toBeInTheDocument();
   });
 });

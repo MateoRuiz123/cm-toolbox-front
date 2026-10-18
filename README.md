@@ -27,18 +27,18 @@ flowchart LR
 
 ## Rutas
 
-| Ruta           | Pantalla                                                         |
-| -------------- | ---------------------------------------------------------------- |
-| `/`            | Hub de aplicaciones (catálogo dinámico según rol y estado)       |
-| `/hub`         | Alias del hub (misma pantalla que `/`)                           |
-| `/diagnostico` | Consulta de remisiones/despachos, re-migración, lista/cuadrícula |
-| `/logs`        | Visor de logs GKE en tiempo real (Test y Producción)             |
+| Ruta           | Pantalla                                                            |
+| -------------- | ------------------------------------------------------------------- |
+| `/`            | Hub de aplicaciones (catálogo dinámico según rol y estado)          |
+| `/hub`         | Alias del hub (misma pantalla que `/`)                              |
+| `/diagnostico` | Consulta de remisiones/despachos, re-migración, lista/cuadrícula    |
+| `/logs`        | Visor de logs GKE en tiempo real (Test y Producción)                |
 | `/admin`       | Administración de usuarios, roles, herramientas del Hub y auditoría |
-| `/privacidad`  | Política de datos (Ley 1581)                                     |
-| `/terminos`    | Términos de uso interno                                          |
-| `/contacto`    | Datos institucionales y formulario                               |
-| `/gracias`     | Confirmación del formulario de contacto                          |
-| cualquier otra | 404                                                              |
+| `/privacidad`  | Política de datos (Ley 1581)                                        |
+| `/terminos`    | Términos de uso interno                                             |
+| `/contacto`    | Datos institucionales y formulario                                  |
+| `/gracias`     | Confirmación del formulario de contacto                             |
+| cualquier otra | 404                                                                 |
 
 El enrutado usa [React Router](https://reactrouter.com/) en modo declarativo (`BrowserRouter`, `Routes`, `Route`). Las páginas de herramienta y legales cargan con `lazy()` y `Suspense`.
 
@@ -56,18 +56,18 @@ En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_
 
 ### Variables
 
-| Variable                   | Uso                                                                     |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                 |
+| Variable                   | Uso                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                                                                      |
 | `DIAGNOSTICO_API_UPSTREAM` | Host del API de migración, solo en el servidor (Vite/nginx). El navegador llama `/migracion/diagnostico` y `/migracion/guia` |
-| `LOGS_API_UPSTREAM`        | Host de `cm-logs-ms` (default `http://localhost:8081`). El navegador llama `/logs-api/*` |
-| `ACCESS_API_UPSTREAM`      | Host de `cm-toolbox-access-ms` (default `http://localhost:8083`). El navegador llama `/access-api/*` |
-| `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)              |
-| `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo       |
-| `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                           |
-| `VITE_KEYCLOAK_CLIENT_ID`  | Opcional. Client del SPA; solo junto con las otras dos                  |
-| `VITE_KEYCLOAK_ENV`        | `dev` \| `test` \| `prod` (default `dev`)                               |
-| `VITE_AUTH_FORCE_KEYCLOAK` | Solo local. `true` fuerza Keycloak en `pnpm dev`                        |
+| `LOGS_API_UPSTREAM`        | Host de `cm-logs-ms` (default `http://localhost:8081`). El navegador llama `/logs-api/*`                                     |
+| `ACCESS_API_UPSTREAM`      | Host de `cm-toolbox-access-ms` (default `http://localhost:8083`). El navegador llama `/access-api/*`                         |
+| `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)                                                                   |
+| `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo                                                            |
+| `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                                                                                |
+| `VITE_KEYCLOAK_CLIENT_ID`  | Opcional. Client del SPA; solo junto con las otras dos                                                                       |
+| `VITE_KEYCLOAK_ENV`        | `dev` \| `test` \| `prod` (default `dev`)                                                                                    |
+| `VITE_AUTH_FORCE_KEYCLOAK` | Solo local. `true` fuerza Keycloak en `pnpm dev`                                                                             |
 
 Las tres variables Keycloak opcionales solo aplican si se definen **las tres**; si no, `@itcoordinadora/cm-sigoo-temp-ui` resuelve el issuer según `VITE_KEYCLOAK_ENV`. Por eso no están en `env/azure.env`: un token `#{...}#` sin variable en la Library quedaría literal y construiría un cliente Keycloak inválido.
 

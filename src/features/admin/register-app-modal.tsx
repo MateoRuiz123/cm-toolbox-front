@@ -40,6 +40,9 @@ export const RegisterAppModal = ({
 
   const [name, setName] = useState(initialApp?.name ?? "");
   const [appId, setAppId] = useState(initialApp?.id ?? "");
+  const [isExternalUrl, setIsExternalUrl] = useState<boolean>(() =>
+    /^https?:\/\//i.test(initialApp?.route ?? ""),
+  );
   const [route, setRoute] = useState(initialApp?.route ?? "/");
   const [autoSlug, setAutoSlug] = useState(!isEditing);
   const [description, setDescription] = useState(initialApp?.description ?? "");
@@ -72,7 +75,9 @@ export const RegisterAppModal = ({
     if (autoSlug && !isEditing) {
       const slug = slugifyAppId(value);
       setAppId(slug);
-      setRoute(slug ? `/${slug}` : "/");
+      if (!isExternalUrl) {
+        setRoute(slug ? `/${slug}` : "/");
+      }
     }
   };
 
@@ -125,9 +130,17 @@ export const RegisterAppModal = ({
     setErrorMsg(null);
 
     const cleanId = appId.trim().toLowerCase();
-    const cleanRoute = route.trim().startsWith("/")
-      ? route.trim()
-      : `/${route.trim()}`;
+    const rawRoute = route.trim();
+    const cleanRoute = isExternalUrl
+      ? rawRoute
+      : rawRoute.startsWith("/")
+        ? rawRoute
+        : `/${rawRoute}`;
+
+    if (isExternalUrl && !/^https?:\/\/[^\s]+$/i.test(cleanRoute)) {
+      setErrorMsg("Ingresa una URL externa válida que comience con https:// o http://.");
+      return;
+    }
 
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(cleanId)) {
       setErrorMsg(
@@ -250,22 +263,63 @@ export const RegisterAppModal = ({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <label className="block sm:col-span-2">
-              <span className="text-xs font-bold text-[var(--text-body)]">
-                Ruta en el Front (React Router)
-              </span>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--text-body)]">
+                  Destino al abrir la herramienta
+                </span>
+                <div className="inline-flex rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-0.5 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExternalUrl(false);
+                      if (/^https?:\/\//i.test(route)) {
+                        setRoute(appId ? `/${appId}` : "/");
+                      }
+                    }}
+                    className={`rounded-[var(--radius-pill)] px-2 py-0.5 font-bold cursor-pointer ${
+                      !isExternalUrl
+                        ? "bg-[var(--color-primary)] text-white"
+                        : "text-[var(--text-muted)]"
+                    }`}
+                  >
+                    Ruta interna
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExternalUrl(true);
+                      if (!/^https?:\/\//i.test(route)) {
+                        setRoute("https://");
+                      }
+                    }}
+                    className={`rounded-[var(--radius-pill)] px-2 py-0.5 font-bold cursor-pointer ${
+                      isExternalUrl
+                        ? "bg-[var(--color-primary)] text-white"
+                        : "text-[var(--text-muted)]"
+                    }`}
+                  >
+                    URL externa
+                  </button>
+                </div>
+              </div>
               <input
                 type="text"
                 required
+                aria-label="Ruta o URL de la herramienta"
                 value={route}
                 onChange={(e) => {
                   setAutoSlug(false);
                   setRoute(e.target.value);
                 }}
-                placeholder="/validador-tarifas"
+                placeholder={
+                  isExternalUrl
+                    ? "https://mi-herramienta.coordinadora.com"
+                    : "/validador-tarifas"
+                }
                 className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 font-mono text-sm text-[var(--text-body)]"
               />
-            </label>
+            </div>
 
             <label className="block">
               <span className="text-xs font-bold text-[var(--text-body)]">
@@ -438,19 +492,6 @@ export const RegisterAppModal = ({
                 + Añadir función interna
               </button>
             </div>
-          </div>
-
-          <div className="rounded-[var(--radius-2)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)]/40 p-3.5 text-xs">
-            <span className="block font-bold text-[var(--color-primary)]">
-              💡 ¿Cómo conectarla en el código del Front?
-            </span>
-            <p className="mt-1 text-[var(--text-muted)]">
-              Al guardar aquí, la tarjeta ya aparece en el Hub y en los modales
-              de permisos. En <code>src/app/app.tsx</code> envuelve tu ruta así:
-            </p>
-            <pre className="mt-1.5 overflow-x-auto rounded-[var(--radius-1)] bg-[var(--surface-card)] p-2 font-mono text-[11px] text-[var(--text-body)]">
-              {`<Route path="${route || "/nueva"}" element={<AppAccessGuard appId="${appId || "nueva"}"><MiPagina /></AppAccessGuard>} />`}
-            </pre>
           </div>
 
           <footer className="flex items-center justify-end gap-3 border-t border-[var(--border-default)] pt-4">
