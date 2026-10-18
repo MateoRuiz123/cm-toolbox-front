@@ -108,10 +108,16 @@ Especificación normativa de comunicación entre `cm-toolbox-front` y `cm-toolbo
 
 ---
 
-### 3.3. `GET /v1/admin/apps`
+### 3.3. `GET /v1/admin/apps` y `POST /v1/admin/apps`
 
-- **Auth:** `admin` o `sub_admin`.
-- ** Propósito:** Obtener la lista de aplicaciones, su estado actual, las acciones configurables de cada una y qué permisos vienen por defecto en cada rol.
+- **`GET /v1/admin/apps`:** (`admin` o `sub_admin`) Lista todas las herramientas y sus acciones configurables.
+- **`POST /v1/admin/apps`:** (Exclusivo `admin`) Registra o edita una herramienta en el catálogo (`id`, `name`, `description`, `route` interna `/...` o externa `https://...`, `icon`, `tags`, `status`, `displayOrder` y `actions`).
+
+### 3.4. `GET /v1/admin/roles`, `PUT /v1/admin/roles/:roleId` y `DELETE /v1/admin/roles/:roleId`
+
+- **`GET /v1/admin/roles`:** (`admin` o `sub_admin`) Lista todas las plantillas de roles, su `hierarchyLevel`, `usersCount` y `defaultPermissions`.
+- **`PUT /v1/admin/roles/:roleId`:** (Exclusivo `admin`) Crea o actualiza un rol y su matriz de permisos por defecto en `role_default_permissions`.
+- **`DELETE /v1/admin/roles/:roleId`:** (Exclusivo `admin`) Elimina un rol personalizado (protege los roles base `admin` y `user`, y reasigna los usuarios afectados al rol `user`).
 - **Respuesta `200 OK`:**
 
 ```json

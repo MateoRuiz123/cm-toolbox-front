@@ -13,8 +13,8 @@ Documento técnico **detallado** del microservicio de autorización, catálogo d
 | Scripts SQL base       | `/home/mateor/Escritorio/local/cm-toolbox-front/sql/` (y copia sincronizada en `cm-toolbox-access-ms/sql/`) |
 | Puerto por defecto     | `8083` (evita choque con API internos `:8080`, logs `:8081` y docs `:8082`)                                 |
 | Consumidor primario    | `cm-toolbox-front` vía proxy `/access-api/`                                                                 |
-| Arquitectura           | Hexagonal (Dominio, Aplicación, Infraestructura, Setup) + InversifyJS + Zod                                 |
-| Persistencia           | PostgreSQL 16 (`pg`) + Redis 7 (`ioredis`)                                                                  |
+| Arquitectura           | Hexagonal (`@domain`, `@application`, `@infrastructure`, `@configuration`, `@util`) + Fastify 5 + InversifyJS + Joi |
+| Persistencia           | PostgreSQL 16 (`pg` en puerto local `:5433`) + Redis 7 (`redis` en puerto local `:6380`)                            |
 
 ---
 

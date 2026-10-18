@@ -142,16 +142,20 @@ Pasar de un portal donde todas las tarjetas del Hub están hardcodeadas y cualqu
 src/
 ├── shared/
 │   └── auth/
-│       ├── access-types.ts               # Esquemas Zod y tipos TS (EffectiveUserAccess, RoleId, AppStatus)
+│       ├── access-types.ts               # Tipos TS (EffectiveUserAccess, RoleId, AppStatus)
 │       ├── access-context.tsx            # AccessProvider, hook useAccess() y fallback dev
 │       ├── access-api.ts                 # Cliente HTTP para /access-api/v1/me/access
-│       └── app-access-guard.tsx          # Componente <AppAccessGuard appId="..."> para rutas
+│       ├── app-access-guard.tsx          # Componente <AppAccessGuard appId="..."> para rutas
+│       └── dynamic-app-route-page.tsx    # Vista institucional y guard automático para nuevas herramientas internas
 └── features/
     └── admin/
-        ├── admin-page.tsx                # Página principal /admin con pestañas (Usuarios, Apps, Auditoría)
-        ├── users-permissions-tab.tsx     # Tabla de usuarios, buscador y filtros
-        ├── user-permissions-modal.tsx    # Modal para crear/editar usuario, rol y permisos por app
-        ├── apps-status-tab.tsx           # Panel de kill-switch (active / maintenance / disabled)
+        ├── admin-page.tsx                # Página principal /admin con KPIs y 4 pestañas
+        ├── users-permissions-tab.tsx     # Tabla de usuarios, buscador, filtros y chips de acceso efectivo
+        ├── user-permissions-modal.tsx    # Modal interactivo en 2 niveles (Acceso a herramienta + Sub-acciones + Vista previa)
+        ├── roles-tab.tsx                 # Pestaña de plantillas de roles
+        ├── role-form-modal.tsx           # Modal para crear/editar/eliminar roles y sus permisos por defecto
+        ├── apps-status-tab.tsx           # Panel de aplicaciones del Hub y selector de estado en caliente
+        ├── register-app-modal.tsx        # Modal para registrar/editar herramientas (Ruta interna o URL externa)
         ├── audit-logs-tab.tsx            # Tabla de auditoría con visor de diff JSON
         └── api/
             └── admin-api.ts              # Cliente HTTP para /access-api/v1/admin/*

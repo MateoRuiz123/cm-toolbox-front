@@ -16,9 +16,9 @@ Guía paso a paso para levantar, probar e inspeccionar todo el sistema de roles,
 │   │   └── 003_views_and_queries.sql # Vista v_effective_user_app_permissions
 │   └── docs/rbac-feature/            # Esta documentación técnica
 └── cm-toolbox-access-ms/             # Backend RBAC (puerto :8083)
-    ├── docker-compose.yml            # PostgreSQL 16 (:5432) + Redis 7 (:6379)
+    ├── docker-compose.yml            # PostgreSQL 16 (:5433, user/pass: toolbox/toolbox) + Redis 7 (:6380)
     ├── sql/                          # Copia montada automáticamente en Postgres
-    └── src/                          # Código fuente Hexagonal + Inversify
+    └── src/                          # Código fuente Hexagonal + Fastify + Inversify
 ```
 
 ---

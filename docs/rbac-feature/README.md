@@ -62,10 +62,10 @@ Luego implementa la integración en cm-toolbox-front respetando front.md, el sis
 
 ## Estado del paquete
 
-| Entregable                                            | Estado    |
-| ----------------------------------------------------- | --------- |
-| Scripts de Base de Datos (`sql/001`, `002`, `003`)    | Listo     |
-| Documentación técnica (`docs/rbac-feature/*`)         | Listo     |
-| Esqueleto repo `cm-toolbox-access-ms` + Workspace     | Listo     |
-| Implementación completa Back (`cm-toolbox-access-ms`) | Pendiente |
-| Implementación completa Front (`cm-toolbox-front`)    | Pendiente |
+| Entregable                                            | Estado |
+| ----------------------------------------------------- | ------ |
+| Scripts de Base de Datos (`sql/001`, `002`, `003`)    | Listo  |
+| Documentación técnica (`docs/rbac-feature/*`)         | Listo  |
+| Esqueleto repo `cm-toolbox-access-ms` + Workspace     | Listo  |
+| Implementación completa Back (`cm-toolbox-access-ms`) | Listo  |
+| Implementación completa Front (`cm-toolbox-front`)    | Listo  |
