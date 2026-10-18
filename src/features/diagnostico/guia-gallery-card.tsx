@@ -7,6 +7,7 @@ interface GuiaGalleryCardProps {
   guia: GuiaDiagnostico
   item: ItemDiagnostico
   selected: boolean
+  canRemigrate?: boolean
   reintentoState?: ReintentoItemState
   onToggleSelect: (selected: boolean) => void
   onReintentar: (codigoRemision: string) => void
@@ -18,6 +19,7 @@ export const GuiaGalleryCard = ({
   guia,
   item,
   selected,
+  canRemigrate = true,
   reintentoState,
   onToggleSelect,
   onReintentar,
@@ -122,7 +124,12 @@ export const GuiaGalleryCard = ({
           <div className="mt-2.5">
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || !canRemigrate}
+              title={
+                !canRemigrate
+                  ? 'Tu perfil tiene acceso de solo lectura. No tienes permiso para re-encolar guías.'
+                  : undefined
+              }
               onClick={handleReintentarClick}
               className={`flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
                 isSuccess

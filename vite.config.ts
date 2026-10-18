@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
   const port = Number(env.PORT || process.env.PORT) || 3000;
   const logsApiUpstream =
     env.LOGS_API_UPSTREAM || process.env.LOGS_API_UPSTREAM || "http://localhost:8081";
+  const accessApiUpstream =
+    env.ACCESS_API_UPSTREAM || process.env.ACCESS_API_UPSTREAM || "http://localhost:8083";
   const diagnosticoUpstream = resolveDiagnosticoUpstream(env);
   const proxy = {
     "/migracion": {
@@ -40,6 +42,11 @@ export default defineConfig(({ mode }) => {
       changeOrigin: true,
       ws: true,
       rewrite: (requestPath: string) => requestPath.replace(/^\/logs-api/, ""),
+    },
+    "/access-api": {
+      target: accessApiUpstream,
+      changeOrigin: true,
+      rewrite: (requestPath: string) => requestPath.replace(/^\/access-api/, ""),
     },
   };
 

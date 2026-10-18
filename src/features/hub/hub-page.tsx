@@ -2,15 +2,18 @@ import {
   SmoothLinkScramble,
   SmoothTitleAccent,
 } from '@/shared/ui/smoothui'
+import { useAccess } from '../../shared/auth/access-context'
+import type { AppIconType, AppStatus } from '../../shared/auth/access-types'
 import { FolderComponent } from './folder-component'
 
 interface AppCardProps {
   readonly titulo: string
   readonly descripcion: string
   readonly ruta?: string
-  readonly estado: 'disponible' | 'proximamente'
+  readonly status: AppStatus
+  readonly canAccess: boolean
   readonly tags: readonly string[]
-  readonly icono: 'diagnostico' | 'pubsub' | 'auditoria'
+  readonly icono: AppIconType
 }
 
 const renderIcono = (tipo: AppCardProps['icono']) => {
@@ -43,8 +46,45 @@ const HubArrowIcon = (
   </svg>
 )
 
-const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProps) => {
-  const disponible = estado === 'disponible' && Boolean(ruta)
+const AppCard = ({
+  titulo,
+  descripcion,
+  ruta,
+  status,
+  canAccess,
+  tags,
+  icono,
+}: AppCardProps) => {
+  const disponible = canAccess && Boolean(ruta) && status !== 'disabled'
+  const isMaintenance = status === 'maintenance'
+  const isRestricted = status === 'active' && !canAccess
+
+  const obtenerBadgeLabel = () => {
+    if (status === 'disabled') return 'Próximamente'
+    if (isMaintenance && canAccess) return 'Mantenimiento (Admin)'
+    if (isMaintenance) return 'En mantenimiento'
+    if (isRestricted) return 'Acceso restringido'
+    return 'Disponible'
+  }
+
+  const obtenerBadgeClass = () => {
+    if (status === 'disabled') {
+      return 'border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)]'
+    }
+    if (isMaintenance) {
+      return 'border border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)] text-[var(--state-warning)]'
+    }
+    if (isRestricted) {
+      return 'border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] text-[var(--state-error)]'
+    }
+    return 'border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] text-[var(--state-success)]'
+  }
+
+  const obtenerCtaDeshabilitadoLabel = () => {
+    if (status === 'disabled') return 'En construcción'
+    if (isMaintenance) return 'En mantenimiento'
+    return 'Permiso requerido'
+  }
 
   return (
     <div
@@ -67,13 +107,9 @@ const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProp
             {renderIcono(icono)}
           </div>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
-              disponible
-                ? 'border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] text-[var(--state-success)]'
-                : 'border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)]'
-            }`}
+            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${obtenerBadgeClass()}`}
           >
-            {disponible ? 'Disponible' : 'Próximamente'}
+            {obtenerBadgeLabel()}
           </span>
         </div>
 
@@ -112,7 +148,7 @@ const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProp
             disabled
             className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-disabled)] cursor-not-allowed"
           >
-            <span>En construcción</span>
+            <span>{obtenerCtaDeshabilitadoLabel()}</span>
           </button>
         )}
       </div>
@@ -121,6 +157,9 @@ const AppCard = ({ titulo, descripcion, ruta, estado, tags, icono }: AppCardProp
 }
 
 export const HubPage = () => {
+  const { apps, canAccessApp } = useAccess()
+  const puedeAbrirDiagnostico = canAccessApp('diagnostico')
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-xs">
@@ -141,14 +180,16 @@ export const HubPage = () => {
             Herramientas operativas y utilitarios para diagnóstico, supervisión y soporte técnico en la migración de guías y despachos entre AGW y CM.
           </p>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-            <SmoothLinkScramble
-              to="/diagnostico"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] shadow-xs transition hover:bg-[var(--color-primary-hover)]"
-              accessibleLabel="Abrir Diagnóstico"
-              before="Abrir "
-              scrambleText="Diagnóstico"
-              trailing={HubArrowIcon}
-            />
+            {puedeAbrirDiagnostico && (
+              <SmoothLinkScramble
+                to="/diagnostico"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] shadow-xs transition hover:bg-[var(--color-primary-hover)]"
+                accessibleLabel="Abrir Diagnóstico"
+                before="Abrir "
+                scrambleText="Diagnóstico"
+                trailing={HubArrowIcon}
+              />
+            )}
             <SmoothLinkScramble
               to="/contacto"
               className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
@@ -165,31 +206,18 @@ export const HubPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AppCard
-          titulo="Diagnóstico de Migración"
-          descripcion="Auditoría integral y trazabilidad de remisiones y despachos en el flujo hacia CM. Permite evaluar checks y reintentar guías."
-          ruta="/diagnostico"
-          estado="disponible"
-          tags={['Remisiones', 'Despachos', 'Re-migración']}
-          icono="diagnostico"
-        />
-
-        <AppCard
-          titulo="Visor de Logs GKE"
-          descripcion="Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test)."
-          ruta="/logs"
-          estado="disponible"
-          tags={['Kubernetes', 'Troubleshooting', 'GCP']}
-          icono="pubsub"
-        />
-
-        <AppCard
-          titulo="Auditoría de Facturación"
-          descripcion="Validación de coherencia en remesas facturadas frente a registros maestros de despachos."
-          estado="proximamente"
-          tags={['Facturas', 'Consistencia', 'Auditoría']}
-          icono="auditoria"
-        />
+        {apps.map((app) => (
+          <AppCard
+            key={app.id}
+            titulo={app.name}
+            descripcion={app.description}
+            ruta={app.route}
+            status={app.status}
+            canAccess={app.canAccess}
+            tags={app.tags}
+            icono={app.icon}
+          />
+        ))}
       </div>
     </div>
   )

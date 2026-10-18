@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { useAccess } from '../../shared/auth/access-context'
 import { reintentarMigracionGuia } from './api/diagnostico-api'
 import {
   guardarPreferenciaVista,
@@ -52,6 +53,7 @@ interface GuiaCardProps {
   item: ItemDiagnostico
   open: boolean
   selected: boolean
+  canRemigrate: boolean
   reintentoState?: ReintentoItemState
   onToggle: (open: boolean) => void
   onToggleSelect: (selected: boolean) => void
@@ -62,6 +64,7 @@ const GuiaCard = ({
   guia,
   open,
   selected,
+  canRemigrate,
   reintentoState,
   onToggle,
   onToggleSelect,
@@ -123,7 +126,12 @@ const GuiaCard = ({
         {esNoOk && (
           <button
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || !canRemigrate}
+            title={
+              !canRemigrate
+                ? 'Tu perfil tiene acceso de solo lectura. No tienes permiso para re-encolar guías.'
+                : undefined
+            }
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -167,7 +175,12 @@ const GuiaCard = ({
           <div className="mt-3 block sm:hidden">
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || !canRemigrate}
+              title={
+                !canRemigrate
+                  ? 'Tu perfil tiene acceso de solo lectura. No tienes permiso para re-encolar guías.'
+                  : undefined
+              }
               onClick={() => onReintentar(guia.codigo_remision)}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)] transition-colors"
             >
@@ -224,6 +237,8 @@ interface ResultadoDiagnosticoProps {
 
 /** Presenta el resultado del lote agrupado por ítem y guía según SIGO Droop. */
 export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagnosticoProps) => {
+  const { canPerformAction } = useAccess()
+  const canRemigrate = canPerformAction('diagnostico', 'remigrate')
   const searchInputId = useId()
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<ModoVista>(obtenerPreferenciaVista)
@@ -599,10 +614,15 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           {/* Botón de reintento masivo en naranja Coordinadora */}
           <button
             type="button"
-            disabled={selectedCodigos.size === 0 || batchLoading}
+            disabled={selectedCodigos.size === 0 || batchLoading || !canRemigrate}
+            title={
+              !canRemigrate
+                ? 'Tu perfil tiene acceso de solo lectura. No tienes permiso para re-encolar guías.'
+                : undefined
+            }
             onClick={handleReintentarSeleccionadas}
             className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-              selectedCodigos.size === 0 || batchLoading
+              selectedCodigos.size === 0 || batchLoading || !canRemigrate
                 ? 'border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-disabled)] opacity-50 cursor-not-allowed'
                 : 'bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)] shadow-sm'
             }`}
@@ -693,6 +713,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                       item={item}
                       open={abiertas.has(id)}
                       selected={selectedCodigos.has(guia.codigo_remision)}
+                      canRemigrate={canRemigrate}
                       reintentoState={reintentosState[guia.codigo_remision]}
                       onToggle={(open) => alternarAcordeon(id, open)}
                       onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
@@ -737,6 +758,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                           guia={guia}
                           item={item}
                           selected={selectedCodigos.has(guia.codigo_remision)}
+                          canRemigrate={canRemigrate}
                           reintentoState={reintentosState[guia.codigo_remision]}
                           onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
                           onReintentar={handleReintentarIndividual}
@@ -764,6 +786,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                           guia={guia}
                           item={item}
                           selected={selectedCodigos.has(guia.codigo_remision)}
+                          canRemigrate={canRemigrate}
                           reintentoState={reintentosState[guia.codigo_remision]}
                           onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
                           onReintentar={handleReintentarIndividual}
@@ -784,6 +807,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
         <GuiaDetalleModal
           guia={modalGuia.guia}
           item={modalGuia.item}
+          canRemigrate={canRemigrate}
           reintentoState={reintentosState[modalGuia.guia.codigo_remision]}
           onReintentar={handleReintentarIndividual}
           onClose={() => setModalGuia(null)}

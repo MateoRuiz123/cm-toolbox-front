@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { SmoothLinkScramble, SmoothTitleAccent } from "@/shared/ui/smoothui";
+import { useAccess } from "../../shared/auth/access-context";
 import {
   authCluster,
   fetchNamespaces,
@@ -55,6 +56,8 @@ const FormErrorIcon = () => (
 );
 
 export const LogsPage = () => {
+  const { canPerformAction } = useAccess();
+  const canViewProd = canPerformAction("logs", "view_prod");
   const [env, setEnv] = useState<LogEnvironment | null>(null);
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState("");
@@ -274,6 +277,7 @@ export const LogsPage = () => {
                   >
                     {(["prod", "test"] as const).map((option) => {
                       const isProd = option === "prod";
+                      const isDisabled = isProd && !canViewProd;
                       const selected = env === option;
                       return (
                         <button
@@ -281,8 +285,14 @@ export const LogsPage = () => {
                           type="button"
                           role="radio"
                           aria-checked={selected}
+                          disabled={isDisabled}
+                          title={
+                            isDisabled
+                              ? 'Requiere el permiso "Ver logs de Producción" (view_prod).'
+                              : undefined
+                          }
                           onClick={() => setEnv(option)}
-                          className={`rounded-[var(--radius-1)] border px-3 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
+                          className={`rounded-[var(--radius-1)] border px-3 py-2.5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:cursor-not-allowed disabled:opacity-50 ${
                             selected
                               ? isProd
                                 ? "border-[var(--state-error)] bg-[var(--alert-error-bg)] text-[var(--state-error)]"

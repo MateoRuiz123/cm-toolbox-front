@@ -32,5 +32,6 @@ done < "$archivo"
 # add_header por variable desconocida. El comodín es el comportamiento histórico.
 [ -n "${KEYCLOAK_UPSTREAM:-}" ] || export KEYCLOAK_UPSTREAM="https://*"
 
-# Opcional: sin valor, /logs-api/ responde 503 en lugar de fallar el arranque.
+# Opcional: sin valor, /logs-api/ y /access-api/ responden 503 en lugar de fallar el arranque.
 export LOGS_API_UPSTREAM="${LOGS_API_UPSTREAM:-}"
+export ACCESS_API_UPSTREAM="${ACCESS_API_UPSTREAM:-}"

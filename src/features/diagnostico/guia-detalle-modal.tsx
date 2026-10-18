@@ -7,6 +7,7 @@ import { CheckRow } from './check-row'
 interface GuiaDetalleModalProps {
   guia: GuiaDiagnostico
   item: ItemDiagnostico
+  canRemigrate?: boolean
   reintentoState?: ReintentoItemState
   onReintentar?: (codigoRemision: string) => void
   onClose: () => void
@@ -16,6 +17,7 @@ interface GuiaDetalleModalProps {
 export const GuiaDetalleModal = ({
   guia,
   item,
+  canRemigrate = true,
   reintentoState,
   onReintentar,
   onClose,
@@ -192,8 +194,13 @@ export const GuiaDetalleModal = ({
               <button
                 type="button"
                 onClick={() => onReintentar(guia.codigo_remision)}
-                disabled={isLoading}
-                className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-accent-contrast)] shadow-sm transition hover:bg-[var(--color-accent-hover)] disabled:cursor-wait disabled:opacity-60"
+                disabled={isLoading || !canRemigrate}
+                title={
+                  !canRemigrate
+                    ? 'Tu perfil tiene acceso de solo lectura. No tienes permiso para re-encolar guías.'
+                    : undefined
+                }
+                className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-accent-contrast)] shadow-sm transition hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading && (
                   <span aria-hidden="true" className="size-3 animate-spin rounded-full border-2 border-current/30 border-t-current" />

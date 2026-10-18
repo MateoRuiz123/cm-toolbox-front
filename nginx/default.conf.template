@@ -60,6 +60,24 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Control de acceso RBAC y estado de aplicaciones: REST hacia cm-toolbox-access-ms.
+    location /access-api/ {
+        set $access_api "${ACCESS_API_UPSTREAM}";
+        if ($access_api = "") {
+            return 503;
+        }
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+        rewrite ^/access-api/(.*)$ /$1 break;
+        proxy_pass $access_api;
+        proxy_http_version 1.1;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

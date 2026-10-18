@@ -4,6 +4,8 @@ import { Route, Routes, useLocation } from 'react-router'
 import { HubPage } from '../features/hub/hub-page'
 import { NotFoundPage } from '../features/not-found/not-found-page'
 import { esAuthBypassActivo } from '../shared/auth/auth-bypass'
+import { AccessProvider } from '../shared/auth/access-context'
+import { AppAccessGuard } from '../shared/auth/app-access-guard'
 import { AuthProvider } from '../shared/auth/auth-context'
 import { AuthGate } from '../shared/auth/auth-gate'
 import { keycloakClient } from '../shared/auth/keycloak-client'
@@ -19,6 +21,10 @@ const DiagnosticoPage = lazy(() =>
 
 const LogsPage = lazy(() =>
   import('../features/logs/logs-page').then((m) => ({ default: m.LogsPage })),
+)
+
+const AdminPage = lazy(() =>
+  import('../features/admin/admin-page').then((m) => ({ default: m.AdminPage })),
 )
 
 const ContactPage = lazy(() =>
@@ -55,8 +61,23 @@ export const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<HubPage />} />
       <Route path="/hub" element={<HubPage />} />
-      <Route path="/diagnostico/*" element={<DiagnosticoPage />} />
-      <Route path="/logs" element={<LogsPage />} />
+      <Route
+        path="/diagnostico/*"
+        element={
+          <AppAccessGuard appId="diagnostico">
+            <DiagnosticoPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/logs"
+        element={
+          <AppAccessGuard appId="logs">
+            <LogsPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="/privacidad" element={<PrivacyPage />} />
       <Route path="/terminos" element={<TermsPage />} />
       <Route path="/contacto" element={<ContactPage />} />
@@ -72,24 +93,26 @@ const AppShell = () => {
 
   return (
     <AuthProvider>
-      <AuthGate>
-        <div
-          className={`flex min-h-screen flex-col bg-[var(--surface-app)] text-[var(--text-body)] ${
-            isFullHeightTool ? 'lg:h-dvh lg:min-h-0 lg:overflow-hidden' : ''
-          }`}
-        >
-          <AppHeader />
-          <main className={isFullHeightTool ? 'flex-1 lg:min-h-0 lg:overflow-hidden' : 'flex-1'}>
-            <ErrorBoundary>
-              <Suspense fallback={<RouteFallback />}>
-                <AppRoutes />
-              </Suspense>
-            </ErrorBoundary>
-          </main>
-          {!isFullHeightTool && <AppFooter />}
-          <CookieBanner />
-        </div>
-      </AuthGate>
+      <AccessProvider>
+        <AuthGate>
+          <div
+            className={`flex min-h-screen flex-col bg-[var(--surface-app)] text-[var(--text-body)] ${
+              isFullHeightTool ? 'lg:h-dvh lg:min-h-0 lg:overflow-hidden' : ''
+            }`}
+          >
+            <AppHeader />
+            <main className={isFullHeightTool ? 'flex-1 lg:min-h-0 lg:overflow-hidden' : 'flex-1'}>
+              <ErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
+                  <AppRoutes />
+                </Suspense>
+              </ErrorBoundary>
+            </main>
+            {!isFullHeightTool && <AppFooter />}
+            <CookieBanner />
+          </div>
+        </AuthGate>
+      </AccessProvider>
     </AuthProvider>
   )
 }

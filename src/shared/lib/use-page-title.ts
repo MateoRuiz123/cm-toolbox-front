@@ -28,6 +28,11 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
     description:
       "Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test) para troubleshooting operativo.",
   },
+  "/admin": {
+    title: "Administración y Permisos | Coordinadora Toolbox",
+    description:
+      "Gobierno de roles jerárquicos, permisos granulares por herramienta, estado de aplicaciones y bitácora de auditoría.",
+  },
   "/contacto": {
     title: "Contacto y Soporte TI | Coordinadora Mercantil",
     description:

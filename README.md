@@ -2,9 +2,9 @@
 
 Portal interno de herramientas de apoyo para migración de guias y despachos (AGW → CM). El hub en `/` agrupa apps; la primera disponible es Diagnóstico de migración.
 
-Stack: React 19, Vite, TypeScript, Tailwind CSS v4, Keycloak (`keycloak-js` 26.1.5), SIGO Droop Design System.
+Stack: React 19, Vite, TypeScript, Tailwind CSS v4, Keycloak (`keycloak-js` 26.2.4), SIGO Droop Design System.
 
-Versión: `1.6.0`.
+Versión: `1.9.0`.
 
 ## Arquitectura
 
@@ -12,21 +12,28 @@ Versión: `1.6.0`.
 flowchart LR
   Browser --> AuthGate
   AuthGate -->|sin sesion| Login[Login Google Keycloak]
-  AuthGate -->|sesion| ReactRouter[React Router]
+  AuthGate -->|sesion| AccessProvider[AccessProvider /access-api]
+  AccessProvider --> ReactRouter[React Router + AppAccessGuard]
   ReactRouter --> Hub["/ /hub"]
   ReactRouter --> Diag["/diagnostico"]
+  ReactRouter --> Logs["/logs"]
+  ReactRouter --> Admin["/admin (RBAC)"]
   ReactRouter --> Legal["/privacidad /terminos /contacto"]
   Diag -->|POST diagnostico| ApiInternos[cm-api-internos]
   Diag -->|POST migracion/guia| ApiInternos
+  Logs -->|REST / WS| LogsMs[cm-logs-ms]
+  Admin -->|REST /v1/admin/*| AccessMs[cm-toolbox-access-ms]
 ```
 
 ## Rutas
 
 | Ruta           | Pantalla                                                         |
 | -------------- | ---------------------------------------------------------------- |
-| `/`            | Hub de aplicaciones                                              |
+| `/`            | Hub de aplicaciones (catálogo dinámico según rol y estado)       |
 | `/hub`         | Alias del hub (misma pantalla que `/`)                           |
 | `/diagnostico` | Consulta de remisiones/despachos, re-migración, lista/cuadrícula |
+| `/logs`        | Visor de logs GKE en tiempo real (Test y Producción)             |
+| `/admin`       | Administración de usuarios, roles, herramientas del Hub y auditoría |
 | `/privacidad`  | Política de datos (Ley 1581)                                     |
 | `/terminos`    | Términos de uso interno                                          |
 | `/contacto`    | Datos institucionales y formulario                               |
@@ -53,6 +60,8 @@ En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_
 | -------------------------- | ----------------------------------------------------------------------- |
 | `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                 |
 | `DIAGNOSTICO_API_UPSTREAM` | Host del API de migración, solo en el servidor (Vite/nginx). El navegador llama `/migracion/diagnostico` y `/migracion/guia` |
+| `LOGS_API_UPSTREAM`        | Host de `cm-logs-ms` (default `http://localhost:8081`). El navegador llama `/logs-api/*` |
+| `ACCESS_API_UPSTREAM`      | Host de `cm-toolbox-access-ms` (default `http://localhost:8083`). El navegador llama `/access-api/*` |
 | `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)              |
 | `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo       |
 | `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                           |
@@ -145,17 +154,21 @@ Genera `reports/bundle-size.txt` (ignorado por Git). Línea base de referencia l
 src/
 ├── app/                    Composición, tema, rutas lazy
 ├── features/
+│   ├── admin/              Panel RBAC: usuarios, roles, registro/estado de apps y auditoría
 │   ├── auth/               Login, error de auth, sin acceso
-│   ├── hub/                Portal de apps
+│   ├── hub/                Portal dinámico de apps
 │   ├── diagnostico/        UI de la herramienta + api/
+│   ├── logs/               Visor de logs GKE en tiempo real
 │   ├── legal/              Privacidad y términos
 │   ├── contact/            Contacto
 │   ├── feedback/           Página de gracias
 │   └── not-found/          404
-└── shared/
-    ├── auth/               Keycloak, tokens, gate, bypass local
-    ├── lib/                env, preferencias, analytics, títulos SEO
-    └── ui/                 Header, footer, cookies
+├── shared/
+│   ├── auth/               Keycloak, tokens, gate, AccessProvider, AppAccessGuard y bypass local
+│   ├── lib/                env, preferencias, analytics, títulos SEO
+│   └── ui/                 Header, footer, cookies
+sql/                        Esquema PostgreSQL (001_schema, 002_seed, 003_views_and_queries)
+docs/rbac-feature/          Especificación técnica detallada del sistema RBAC y gestión de apps
 test/                       Vitest, espeja src/
 env/azure.env               Tokens de Azure DevOps Library
 nginx/                      Template + scripts de runtime

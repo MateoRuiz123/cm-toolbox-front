@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { useAuth } from './use-auth'
+import { useAccess } from './access-context'
 import { LoginScreen } from '../../features/auth/login-screen'
 import { SinAccesoScreen } from '../../features/auth/sin-acceso-screen'
 import { ErrorAuthScreen } from '../../features/auth/error-auth-screen'
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
   const { estadoAuth, email, errorAuth, cerrarSesion, iniciarSesion, reintentar } = useAuth()
+  const { isUserBlocked, refreshAccess } = useAccess()
 
   if (estadoAuth === 'inicializando') {
     return (
@@ -34,12 +36,12 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     return <LoginScreen onLogin={iniciarSesion} />
   }
 
-  if (estadoAuth === 'sin_acceso') {
+  if (estadoAuth === 'sin_acceso' || isUserBlocked) {
     return (
       <SinAccesoScreen
         email={email}
         onCerrarSesion={cerrarSesion}
-        onReintentar={reintentar}
+        onReintentar={isUserBlocked ? () => void refreshAccess() : reintentar}
       />
     )
   }
