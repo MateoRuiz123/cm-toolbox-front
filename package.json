@@ -2,7 +2,7 @@
   "name": "cm-toolbox-front",
   "description": "Portal y Hub de herramientas de apoyo y diagnóstico",
   "private": true,
-  "version": "1.9.0",
+  "version": "1.10.0",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
@@ -17,6 +17,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
     "@itcoordinadora/cm-sigoo-temp-ui": "^1.0.14",
     "clsx": "^2.1.1",
     "keycloak-js": "26.2.4",

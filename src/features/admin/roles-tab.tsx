@@ -63,7 +63,7 @@ export const RolesTab = ({
               setEditingRole(null);
               setModalOpen(true);
             }}
-            className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] cursor-pointer"
+            className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] cursor-pointer"
           >
             + Crear nuevo rol
           </button>

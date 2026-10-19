@@ -50,7 +50,7 @@ export const CookieBanner = () => {
           <button
             type="button"
             onClick={() => responder('accepted')}
-            className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[var(--color-primary-hover)]"
+            className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[var(--color-action-hover)]"
           >
             Aceptar todas
           </button>

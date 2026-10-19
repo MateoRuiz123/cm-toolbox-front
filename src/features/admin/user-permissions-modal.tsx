@@ -403,8 +403,8 @@ export const UserPermissionsModal = ({
                                 ? opt.id === "deny"
                                   ? "bg-[var(--state-error)] text-white"
                                   : opt.id === "allow"
-                                    ? "bg-[var(--state-success)] text-white"
-                                    : "bg-[var(--color-primary)] text-white"
+                                    ? "bg-[var(--state-success)] text-[var(--state-success-on)]"
+                                    : "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
                                 : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
                             }`}
                           >
@@ -580,7 +580,7 @@ export const UserPermissionsModal = ({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-primary-hover)] disabled:opacity-60 cursor-pointer"
+              className="rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-action-hover)] disabled:opacity-60 cursor-pointer"
             >
               {saving ? "Guardando..." : "Guardar permisos"}
             </button>

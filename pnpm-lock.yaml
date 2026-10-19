@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@itcoordinadora/cm-sigoo-temp-ui':
         specifier: ^1.0.14
         version: 1.0.14(hayxjbaq3oprksck6w4rhuxkny)
@@ -405,6 +408,9 @@ packages:
 
   '@fontsource-variable/roboto@5.3.0':
     resolution: {integrity: sha512-BoaaZiQf8fgtxv07KXkTwx1bKz/EoqIlTXq2OOKKXINxp6qXWdnlChqV+hSaDANS49yyUASFl3OVBMMDTCIHFA==}
+
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
 
   '@fontsource/roboto@5.3.0':
     resolution: {integrity: sha512-BapRJOWYP+LZ21zp+wBQjfpPYKRoxc4LspJ/RLuI+HSMBD5u/X4O+ESDrSvEqDSy0rAl7GwBJ+09mdc16cVQ1Q==}
@@ -2427,6 +2433,8 @@ snapshots:
   '@exodus/bytes@1.16.0': {}
 
   '@fontsource-variable/roboto@5.3.0': {}
+
+  '@fontsource/inter@5.3.0': {}
 
   '@fontsource/roboto@5.3.0': {}
 

@@ -1,107 +1,133 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
-import type { LogStreamMessage, LogSeverity, ProcessedLogLine } from './api/logs-types'
+import { useEffect, useRef, useState, useMemo } from "react";
+import type {
+  LogStreamMessage,
+  LogSeverity,
+  ProcessedLogLine,
+} from "./api/logs-types";
 
 export interface LogsViewerTarget {
-  readonly workload: string
-  readonly namespace: string
-  readonly cluster: string
-  readonly env: string
+  readonly workload: string;
+  readonly namespace: string;
+  readonly cluster: string;
+  readonly env: string;
 }
 
 interface LogsViewerProps {
-  readonly logs: readonly LogStreamMessage[]
-  readonly isStreaming: boolean
-  readonly onClear: () => void
-  readonly target?: LogsViewerTarget
+  readonly logs: readonly LogStreamMessage[];
+  readonly isStreaming: boolean;
+  readonly onClear: () => void;
+  readonly target?: LogsViewerTarget;
 }
 
 const detectSeverity = (text: string): LogSeverity => {
-  const t = text.toLowerCase()
-  if (t.includes('error') || t.includes('exception') || t.includes('fatal')) return 'error'
-  if (t.includes('warn')) return 'warn'
-  if (t.includes('debug')) return 'debug'
-  return 'info'
-}
+  const t = text.toLowerCase();
+  if (t.includes("error") || t.includes("exception") || t.includes("fatal"))
+    return "error";
+  if (t.includes("warn")) return "warn";
+  if (t.includes("debug")) return "debug";
+  return "info";
+};
 
 const severityLabel: Record<LogSeverity, string> = {
-  error: 'ERR',
-  warn: 'WRN',
-  info: 'INF',
-  debug: 'DBG',
-}
+  error: "ERR",
+  warn: "WRN",
+  info: "INF",
+  debug: "DBG",
+};
 
 const severityBadgeClass: Record<LogSeverity, string> = {
-  error: 'bg-[var(--state-error)]/10 text-[var(--state-error)]',
-  warn: 'bg-[var(--state-warning)]/10 text-[var(--state-warning)]',
-  info: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
-  debug: 'bg-[var(--surface-sunken)] text-[var(--text-muted)]',
-}
+  error: "bg-[var(--state-error)]/10 text-[var(--state-error)]",
+  warn: "bg-[var(--state-warning)]/10 text-[var(--state-warning)]",
+  info: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  debug: "bg-[var(--surface-sunken)] text-[var(--text-muted)]",
+};
 
 const severityFilterActiveClass: Record<LogSeverity, string> = {
-  error: 'border-[var(--state-error)]/40 bg-[var(--state-error)]/10 text-[var(--state-error)]',
-  warn: 'border-[var(--state-warning)]/40 bg-[var(--state-warning)]/10 text-[var(--state-warning)]',
-  info: 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
-  debug: 'border-[var(--text-muted)]/40 bg-[var(--surface-sunken)] text-[var(--text-body)]',
-}
+  error:
+    "border-[var(--state-error)]/40 bg-[var(--state-error)]/10 text-[var(--state-error)]",
+  warn: "border-[var(--state-warning)]/40 bg-[var(--state-warning)]/10 text-[var(--state-warning)]",
+  info: "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  debug:
+    "border-[var(--text-muted)]/40 bg-[var(--surface-sunken)] text-[var(--text-body)]",
+};
 
-const SEVERITY_ORDER = ['error', 'warn', 'info', 'debug'] as const
+const SEVERITY_ORDER = ["error", "warn", "info", "debug"] as const;
 
-export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerProps) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [autoScroll, setAutoScroll] = useState(true)
-  const [severityFilter, setSeverityFilter] = useState<'all' | LogSeverity>('all')
+export const LogsViewer = ({
+  logs,
+  isStreaming,
+  onClear,
+  target,
+}: LogsViewerProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [severityFilter, setSeverityFilter] = useState<"all" | LogSeverity>(
+    "all",
+  );
+  const [textoFiltro, setTextoFiltro] = useState("");
 
   const processedLogs = useMemo(() => {
-    const lines: ProcessedLogLine[] = []
+    const lines: ProcessedLogLine[] = [];
     logs.forEach((msg) => {
-      if (!msg.text) return
-      const chunks = msg.text.split('\n').filter((l) => l.trim())
-      const time = new Date(msg.timestamp).toLocaleTimeString('es', { hour12: false })
+      if (!msg.text) return;
+      const chunks = msg.text.split("\n").filter((l) => l.trim());
+      const time = new Date(msg.timestamp).toLocaleTimeString("es", {
+        hour12: false,
+      });
       chunks.forEach((line, lineIndex) => {
-        let sev: LogSeverity = 'info'
-        if (msg.type === 'error') sev = 'error'
-        else if (msg.type === 'log') sev = detectSeverity(line)
+        let sev: LogSeverity = "info";
+        if (msg.type === "error") sev = "error";
+        else if (msg.type === "log") sev = detectSeverity(line);
         lines.push({
           id: `${msg.id}-${lineIndex}`,
-          pod: msg.pod ?? '',
+          pod: msg.pod ?? "",
           text: line,
           severity: sev,
           time,
-        })
-      })
-    })
-    return lines
-  }, [logs])
+        });
+      });
+    });
+    return lines;
+  }, [logs]);
 
   const filteredLogs = useMemo(() => {
-    if (severityFilter === 'all') return processedLogs
-    return processedLogs.filter((l) => l.severity === severityFilter)
-  }, [processedLogs, severityFilter])
+    const porSeveridad =
+      severityFilter === "all"
+        ? processedLogs
+        : processedLogs.filter((l) => l.severity === severityFilter);
+    const consulta = textoFiltro.trim().toLowerCase();
+    if (!consulta) return porSeveridad;
+    return porSeveridad.filter(
+      (linea) =>
+        linea.text.toLowerCase().includes(consulta) ||
+        linea.pod.toLowerCase().includes(consulta),
+    );
+  }, [processedLogs, severityFilter, textoFiltro]);
 
   const counts = useMemo(() => {
     return processedLogs.reduce(
       (acc, l) => {
-        acc[l.severity] += 1
-        return acc
+        acc[l.severity] += 1;
+        return acc;
       },
       { error: 0, warn: 0, info: 0, debug: 0 },
-    )
-  }, [processedLogs])
+    );
+  }, [processedLogs]);
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [filteredLogs, autoScroll])
+  }, [filteredLogs, autoScroll]);
 
   const filterButtonClass = (active: boolean, sev?: LogSeverity) =>
     `flex items-center gap-1 rounded-[var(--radius-1)] border px-2 py-1 font-mono text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
       active
         ? sev
           ? severityFilterActiveClass[sev]
-          : 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-        : 'border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-body)]'
-    }`
+          : "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+        : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
+    }`;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -114,36 +140,54 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
               className="truncate font-mono text-[11px] text-[var(--text-muted)]"
               title={`${target.workload} · ${target.namespace} · ${target.cluster} · ${target.env.toUpperCase()}`}
             >
-              <span className="font-semibold text-[var(--text-body)]">{target.workload}</span>
-              {' · '}
+              <span className="font-semibold text-[var(--text-body)]">
+                {target.workload}
+              </span>
+              {" · "}
               {target.namespace}
-              {' · '}
+              {" · "}
               {target.cluster}
-              {' · '}
+              {" · "}
               {target.env.toUpperCase()}
             </p>
           ) : (
-            <p className="font-mono text-[11px] text-[var(--text-muted)]" aria-hidden="true">
+            <p
+              className="font-mono text-[11px] text-[var(--text-muted)]"
+              aria-hidden="true"
+            >
               Logs en tiempo real
             </p>
           )}
           <span
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
               isStreaming
-                ? 'bg-[var(--state-success)]/10 text-[var(--state-success)]'
-                : 'bg-[var(--surface-sunken)] text-[var(--text-muted)]'
+                ? "bg-[var(--state-success)]/10 text-[var(--state-success)]"
+                : "bg-[var(--surface-sunken)] text-[var(--text-muted)]"
             }`}
           >
             <span
               aria-hidden="true"
               className={`size-1.5 rounded-full ${
-                isStreaming ? 'animate-pulse bg-[var(--state-success)]' : 'bg-[var(--text-muted)]'
+                isStreaming
+                  ? "animate-pulse bg-[var(--state-success)]"
+                  : "bg-[var(--text-muted)]"
               }`}
             />
-            {isStreaming ? 'En vivo' : 'Detenido'}
+            {isStreaming ? "En vivo" : "Detenido"}
           </span>
         </div>
 
+        <label className="min-w-36 flex-1">
+          <span className="sr-only">Buscar en los logs</span>
+          <input
+            type="search"
+            value={textoFiltro}
+            onChange={(event) => setTextoFiltro(event.target.value)}
+            placeholder="Buscar texto o pod"
+            aria-label="Buscar en los logs"
+            className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2 py-1 font-sans text-[11px] text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]"
+          />
+        </label>
         <div
           className="flex items-center gap-1"
           role="group"
@@ -151,9 +195,9 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
         >
           <button
             type="button"
-            onClick={() => setSeverityFilter('all')}
-            aria-pressed={severityFilter === 'all'}
-            className={filterButtonClass(severityFilter === 'all')}
+            onClick={() => setSeverityFilter("all")}
+            aria-pressed={severityFilter === "all"}
+            className={filterButtonClass(severityFilter === "all")}
           >
             Todos
             <span className="opacity-70">{processedLogs.length}</span>
@@ -181,8 +225,8 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
             title="Desplazamiento automático al final"
             className={`flex items-center gap-1 rounded-[var(--radius-1)] border px-2 py-1 text-[11px] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
               autoScroll
-                ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                : 'border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-body)]'
+                ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
             }`}
           >
             <svg
@@ -225,14 +269,24 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
       {/* Salida de logs */}
       <div
         ref={containerRef}
-        className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-[11px] leading-[1.65] text-[var(--text-body)] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
+        className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-xs leading-[1.75] text-[var(--text-body)] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
       >
-        {filteredLogs.length === 0 ? (
+        {processedLogs.length > 0 && filteredLogs.length === 0 ? (
+          <p
+            className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]"
+            role="status"
+          >
+            Ninguna línea coincide con la búsqueda.
+          </p>
+        ) : filteredLogs.length === 0 ? (
           target ? (
-            <p className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]" role="status">
+            <p
+              className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]"
+              role="status"
+            >
               {isStreaming
                 ? `▸ terminal limpia · esperando eventos de ${target.workload}…`
-                : '▸ terminal limpia · streaming detenido'}
+                : "▸ terminal limpia · streaming detenido"}
             </p>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1.5 text-[var(--text-muted)]">
@@ -261,7 +315,7 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
             {filteredLogs.map((log) => (
               <div
                 key={log.id}
-                className="group flex items-start gap-2.5 rounded-[var(--radius-1)] px-1.5 py-px transition-colors hover:bg-[var(--surface-card)]/70"
+                className="group flex items-start gap-2.5 rounded-[var(--radius-1)] border-l-2 border-transparent px-1.5 py-1 transition-colors duration-150 hover:border-[var(--border-focus)]/50 hover:bg-[var(--surface-card)]/90"
               >
                 <span className="shrink-0 select-none pt-px text-[10px] text-[var(--text-muted)]">
                   {log.time}
@@ -281,11 +335,11 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
                 )}
                 <span
                   className={`min-w-0 flex-1 whitespace-pre-wrap break-words ${
-                    log.severity === 'error'
-                      ? 'text-[var(--state-error)]'
-                      : log.severity === 'warn'
-                        ? 'text-[var(--state-warning)]'
-                        : ''
+                    log.severity === "error"
+                      ? "text-[var(--state-error)]"
+                      : log.severity === "warn"
+                        ? "text-[var(--state-warning)]"
+                        : ""
                   }`}
                 >
                   {log.text}
@@ -296,5 +350,5 @@ export const LogsViewer = ({ logs, isStreaming, onClear, target }: LogsViewerPro
         )}
       </div>
     </div>
-  )
-}
+  );
+};

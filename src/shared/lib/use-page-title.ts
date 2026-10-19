@@ -11,12 +11,12 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
   "/": {
     title: "Portal de Aplicaciones | Coordinadora Toolbox",
     description:
-      "Portal centralizado de herramientas de apoyo, diagnóstico y supervisión para la migración de guías y despachos de Coordinadora Mercantil S.A.",
+      "Portal centralizado de herramientas operativas, diagnóstico, monitoreo y soporte técnico para los equipos de Coordinadora Mercantil S.A.",
   },
   "/hub": {
     title: "Portal de Aplicaciones | Coordinadora Toolbox",
     description:
-      "Portal centralizado de herramientas de apoyo, diagnóstico y supervisión para la migración de guías y despachos de Coordinadora Mercantil S.A.",
+      "Portal centralizado de herramientas operativas, diagnóstico, monitoreo y soporte técnico para los equipos de Coordinadora Mercantil S.A.",
   },
   "/diagnostico": {
     title: "Diagnóstico de Migración | Coordinadora Toolbox",
@@ -52,6 +52,11 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
     title: "Mensaje Enviado con Éxito | Coordinadora Mercantil",
     description:
       "Confirmación de radicación y recepción de consulta técnica o reporte operativo en Coordinadora Mercantil S.A.",
+  },
+  "/configuracion": {
+    title: "Apariencia | Coordinadora Toolbox",
+    description:
+      "Preferencia visual del toolbox: SIGO Droop o Visitors, combinada con el modo claro u oscuro.",
   },
   "/404": {
     title: "404 - Página no encontrada | Coordinadora Toolbox",

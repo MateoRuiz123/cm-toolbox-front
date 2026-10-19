@@ -138,7 +138,9 @@ export const RegisterAppModal = ({
         : `/${rawRoute}`;
 
     if (isExternalUrl && !/^https?:\/\/[^\s]+$/i.test(cleanRoute)) {
-      setErrorMsg("Ingresa una URL externa válida que comience con https:// o http://.");
+      setErrorMsg(
+        "Ingresa una URL externa válida que comience con https:// o http://.",
+      );
       return;
     }
 
@@ -279,7 +281,7 @@ export const RegisterAppModal = ({
                     }}
                     className={`rounded-[var(--radius-pill)] px-2 py-0.5 font-bold cursor-pointer ${
                       !isExternalUrl
-                        ? "bg-[var(--color-primary)] text-white"
+                        ? "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
                         : "text-[var(--text-muted)]"
                     }`}
                   >
@@ -295,7 +297,7 @@ export const RegisterAppModal = ({
                     }}
                     className={`rounded-[var(--radius-pill)] px-2 py-0.5 font-bold cursor-pointer ${
                       isExternalUrl
-                        ? "bg-[var(--color-primary)] text-white"
+                        ? "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
                         : "text-[var(--text-muted)]"
                     }`}
                   >
@@ -376,7 +378,7 @@ export const RegisterAppModal = ({
                 type="text"
                 value={tagsRaw}
                 onChange={(e) => setTagsRaw(e.target.value)}
-                placeholder="Facturación, Consistencia, AGW"
+                placeholder="Monitoreo, Soporte, Operaciones"
                 className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
               />
             </label>
@@ -487,7 +489,7 @@ export const RegisterAppModal = ({
               <button
                 type="button"
                 onClick={handleAddAction}
-                className="rounded-[var(--radius-pill)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-1.5 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white cursor-pointer"
+                className="rounded-[var(--radius-pill)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-1.5 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-on)] cursor-pointer"
               >
                 + Añadir función interna
               </button>
@@ -505,7 +507,7 @@ export const RegisterAppModal = ({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-primary-hover)] disabled:opacity-60 cursor-pointer"
+              className="rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-action-hover)] disabled:opacity-60 cursor-pointer"
             >
               {saving ? "Guardando..." : "Guardar herramienta"}
             </button>

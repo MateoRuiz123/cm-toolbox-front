@@ -232,7 +232,7 @@ export const RoleFormModal = ({
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej. Equipo encargado de diagnosticar y re-encolar guías en contingencia"
+              placeholder="Ej. Equipo encargado de monitoreo y soporte operativo"
               className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
             />
           </label>
@@ -261,7 +261,7 @@ export const RoleFormModal = ({
                     onClick={() => setHierarchyLevel(preset.val)}
                     className={`rounded-[var(--radius-pill)] border px-2.5 py-1 text-[11px] font-semibold cursor-pointer ${
                       hierarchyLevel === preset.val
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-on)]"
                         : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)]"
                     }`}
                   >
@@ -448,7 +448,7 @@ export const RoleFormModal = ({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-primary-hover)] disabled:opacity-60 cursor-pointer"
+              className="rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-xs hover:bg-[var(--color-action-hover)] disabled:opacity-60 cursor-pointer"
             >
               {saving ? "Guardando..." : "Guardar rol"}
             </button>

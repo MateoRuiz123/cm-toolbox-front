@@ -78,7 +78,7 @@ export const DynamicAppRoutePage = ({ app }: DynamicAppRoutePageProps) => {
             </p>
             <Link
               to="/"
-              className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)]"
+              className="rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)]"
             >
               Volver al portal
             </Link>
