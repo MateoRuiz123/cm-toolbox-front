@@ -16,16 +16,26 @@ const ROLE_LABELS: Record<string, string> = {
  */
 export const AppHeader = () => {
   const { email, terminal, cerrarSesion } = useAuth();
-  const { roleId, canManageApps, canManageUsers } = useAccess();
+  const { roleId, canManageApps, canManageUsers, apps } = useAccess();
   const { pathname: path } = useLocation();
   const esHome = path === "/" || path === "/hub";
   const esAdmin = path.startsWith("/admin");
   const puedeAdministrar = canManageApps || canManageUsers;
+  const herramientasRapidas = apps.filter(
+    (app) =>
+      app.canAccess && app.status !== "disabled" && app.route.startsWith("/"),
+  );
+  const obtenerNombreCorto = (appId: string, nombre: string) => {
+    if (appId === "diagnostico") return "Diagnóstico";
+    if (appId === "logs") return "Logs GKE";
+    return nombre;
+  };
 
   const obtenerTituloRuta = () => {
     if (path.startsWith("/diagnostico")) return "Diagnóstico de migración";
     if (path.startsWith("/logs")) return "Visor de Logs GKE";
     if (path.startsWith("/admin")) return "Administración de Accesos";
+    if (path.startsWith("/configuracion")) return "Apariencia";
     if (path.startsWith("/privacidad")) return "Política de Privacidad";
     if (path.startsWith("/terminos")) return "Términos y Condiciones";
     if (path.startsWith("/contacto")) return "Contacto y Soporte";
@@ -75,13 +85,39 @@ export const AppHeader = () => {
             </span>
           )}
         </div>
+
+        {!esHome && herramientasRapidas.length > 1 && (
+          <nav
+            aria-label="Cambiar de herramienta"
+            className="hidden shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-0.5 xl:flex"
+          >
+            {herramientasRapidas.map((app) => {
+              const activa = path.startsWith(app.route);
+              return (
+                <Link
+                  key={app.id}
+                  to={app.route}
+                  aria-current={activa ? "page" : undefined}
+                  title={`Ir a ${app.name}`}
+                  className={`whitespace-nowrap rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
+                    activa
+                      ? "bg-[var(--surface-card)] text-[var(--text-body)] shadow-xs"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
+                  }`}
+                >
+                  {obtenerNombreCorto(app.id, app.name)}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         {!esHome && (
           <Link
             to="/"
-            className="hidden md:flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--color-primary)]"
+            className="hidden items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--color-primary)] md:flex xl:hidden"
             title="Volver a la lista de aplicaciones"
           >
             <svg
@@ -104,7 +140,7 @@ export const AppHeader = () => {
         {puedeAdministrar && !esAdmin && (
           <Link
             to="/admin"
-            className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)] px-3 py-1.5 text-xs font-bold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)] px-3 py-1.5 text-xs font-bold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-on)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             title="Administrar usuarios, permisos y estado de aplicaciones"
           >
             <svg
@@ -179,6 +215,34 @@ export const AppHeader = () => {
             />
           </svg>
         </button>
+
+        <Link
+          to="/configuracion"
+          aria-label="Apariencia"
+          title="Apariencia"
+          className="surface grid size-10 place-items-center rounded-full border border-[var(--border-default)] text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+        >
+          <svg
+            aria-hidden="true"
+            className="size-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+            />
+          </svg>
+        </Link>
 
         <ThemeToggle />
       </div>

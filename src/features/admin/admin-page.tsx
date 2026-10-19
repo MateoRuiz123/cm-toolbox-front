@@ -183,7 +183,7 @@ export const AdminPage = () => {
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white"
+            className="inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white"
           >
             Volver al portal
           </Link>
@@ -301,7 +301,7 @@ export const AdminPage = () => {
             onClick={() => setActiveTab("users")}
             className={`rounded-[var(--radius-pill)] px-4 py-2 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
               activeTab === "users"
-                ? "bg-[var(--color-primary)] text-white shadow-xs"
+                ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-xs"
                 : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
             }`}
           >
@@ -315,7 +315,7 @@ export const AdminPage = () => {
             onClick={() => setActiveTab("roles")}
             className={`rounded-[var(--radius-pill)] px-4 py-2 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
               activeTab === "roles"
-                ? "bg-[var(--color-primary)] text-white shadow-xs"
+                ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-xs"
                 : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
             }`}
           >
@@ -331,7 +331,7 @@ export const AdminPage = () => {
                 onClick={() => setActiveTab("apps")}
                 className={`rounded-[var(--radius-pill)] px-4 py-2 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
                   activeTab === "apps"
-                    ? "bg-[var(--color-primary)] text-white shadow-xs"
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-xs"
                     : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
                 }`}
               >
@@ -345,7 +345,7 @@ export const AdminPage = () => {
                 onClick={() => setActiveTab("audit")}
                 className={`rounded-[var(--radius-pill)] px-4 py-2 text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
                   activeTab === "audit"
-                    ? "bg-[var(--color-primary)] text-white shadow-xs"
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-xs"
                     : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
                 }`}
               >

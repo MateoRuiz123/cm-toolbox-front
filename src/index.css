@@ -24,12 +24,12 @@
   --azul-700: #1976d2;
 
   /* ── Neutrals ───────────────────────────────────────────────── */
-  --gris-app: #f5f5f5;
-  --gris-panel: #f8f9fa;
-  --gris-barra: #f9f9f9;
-  --gris-borde: #e0e0e0;
+  --gris-app: #f4f3ef;
+  --gris-panel: #f7f6f2;
+  --gris-barra: #f6f5f1;
+  --gris-borde: #dfddd6;
   --gris-desactivado: #9e9e9e;
-  --blanco: #ffffff;
+  --blanco: #fcfbf9;
   --tinta: #333333;
   --tinta-suave: #666666;
 
@@ -40,14 +40,21 @@
   --ambar-aviso: #ed6c02;
 
   /* ── Code surface (dialog de detalle del fallo/JSON) ────────── */
-  --code-bg: #0d1117;
-  --code-fg: #e6edf3;
+  --code-bg: #1c1b18;
+  --code-fg: #e6e2d8;
+  --code-border: #302e29;
 
   /* ── Semantic aliases ───────────────────────────────────────── */
   --color-primary: var(--azul-coordinadora);
   --color-primary-hover: var(--azul-dark);
   --color-primary-soft: var(--azul-50);
   --color-primary-contrast: var(--blanco);
+
+  --color-primary-on: #ffffff;
+
+  --color-action: var(--color-primary);
+  --color-action-hover: var(--color-primary-hover);
+  --color-action-contrast: var(--color-primary-contrast);
 
   --color-accent: var(--naranja-coordinadora);
   --color-accent-hover: var(--naranja-dark);
@@ -71,6 +78,7 @@
 
   --state-error: var(--rojo-error);
   --state-success: var(--verde-exito);
+  --state-success-on: #ffffff;
   --state-warning: var(--ambar-aviso);
 
   /* Alert fills */
@@ -101,6 +109,13 @@
   --elevation-card-hover: var(--shadow-3);
   --elevation-raised: var(--shadow-3);
   --elevation-modal: var(--shadow-24);
+
+  --folder-back: #0066cc;
+  --folder-flap: #0052a3;
+  --folder-stroke: #3385d6;
+  --folder-card: #ffffff;
+  --folder-card-stroke: #e0e0e0;
+  --folder-line: #90caf9;
 
   /* ── Login: scrim, vidrio y anchos de tarjeta ───────────────── */
   --scrim-login: rgba(0, 0, 0, 0.4);
@@ -133,30 +148,34 @@
 }
 
 .dark {
-  --gris-app: #121212;
-  --gris-panel: #1a1c22;
+  --gris-app: #16181d;
+  --gris-panel: #1a1d24;
   --gris-barra: #1e2026;
   --gris-borde: #2c303b;
   --gris-desactivado: #6e7382;
-  --blanco: #1e212a;
-  --tinta: #e8ecf4;
+  --blanco: #20232b;
+  --tinta: #e4e7ee;
   --tinta-suave: #9ba3b4;
 
-  --surface-app: #121212;
-  --surface-card: #1e212a;
-  --surface-sunken: #16181f;
-  --surface-bar: #1a1c24;
-  --surface-header: #1a1c24;
+  --surface-app: #16181d;
+  --surface-card: #20232b;
+  --surface-sunken: #1a1d24;
+  --surface-bar: #1c1f26;
+  --surface-header: #1c1f26;
 
-  --text-body: #e8ecf4;
+  --text-body: #e4e7ee;
   --text-muted: #9ba3b4;
   --text-disabled: #6e7382;
   --border-default: #2c303b;
 
   --azul-50: rgba(0, 102, 204, 0.25);
-  --color-primary: #3385d6;
+  --color-primary: #4a94e0;
   --color-primary-hover: #5ba3eb;
   --color-primary-soft: rgba(0, 102, 204, 0.25);
+  --color-primary-on: #12151c;
+  --color-action-contrast: #12151c;
+  --state-success: #4caf50;
+  --state-success-on: #0d2a16;
   --color-accent: #ef7d56;
   --color-accent-hover: #eb5d2c;
 
@@ -274,7 +293,7 @@ button:focus-visible,
 textarea:focus-visible,
 input:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
 
@@ -293,4 +312,225 @@ a:focus-visible {
     animation: none !important;
     transition: none !important;
   }
+}
+
+html[data-movimiento="reducido"] *,
+html[data-movimiento="reducido"] ::view-transition-group(*),
+html[data-movimiento="reducido"] ::view-transition-old(*),
+html[data-movimiento="reducido"] ::view-transition-new(*) {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Visitors: blueprint claro. Lavanda solo en --color-action. */
+html[data-sistema="visitors"] {
+  --gris-app: #fbfaf7;
+  --gris-panel: #f4f3ee;
+  --gris-barra: #f8f7f3;
+  --gris-borde: #e6e4dd;
+  --gris-desactivado: #999999;
+  --blanco: #fdfcfa;
+  --tinta: #181925;
+  --tinta-suave: #666666;
+
+  --surface-app: #fbfaf7;
+  --surface-card: #fdfcfa;
+  --surface-sunken: #f4f3ee;
+  --surface-bar: #f8f7f3;
+  --surface-header: #fbfaf7;
+  --surface-glass: rgba(253, 252, 250, 0.95);
+
+  --text-body: #181925;
+  --text-muted: #666666;
+  --text-disabled: #999999;
+  --text-on-primary: #ffffff;
+  --text-link: #181925;
+  --text-link-hover: #181925;
+
+  --border-default: #e6e4dd;
+  --border-focus: #918df6;
+
+  --color-primary: #181925;
+  --color-primary-hover: #12131c;
+  --color-primary-soft: #f5f5f5;
+  --color-primary-contrast: #ffffff;
+
+  --color-action: #918df6;
+  --color-action-hover: #a9a6f8;
+  --color-action-contrast: #181925;
+
+  --state-success: #137434;
+  --verde-exito: #137434;
+  --ok: #137434;
+  --alert-success-bg: #def6e4;
+  --alert-success-fg: #146c32;
+
+  --radius-1: 8px;
+  --radius-2: 16px;
+  --radius-3: 16px;
+  --radius-4: 9999px;
+  --radius-pill: 9999px;
+
+  --shadow-1: rgba(0, 0, 0, 0.08) 0px 1px 1px 1px, rgba(0, 0, 0, 0.06) 0px 0px 0px 0.5px;
+  --shadow-3: rgba(0, 0, 0, 0.06) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 8px 16px 0px, rgba(0, 0, 0, 0.02) 0px 0px 0px 1px;
+  --shadow-24: rgba(0, 0, 0, 0.06) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 8px 16px 0px, rgba(0, 0, 0, 0.02) 0px 0px 0px 1px;
+  --shadow-panel: rgba(0, 0, 0, 0.08) 0px 1px 1px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px;
+  --elevation-card: var(--shadow-1);
+  --elevation-card-hover: var(--shadow-3);
+  --elevation-raised: var(--shadow-3);
+  --elevation-modal: var(--shadow-3);
+  --shadow-card: var(--elevation-card);
+
+  --folder-back: #181925;
+  --folder-flap: #2a2b3a;
+  --folder-stroke: #e8e8e8;
+  --folder-card: #ffffff;
+  --folder-card-stroke: #e8e8e8;
+  --folder-line: #918df6;
+}
+
+html.dark[data-sistema="visitors"] {
+  --gris-app: #16161e;
+  --gris-panel: #1a1a24;
+  --gris-barra: #1a1a24;
+  --gris-borde: #2e2e3a;
+  --gris-desactivado: #8a8a96;
+  --blanco: #20202b;
+  --tinta: #ececf0;
+  --tinta-suave: #a3a3ad;
+
+  --surface-app: #16161e;
+  --surface-card: #20202b;
+  --surface-sunken: #1a1a24;
+  --surface-bar: #1a1a24;
+  --surface-header: #1a1a24;
+  --surface-glass: rgba(22, 22, 30, 0.95);
+
+  --text-body: #ececf0;
+  --text-muted: #a3a3ad;
+  --text-disabled: #8a8a96;
+  --text-link: #f5f5f7;
+  --text-link-hover: #ffffff;
+
+  --border-default: #2e2e3a;
+  --border-focus: #918df6;
+
+  --color-primary: #f5f5f7;
+  --color-primary-hover: #ffffff;
+  --color-primary-soft: #2a2a36;
+  --color-primary-contrast: #12121a;
+  --color-primary-on: #12121a;
+
+  --color-action: #918df6;
+  --color-action-hover: #a9a6f8;
+  --color-action-contrast: #181925;
+
+  --state-success: #33c758;
+  --state-success-on: #0d2a16;
+  --ok: #33c758;
+  --alert-success-bg: #16351f;
+  --alert-success-fg: #b6f0c6;
+
+  --shadow-1: rgba(0, 0, 0, 0.28) 0px 1px 1px 1px, rgba(0, 0, 0, 0.2) 0px 0px 0px 0.5px;
+  --shadow-3: rgba(0, 0, 0, 0.28) 0px 1px 3px 0px, rgba(0, 0, 0, 0.22) 0px 8px 16px 0px;
+  --shadow-24: rgba(0, 0, 0, 0.28) 0px 1px 3px 0px, rgba(0, 0, 0, 0.22) 0px 8px 16px 0px;
+  --shadow-panel: rgba(0, 0, 0, 0.28) 0px 1px 1px 0px;
+
+  --folder-back: #1c1c28;
+  --folder-flap: #12121a;
+  --folder-stroke: #2e2e3a;
+  --folder-card: #242430;
+  --folder-card-stroke: #2e2e3a;
+  --folder-line: #918df6;
+}
+
+/* Descanso visual: superficies cálidas (~4500K) para turnos largos. Va después de Visitors para ganar en empate de especificidad. */
+html[data-descanso="calido"] {
+  --gris-app: #f3efe6;
+  --gris-panel: #ece7dc;
+  --gris-barra: #f1ece2;
+  --gris-borde: #dcd5c7;
+  --blanco: #faf6ed;
+  --tinta: #2c2823;
+  --tinta-suave: #665f55;
+
+  --surface-app: #f3efe6;
+  --surface-card: #faf6ed;
+  --surface-sunken: #ece7dc;
+  --surface-bar: #f1ece2;
+  --surface-header: #f7f3ea;
+  --surface-glass: rgba(250, 246, 237, 0.95);
+
+  --text-body: #2c2823;
+  --text-muted: #665f55;
+  --border-default: #dcd5c7;
+  --folder-card: #faf6ed;
+  --folder-card-stroke: #dcd5c7;
+}
+
+html.dark[data-descanso="calido"] {
+  --gris-app: #191714;
+  --gris-panel: #1d1a16;
+  --gris-barra: #1e1b17;
+  --gris-borde: #332e28;
+  --blanco: #23201c;
+  --tinta: #e6dfd5;
+  --tinta-suave: #a89f93;
+
+  --surface-app: #191714;
+  --surface-card: #23201c;
+  --surface-sunken: #1d1a16;
+  --surface-bar: #1e1b17;
+  --surface-header: #1e1b17;
+  --surface-glass: rgba(35, 32, 28, 0.95);
+
+  --text-body: #e6dfd5;
+  --text-muted: #a89f93;
+  --border-default: #332e28;
+  --folder-card: #2a2621;
+  --folder-card-stroke: #332e28;
+}
+
+/* En @layer base para que las utilidades transition-* de Tailwind sigan ganando. */
+@layer base {
+  .surface,
+  input,
+  textarea,
+  select {
+    transition:
+      background-color 200ms var(--ease-standard),
+      border-color 200ms var(--ease-standard),
+      color 150ms var(--ease-standard);
+  }
+}
+
+html[data-sistema="visitors"] body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html[data-sistema="visitors"] :is(h1, h2, h3),
+html[data-sistema="visitors"] :is(h1, h2, h3):is(.font-bold, .font-extrabold, .font-semibold) {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+html[data-sistema="visitors"] :is(a, button).uppercase {
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+html[data-sistema="visitors"] a:not([class*="rounded"]):hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Tailwind v4 fija bg-[var(--color-action)] al primario inicial. Estas reglas lo devuelven a la lavanda en runtime. */
+html[data-sistema="visitors"] .bg-\[var\(--color-action\)\] {
+  background-color: #918df6;
+  color: #181925;
+}
+
+html[data-sistema="visitors"] .hover\:bg-\[var\(--color-action-hover\)\]:hover {
+  background-color: #a9a6f8;
 }

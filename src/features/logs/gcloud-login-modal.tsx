@@ -184,7 +184,7 @@ export const GcloudLoginModal = ({ open, onClose, onSuccess }: GcloudLoginModalP
             <button
               type="submit"
               disabled={!code.trim() || status === 'submitting' || !loginUrl}
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {status === 'submitting' && (
                 <span

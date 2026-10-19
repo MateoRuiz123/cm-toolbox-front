@@ -1,12 +1,22 @@
-import { Link } from 'react-router'
-import { SmoothTitleAccent } from '@/shared/ui/smoothui'
+import { Link } from "react-router";
+import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 
 export const ThankYouPage = () => {
   return (
     <div className="mx-auto flex min-h-[65vh] max-w-2xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6">
       <div className="mb-6 grid size-16 place-items-center rounded-full bg-[var(--alert-success-bg)] text-[var(--state-success)] shadow-xs animate-modal-dialog">
-        <svg className="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+        <svg
+          className="size-8"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+            d="M5 13l4 4L19 7"
+          />
         </svg>
       </div>
 
@@ -25,24 +35,26 @@ export const ThankYouPage = () => {
       />
 
       <p className="text-sm text-[var(--text-muted)] leading-relaxed max-w-lg mb-8">
-        Hemos recibido tu consulta o reporte técnico. Un ingeniero del equipo de soporte de integraciones y migración de Coordinadora Mercantil revisará tu requerimiento a la mayor brevedad.
+        Hemos recibido tu consulta o reporte técnico. El equipo responsable de
+        las plataformas internas de Coordinadora Mercantil revisará tu
+        requerimiento a la mayor brevedad.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
           to="/"
-          className="flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          className="flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
         >
           <span>Volver al Portal</span>
         </Link>
 
         <Link
-          to="/diagnostico"
+          to="/contacto"
           className="flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
         >
-          <span>Ir a Diagnóstico</span>
+          <span>Enviar otra consulta</span>
         </Link>
       </div>
     </div>
-  )
-}
+  );
+};

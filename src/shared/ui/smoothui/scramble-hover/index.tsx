@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMovimientoReducido } from '@/shared/lib/use-movimiento-reducido'
 
 export interface ScrambleHoverProps {
   children: string
@@ -28,7 +29,7 @@ export const ScrambleHover = ({
   className = '',
 }: ScrambleHoverProps) => {
   const [display, setDisplay] = useState(children)
-  const [shouldReduceMotion, setShouldReduceMotion] = useState(false)
+  const shouldReduceMotion = useMovimientoReducido()
   const [isHoverDevice, setIsHoverDevice] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -37,26 +38,15 @@ export const ScrambleHover = ({
     if (typeof window.matchMedia !== 'function') {
       return
     }
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const hoverQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
-
-    setShouldReduceMotion(motionQuery.matches)
     setIsHoverDevice(hoverQuery.matches)
 
-    const handleMotionChange = (event: MediaQueryListEvent) => {
-      setShouldReduceMotion(event.matches)
-    }
     const handleHoverChange = (event: MediaQueryListEvent) => {
       setIsHoverDevice(event.matches)
     }
 
-    motionQuery.addEventListener('change', handleMotionChange)
     hoverQuery.addEventListener('change', handleHoverChange)
-
-    return () => {
-      motionQuery.removeEventListener('change', handleMotionChange)
-      hoverQuery.removeEventListener('change', handleHoverChange)
-    }
+    return () => hoverQuery.removeEventListener('change', handleHoverChange)
   }, [])
 
   const handleMouseEnter = () => {

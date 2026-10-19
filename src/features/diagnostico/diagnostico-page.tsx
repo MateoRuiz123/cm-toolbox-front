@@ -1,45 +1,53 @@
-import { useRef, useState, type FormEvent } from 'react'
-import { diagnosticarMigracion } from './api/diagnostico-api'
-import type { DiagnosticoOutput } from './api/types'
-import { parseDespachos, splitCodigos } from '../../shared/lib/split-codigos'
-import { SmoothTitleAccent } from '@/shared/ui/smoothui'
-import { JsonModal } from '../../shared/ui/json-modal'
-import { DeleteButton } from './delete-button'
-import { DiagnosticoSkeleton } from './diagnostico-skeleton'
-import { ResultadoDiagnostico } from './resultado-diagnostico'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { diagnosticarMigracion } from "./api/diagnostico-api";
+import type { DiagnosticoOutput } from "./api/types";
+import { parseDespachos, splitCodigos } from "../../shared/lib/split-codigos";
+import { SmoothTitleAccent } from "@/shared/ui/smoothui";
+import { JsonModal } from "../../shared/ui/json-modal";
+import { DeleteButton } from "./delete-button";
+import { DiagnosticoSkeleton } from "./diagnostico-skeleton";
+import { ResultadoDiagnostico } from "./resultado-diagnostico";
+import { guardarConsultaSesion, leerConsultaSesion } from "./consulta-sesion";
 
 /** Pantalla principal de consulta de diagnósticos de migración bajo el sistema SIGO Droop. */
 export const DiagnosticoPage = () => {
-  const [remisionesRaw, setRemisionesRaw] = useState('')
-  const [despachosRaw, setDespachosRaw] = useState('')
-  const [data, setData] = useState<DiagnosticoOutput | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [showJson, setShowJson] = useState(false)
+  const [remisionesRaw, setRemisionesRaw] = useState(() => leerConsultaSesion().remisiones);
+  const [despachosRaw, setDespachosRaw] = useState(() => leerConsultaSesion().despachos);
+  const [data, setData] = useState<DiagnosticoOutput | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showJson, setShowJson] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const ejecutarConsulta = async (remisionesTexto: string, despachosTexto: string) => {
-    setError(null)
-    const codigosRemision = splitCodigos(remisionesTexto)
-    const despachos = parseDespachos(despachosTexto)
+  useEffect(() => {
+    guardarConsultaSesion({ remisiones: remisionesRaw, despachos: despachosRaw });
+  }, [remisionesRaw, despachosRaw]);
+
+  const ejecutarConsulta = async (
+    remisionesTexto: string,
+    despachosTexto: string,
+  ) => {
+    setError(null);
+    const codigosRemision = splitCodigos(remisionesTexto);
+    const despachos = parseDespachos(despachosTexto);
 
     if (despachos.error) {
-      setError(despachos.error)
-      return
+      setError(despachos.error);
+      return;
     }
     if (codigosRemision.length === 0 && despachos.values.length === 0) {
-      setError('Ingresa al menos una remisión o un despacho.')
-      return
+      setError("Ingresa al menos una remisión o un despacho.");
+      return;
     }
 
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+      abortControllerRef.current.abort();
     }
-    const controller = new AbortController()
-    abortControllerRef.current = controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    setLoading(true)
+    setLoading(true);
     try {
       const result = await diagnosticarMigracion(
         {
@@ -47,38 +55,68 @@ export const DiagnosticoPage = () => {
           codigos_despacho: despachos.values,
         },
         controller.signal,
-      )
-      setData(result)
+      );
+      setData(result);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Ocurrió un error inesperado.')
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Ocurrió un error inesperado.",
+      );
     } finally {
-      setLoading(false)
-      abortControllerRef.current = null
+      setLoading(false);
+      abortControllerRef.current = null;
     }
-  }
+  };
 
   const handleCancelar = () => {
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+      abortControllerRef.current.abort();
     }
-  }
+  };
 
   const handleLimpiarFormulario = () => {
-    setRemisionesRaw('')
-    setDespachosRaw('')
-    setError(null)
-  }
+    setRemisionesRaw("");
+    setDespachosRaw("");
+    setError(null);
+  };
 
-  const tieneContenido = remisionesRaw.trim().length > 0 || despachosRaw.trim().length > 0
+  const tieneContenido =
+    remisionesRaw.trim().length > 0 || despachosRaw.trim().length > 0;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    void ejecutarConsulta(remisionesRaw, despachosRaw)
-  }
+    event.preventDefault();
+    void ejecutarConsulta(remisionesRaw, despachosRaw);
+  };
 
   const handleRediagnosticar = () => {
-    void ejecutarConsulta(remisionesRaw, despachosRaw)
-  }
+    void ejecutarConsulta(remisionesRaw, despachosRaw);
+  };
+
+  const handleAtajoConsulta = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey) || loading)
+      return;
+    event.preventDefault();
+    void ejecutarConsulta(remisionesRaw, despachosRaw);
+  };
+
+  const handlePegar = async (
+    setValor: (actualizar: (previo: string) => string) => void,
+  ) => {
+    try {
+      const texto = (await navigator.clipboard.readText()).trim();
+      if (!texto) return;
+      setValor((previo) =>
+        previo.trim() ? `${previo.trimEnd()}\n${texto}` : texto,
+      );
+      setError(null);
+    } catch {
+      setError("No se pudo leer el portapapeles. Pega con Ctrl+V.");
+    }
+  };
+
+  const botonPegarClass =
+    "cursor-pointer rounded-[var(--radius-1)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]";
 
   return (
     <div className="mx-auto w-full max-w-[1680px] px-4 pb-20 pt-6 sm:px-8 sm:pt-8">
@@ -98,13 +136,14 @@ export const DiagnosticoPage = () => {
               amplitude={3}
             />
             <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-              Verifica el estado técnico, consistencia y posibles bloqueos de guías entre AGW y CM.
+              Verifica el estado técnico, consistencia y posibles bloqueos de
+              guías entre AGW y CM.
             </p>
           </header>
 
           <form
             onSubmit={handleSubmit}
-            style={{ boxShadow: 'var(--shadow-panel)' }}
+            style={{ boxShadow: "var(--shadow-panel)" }}
             className="surface rounded-[var(--radius-2)] border border-[var(--border-default)] p-5 sm:p-6"
           >
             <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
@@ -113,58 +152,99 @@ export const DiagnosticoPage = () => {
               </span>
               {tieneContenido && !loading && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-[var(--text-muted)]">Limpiar:</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    Limpiar:
+                  </span>
                   <DeleteButton onConfirm={handleLimpiarFormulario} />
                 </div>
               )}
             </div>
 
             <div className="mt-4 space-y-4">
-              <label className="block">
+              <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-body)]">Remisiones</span>
-                  <span className="text-[11px] text-[var(--text-muted)]">Por coma o línea</span>
+                  <label
+                    htmlFor="diagnostico-remisiones"
+                    className="text-xs font-bold text-[var(--text-body)]"
+                  >
+                    Remisiones
+                  </label>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Por coma o línea
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handlePegar(setRemisionesRaw)}
+                      aria-label="Pegar remisiones desde el portapapeles"
+                      className={botonPegarClass}
+                    >
+                      Pegar
+                    </button>
+                  </span>
                 </div>
                 <textarea
+                  id="diagnostico-remisiones"
+                  autoFocus
+                  onKeyDown={handleAtajoConsulta}
                   value={remisionesRaw}
                   onChange={(event) => {
-                    setRemisionesRaw(event.target.value)
-                    if (error) setError(null)
+                    setRemisionesRaw(event.target.value);
+                    if (error) setError(null);
                   }}
                   aria-invalid={Boolean(error)}
-                  aria-describedby={error ? 'form-error-msg' : undefined}
-                  placeholder={'20018012531\n20018012532'}
+                  aria-describedby={error ? "form-error-msg" : undefined}
+                  placeholder={"20018012531\n20018012532"}
                   rows={5}
                   className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
                     error
-                      ? 'border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]'
-                      : 'border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                      ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
+                      : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                   }`}
                 />
-              </label>
+              </div>
 
-              <label className="block">
+              <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-body)]">Despachos</span>
-                  <span className="text-[11px] text-[var(--text-muted)]">Solo números enteros</span>
+                  <label
+                    htmlFor="diagnostico-despachos"
+                    className="text-xs font-bold text-[var(--text-body)]"
+                  >
+                    Despachos
+                  </label>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Solo números enteros
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handlePegar(setDespachosRaw)}
+                      aria-label="Pegar despachos desde el portapapeles"
+                      className={botonPegarClass}
+                    >
+                      Pegar
+                    </button>
+                  </span>
                 </div>
                 <textarea
+                  id="diagnostico-despachos"
+                  onKeyDown={handleAtajoConsulta}
                   value={despachosRaw}
                   onChange={(event) => {
-                    setDespachosRaw(event.target.value)
-                    if (error) setError(null)
+                    setDespachosRaw(event.target.value);
+                    if (error) setError(null);
                   }}
                   aria-invalid={Boolean(error)}
-                  aria-describedby={error ? 'form-error-msg' : undefined}
-                  placeholder={'56727471\n56727472'}
+                  aria-describedby={error ? "form-error-msg" : undefined}
+                  placeholder={"56727471\n56727472"}
                   rows={4}
                   className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
                     error
-                      ? 'border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]'
-                      : 'border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]'
+                      ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
+                      : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                   }`}
                 />
-              </label>
+              </div>
             </div>
 
             {error && (
@@ -181,8 +261,22 @@ export const DiagnosticoPage = () => {
                   stroke="currentColor"
                 >
                   <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                  <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2" strokeLinecap="round" />
+                  <line
+                    x1="12"
+                    y1="8"
+                    x2="12"
+                    y2="12"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="12"
+                    y1="16"
+                    x2="12.01"
+                    y2="16"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <div>{error}</div>
               </div>
@@ -192,7 +286,7 @@ export const DiagnosticoPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] shadow-sm transition hover:bg-[var(--color-primary-hover)] disabled:cursor-wait disabled:opacity-60"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] disabled:cursor-wait disabled:opacity-60"
               >
                 {loading && (
                   <span
@@ -200,7 +294,7 @@ export const DiagnosticoPage = () => {
                     className="size-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current"
                   />
                 )}
-                {loading ? 'Consultando…' : 'Diagnosticar'}
+                {loading ? "Consultando…" : "Diagnosticar"}
               </button>
 
               {loading && (
@@ -213,10 +307,21 @@ export const DiagnosticoPage = () => {
                 </button>
               )}
             </div>
+            <p className="mt-2.5 text-center text-[11px] text-[var(--text-muted)]">
+              Atajo:{" "}
+              <kbd className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-body)]">
+                Ctrl
+              </kbd>{" "}
+              +{" "}
+              <kbd className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-body)]">
+                Enter
+              </kbd>
+            </p>
           </form>
 
           <p className="px-1 text-center text-xs text-[var(--text-muted)] lg:text-left">
-            El diagnóstico es una operación de consulta no destructiva en tiempo real.
+            El diagnóstico es una operación de consulta no destructiva en tiempo
+            real.
           </p>
         </aside>
 
@@ -225,8 +330,11 @@ export const DiagnosticoPage = () => {
           {loading && <DiagnosticoSkeleton />}
 
           {data && !loading && (
-            <>
-              <ResultadoDiagnostico data={data} onRediagnosticar={handleRediagnosticar} />
+            <div className="animate-view-fade">
+              <ResultadoDiagnostico
+                data={data}
+                onRediagnosticar={handleRediagnosticar}
+              />
               <div className="mt-8 text-center">
                 <button
                   type="button"
@@ -236,12 +344,12 @@ export const DiagnosticoPage = () => {
                   Ver respuesta JSON completa
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           {!data && !loading && (
             <div
-              style={{ boxShadow: 'var(--shadow-panel)' }}
+              style={{ boxShadow: "var(--shadow-panel)" }}
               className="surface flex flex-col items-center justify-center rounded-[var(--radius-2)] border border-[var(--border-default)] p-8 text-center sm:p-14"
             >
               <div className="flex size-14 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] sm:size-16">
@@ -271,8 +379,13 @@ export const DiagnosticoPage = () => {
               />
 
               <p className="mt-2 max-w-md text-xs sm:text-sm leading-relaxed text-[var(--text-muted)]">
-                Ingresa una o varias remisiones o números de despacho en el panel lateral y presiona{' '}
-                <strong className="font-semibold text-[var(--text-body)]">Diagnosticar</strong> para verificar el estado de migración, inconsistencias o bloqueos.
+                Ingresa una o varias remisiones o números de despacho en el
+                panel lateral y presiona{" "}
+                <strong className="font-semibold text-[var(--text-body)]">
+                  Diagnosticar
+                </strong>{" "}
+                para verificar el estado de migración, inconsistencias o
+                bloqueos.
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-[var(--text-muted)]">
@@ -291,7 +404,9 @@ export const DiagnosticoPage = () => {
         </section>
       </div>
 
-      {showJson && data && <JsonModal data={data} onClose={() => setShowJson(false)} />}
+      {showJson && data && (
+        <JsonModal data={data} onClose={() => setShowJson(false)} />
+      )}
     </div>
-  )
-}
+  );
+};

@@ -75,7 +75,7 @@ export const AppAccessGuard = ({ appId, children }: AppAccessGuardProps) => {
 
         <Link
           to="/"
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-primary-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
         >
           <span>Volver al portal</span>
         </Link>

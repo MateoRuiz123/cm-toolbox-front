@@ -26,6 +26,7 @@ import { LogsViewer, type LogsViewerTarget } from "./logs-viewer";
 import { GcloudLoginModal } from "./gcloud-login-modal";
 import { WorkloadCombobox } from "./workload-combobox";
 import { appendBoundedLog } from "./logs-buffer";
+import { guardarLogsSesion, idWorkload, leerLogsSesion } from "./logs-sesion";
 
 const FormErrorIcon = () => (
   <svg
@@ -58,7 +59,15 @@ const FormErrorIcon = () => (
 export const LogsPage = () => {
   const { canPerformAction } = useAccess();
   const canViewProd = canPerformAction("logs", "view_prod");
-  const [env, setEnv] = useState<LogEnvironment | null>(null);
+  const [sesionGuardada] = useState(leerLogsSesion);
+  const sesionAplicable =
+    sesionGuardada && !(sesionGuardada.env === "prod" && !canViewProd)
+      ? sesionGuardada
+      : null;
+  const restauracionRef = useRef(sesionAplicable);
+  const [env, setEnv] = useState<LogEnvironment | null>(
+    () => sesionAplicable?.env ?? null,
+  );
   const [namespaces, setNamespaces] = useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState("");
   const [workloads, setWorkloads] = useState<WorkloadInfo[]>([]);
@@ -89,6 +98,12 @@ export const LogsPage = () => {
   }, []);
 
   const loadCatalogForEnv = useCallback(async (selectedEnv: LogEnvironment) => {
+    if (
+      restauracionRef.current &&
+      restauracionRef.current.env !== selectedEnv
+    ) {
+      restauracionRef.current = null;
+    }
     setLoadingCatalog(true);
     setFormError(null);
     setGcloudAuthRequired(false);
@@ -101,6 +116,16 @@ export const LogsPage = () => {
       await authCluster(selectedEnv);
       const ns = await fetchNamespaces(selectedEnv);
       setNamespaces(ns);
+      const pendiente = restauracionRef.current;
+      if (
+        pendiente?.env === selectedEnv &&
+        pendiente.namespace &&
+        ns.includes(pendiente.namespace)
+      ) {
+        setSelectedNamespace(pendiente.namespace);
+      } else if (pendiente?.env === selectedEnv) {
+        restauracionRef.current = null;
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error autenticando";
       setFormError(message);
@@ -126,11 +151,28 @@ export const LogsPage = () => {
       fetchWorkloads(env, selectedNamespace, search)
         .then((list) => {
           setWorkloads(list);
+          const pendiente = restauracionRef.current;
+          if (
+            pendiente?.namespace === selectedNamespace &&
+            pendiente.workload
+          ) {
+            const existe = list.some(
+              (workload) =>
+                idWorkload(
+                  workload.cluster,
+                  workload.namespace,
+                  workload.name,
+                ) === pendiente.workload,
+            );
+            if (existe) setSelectedWorkload(pendiente.workload);
+          }
+          restauracionRef.current = null;
           setLoadingWorkloads(false);
         })
         .catch((err) => {
           const message =
             err instanceof Error ? err.message : "Error cargando workloads";
+          restauracionRef.current = null;
           setFormError(message);
           setLoadingWorkloads(false);
         });
@@ -142,6 +184,15 @@ export const LogsPage = () => {
   }, [env, selectedNamespace, search]);
 
   useEffect(() => () => handleStop(), [handleStop]);
+
+  useEffect(() => {
+    if (restauracionRef.current) return;
+    guardarLogsSesion(
+      env
+        ? { env, namespace: selectedNamespace, workload: selectedWorkload }
+        : null,
+    );
+  }, [env, selectedNamespace, selectedWorkload]);
 
   const handleFormSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -212,6 +263,8 @@ export const LogsPage = () => {
     setFormError(null);
     try {
       await logoutGcloudSession();
+      restauracionRef.current = null;
+      guardarLogsSesion(null);
       setEnv(null);
       setNamespaces([]);
       setSelectedNamespace("");
@@ -393,7 +446,7 @@ export const LogsPage = () => {
                   disabled={
                     !isStreaming && (!selectedWorkload || loadingCatalog)
                   }
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] shadow-sm transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loadingCatalog && (
                     <span

@@ -5,16 +5,16 @@ import { cn } from '../../shared/lib/utils'
 
 const themes = {
   blue: {
-    backFill: '#0066cc',
+    backFill: 'var(--folder-back)',
     backInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0',
     backInsetShadow: 'inset 0 0 6px 2px rgba(255,255,255,0.35)',
-    flapFill: '#0052a3',
+    flapFill: 'var(--folder-flap)',
     flapFillOpacity: 0.85,
-    flapStroke: '#3385d6',
+    flapStroke: 'var(--folder-stroke)',
     flapInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0',
-    cardFill: '#ffffff',
-    cardStroke: '#e0e0e0',
-    cardLineFill: '#90caf9',
+    cardFill: 'var(--folder-card)',
+    cardStroke: 'var(--folder-card-stroke)',
+    cardLineFill: 'var(--folder-line)',
     cardInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0',
   },
   orange: {
@@ -233,7 +233,10 @@ const Card = ({ id: _id, theme }: { id: number; theme: Theme }) => {
         />
       </div>
       <div className="flex items-center justify-between border-t border-[var(--border-default)] pt-2">
-        <div className="size-3 rounded-full bg-[var(--color-primary)] opacity-80" />
+        <div
+          style={{ backgroundColor: theme.cardLineFill }}
+          className="size-3 rounded-full opacity-80"
+        />
         <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
           CM
         </span>
