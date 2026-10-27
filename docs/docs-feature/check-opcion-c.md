@@ -6,7 +6,9 @@ La opción **C** añade a B:
 - UI admin en el front (formulario de subida)
 - Rol/claim `docs:publish`
 
-**No se implementa en paralelo al día 1.** Solo después de B usable.
+**Estado: GO — implementado** (UI en `/docs/:apiId` + `POST /v1/apis/:apiId/specs` en `cm-docs-ms`).
+
+**Publish es solo para internos** (claim `docs:publish` / header `X-Dev-Can-Publish` en local). La puerta `/cliente` y tokens `client:*` **nunca** publican specs; ver [auth-clientes.md](./auth-clientes.md) CA-C10.
 
 ---
 
@@ -24,22 +26,22 @@ Cuando existan, como mínimo:
 
 Marcar en la fecha de revisión:
 
-| # | Criterio | Sí / No |
-| --- | --- | --- |
-| 1 | ¿B está estable (sin 5xx frecuentes, auth OK)? | |
-| 2 | ¿Sobran ≥ 2 semanas de práctica o capacidad equivalente? | |
-| 3 | ¿IAM/Keycloak tiene (o tendrá esta sprint) un rol `docs:publish`? | |
-| 4 | ¿Hay dueño humano que publicará specs (no solo el practicante)? | |
-| 5 | ¿El riesgo de publicar un OpenAPI incorrecto es aceptable (rollback claro)? | |
-| 6 | ¿CI del API documentado **no** cubre ya el publish al storage? | |
+| #   | Criterio                                                                    | Sí / No |
+| --- | --------------------------------------------------------------------------- | ------- |
+| 1   | ¿B está estable (sin 5xx frecuentes, auth OK)?                              |         |
+| 2   | ¿Sobran ≥ 2 semanas de práctica o capacidad equivalente?                    |         |
+| 3   | ¿IAM/Keycloak tiene (o tendrá esta sprint) un rol `docs:publish`?           |         |
+| 4   | ¿Hay dueño humano que publicará specs (no solo el practicante)?             |         |
+| 5   | ¿El riesgo de publicar un OpenAPI incorrecto es aceptable (rollback claro)? |         |
+| 6   | ¿CI del API documentado **no** cubre ya el publish al storage?              |         |
 
 ### Resultado
 
-| Condición | Decisión |
-| --- | --- |
-| Todos los #1–#5 en **Sí**, y #6 en **Sí** (no hay CI) | **GO C** — implementar upload |
-| #1–#5 Sí, pero #6 es **No** (CI ya publica) | **NO-GO UI** — C de servidor opcional; priorizar documentar el CI |
-| Cualquier #1–#5 en **No** | **NO-GO** — quedarse en B; re-evaluar después |
+| Condición                                             | Decisión                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------- |
+| Todos los #1–#5 en **Sí**, y #6 en **Sí** (no hay CI) | **GO C** — implementar upload                                     |
+| #1–#5 Sí, pero #6 es **No** (CI ya publica)           | **NO-GO UI** — C de servidor opcional; priorizar documentar el CI |
+| Cualquier #1–#5 en **No**                             | **NO-GO** — quedarse en B; re-evaluar después                     |
 
 ---
 
@@ -76,6 +78,6 @@ Pegar ese párrafo en el PR o en este archivo bajo “Historial”.
 
 ## Historial de revisiones
 
-| Fecha | Resultado | Notas |
-| --- | --- | --- |
-| _pendiente_ | — | Primera evaluación post-B |
+| Fecha       | Resultado | Notas                     |
+| ----------- | --------- | ------------------------- |
+| _pendiente_ | —         | Primera evaluación post-B |

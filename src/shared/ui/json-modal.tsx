@@ -3,10 +3,19 @@ import { useEffect, useRef, useState } from "react";
 interface JsonModalProps {
   data: unknown;
   onClose: () => void;
+  title?: string;
+  copyLabel?: string;
+  closeLabel?: string;
 }
 
-/** Presenta y permite copiar la respuesta cruda del diagnóstico en un Dialog SIGO Droop. */
-export const JsonModal = ({ data, onClose }: JsonModalProps) => {
+/** Presenta y permite copiar un payload JSON en un Dialog SIGO Droop. */
+export const JsonModal = ({
+  data,
+  onClose,
+  title = "Detalle técnico",
+  copyLabel = "Copiar detalle",
+  closeLabel = "Cerrar detalle",
+}: JsonModalProps) => {
   const [copied, setCopied] = useState(false);
   const json = JSON.stringify(data, null, 2);
   const dialogRef = useRef<HTMLElement>(null);
@@ -81,13 +90,13 @@ export const JsonModal = ({ data, onClose }: JsonModalProps) => {
             id="json-title"
             className="text-sm font-bold uppercase tracking-wider text-[var(--text-body)]"
           >
-            Respuesta JSON Completa
+            {title}
           </h2>
           <button
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            aria-label="Cerrar JSON"
+            aria-label={closeLabel}
             className="grid size-8 cursor-pointer place-items-center rounded-[var(--radius-1)] text-[var(--text-muted)] hover:bg-[var(--border-default)]/30 hover:text-[var(--text-body)] transition-colors"
           >
             <svg
@@ -136,7 +145,7 @@ export const JsonModal = ({ data, onClose }: JsonModalProps) => {
                 <span>Copiado al portapapeles</span>
               </span>
             ) : (
-              "Copiar JSON"
+              copyLabel
             )}
           </button>
           <button

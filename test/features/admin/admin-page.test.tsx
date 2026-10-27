@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminPage } from "../../../src/features/admin/admin-page";
@@ -148,6 +149,12 @@ describe("AdminPage y AppAccessGuard", () => {
         screen.getByText(/✓ Diagnóstico de Migración/i),
       ).toBeInTheDocument();
     });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /Auditoría/i }));
+    expect(
+      screen.getByText(/No hay eventos de auditoría registrados/i),
+    ).toBeInTheDocument();
   });
 
   it("CA-F03: AppAccessGuard bloquea navegación directa cuando canAccessApp es false", () => {

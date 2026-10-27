@@ -65,6 +65,8 @@
   --surface-sunken: var(--gris-panel);
   --surface-bar: var(--gris-barra);
   --surface-header: var(--blanco);
+  --surface-dropdown: #fcfbf9;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23525866' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 
   --text-body: var(--tinta);
   --text-muted: var(--tinta-suave);
@@ -162,6 +164,8 @@
   --surface-sunken: #1a1d24;
   --surface-bar: #1c1f26;
   --surface-header: #1c1f26;
+  --surface-dropdown: #20232b;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ba3b4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 
   --text-body: #e4e7ee;
   --text-muted: #9ba3b4;
@@ -338,6 +342,7 @@ html[data-sistema="visitors"] {
   --surface-sunken: #f4f3ee;
   --surface-bar: #f8f7f3;
   --surface-header: #fbfaf7;
+  --surface-dropdown: #fdfcfa;
   --surface-glass: rgba(253, 252, 250, 0.95);
 
   --text-body: #181925;
@@ -404,6 +409,7 @@ html.dark[data-sistema="visitors"] {
   --surface-sunken: #1a1a24;
   --surface-bar: #1a1a24;
   --surface-header: #1a1a24;
+  --surface-dropdown: #20202b;
   --surface-glass: rgba(22, 22, 30, 0.95);
 
   --text-body: #ececf0;
@@ -444,6 +450,142 @@ html.dark[data-sistema="visitors"] {
   --folder-line: #918df6;
 }
 
+/* Glass Spatial: cristal escarchado monocromático tipo Apple visionOS / macOS Sonoma. */
+html[data-sistema="glass"] {
+  --gris-app: #e6ecf5;
+  --gris-panel: rgba(15, 23, 42, 0.045);
+  --gris-barra: rgba(255, 255, 255, 0.52);
+  --gris-borde: rgba(255, 255, 255, 0.82);
+  --gris-desactivado: #8b93a4;
+  --blanco: rgba(255, 255, 255, 0.56);
+  --tinta: #11141c;
+  --tinta-suave: #4a5162;
+
+  --surface-app: #e6ecf5;
+  --surface-card: rgba(255, 255, 255, 0.56);
+  --surface-card-hover: rgba(255, 255, 255, 0.74);
+  --surface-sunken: rgba(15, 23, 42, 0.045);
+  --surface-bar: rgba(255, 255, 255, 0.52);
+  --surface-header: rgba(255, 255, 255, 0.66);
+  --surface-dropdown: #f4f7fb;
+  --surface-glass: rgba(255, 255, 255, 0.64);
+  --glass-sheen: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.12) 55%,
+    rgba(255, 255, 255, 0.28) 100%
+  );
+
+  --text-body: #11141c;
+  --text-muted: #4a5162;
+  --text-disabled: #8b93a4;
+
+  --border-default: rgba(255, 255, 255, 0.82);
+  --border-focus: #0066cc;
+
+  --backdrop-glass: blur(24px) saturate(190%);
+  --backdrop-glass-header: blur(30px) saturate(200%);
+
+  --radius-1: 10px;
+  --radius-2: 16px;
+  --radius-3: 22px;
+  --radius-4: 9999px;
+  --radius-pill: 9999px;
+
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-1:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.45),
+    0 12px 32px -8px rgba(15, 23, 42, 0.1),
+    0 2px 6px -1px rgba(15, 23, 42, 0.05);
+  --shadow-3:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.45),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.6),
+    0 20px 42px -10px rgba(15, 23, 42, 0.16),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --shadow-4: var(--shadow-3);
+  --shadow-24:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.4),
+    0 28px 60px -12px rgba(15, 23, 42, 0.22),
+    0 8px 22px -4px rgba(15, 23, 42, 0.1);
+  --shadow-panel:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.88),
+    0 6px 20px -4px rgba(15, 23, 42, 0.07);
+
+  --elevation-card: var(--shadow-1);
+  --elevation-card-hover: var(--shadow-3);
+  --elevation-raised: var(--shadow-3);
+  --elevation-modal: var(--shadow-24);
+  --shadow-card: var(--elevation-card);
+}
+
+html.dark[data-sistema="glass"] {
+  --gris-app: #0b0e14;
+  --gris-panel: rgba(255, 255, 255, 0.055);
+  --gris-barra: rgba(18, 22, 32, 0.58);
+  --gris-borde: rgba(255, 255, 255, 0.18);
+  --gris-desactivado: #6b7280;
+  --blanco: rgba(26, 31, 44, 0.52);
+  --tinta: #f2f4f8;
+  --tinta-suave: #a6b0c3;
+
+  --surface-app: #0b0e14;
+  --surface-card: rgba(26, 31, 44, 0.52);
+  --surface-card-hover: rgba(36, 43, 60, 0.66);
+  --surface-sunken: rgba(255, 255, 255, 0.055);
+  --surface-bar: rgba(18, 22, 32, 0.58);
+  --surface-header: rgba(16, 20, 29, 0.64);
+  --surface-dropdown: #181d2a;
+  --surface-glass: rgba(26, 31, 44, 0.64);
+  --glass-sheen: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 55%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+
+  --text-body: #f2f4f8;
+  --text-muted: #a6b0c3;
+  --text-disabled: #6b7280;
+
+  --border-default: rgba(255, 255, 255, 0.18);
+  --border-focus: #5ba3eb;
+
+  --color-primary: #5ba3eb;
+  --color-primary-hover: #73b2f0;
+  --color-action: #5ba3eb;
+  --color-action-hover: #73b2f0;
+
+  --shadow-1:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
+    0 16px 38px -10px rgba(0, 0, 0, 0.55),
+    0 4px 12px -2px rgba(0, 0, 0, 0.35);
+  --shadow-3:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.14),
+    0 22px 48px -10px rgba(0, 0, 0, 0.65),
+    0 6px 16px -2px rgba(0, 0, 0, 0.42);
+  --shadow-4: var(--shadow-3);
+  --shadow-24:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 30px 64px -12px rgba(0, 0, 0, 0.72),
+    0 10px 26px -4px rgba(0, 0, 0, 0.5);
+  --shadow-panel:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+    0 8px 24px -4px rgba(0, 0, 0, 0.45);
+}
+
 /* Descanso visual: superficies cálidas (~4500K) para turnos largos. Va después de Visitors para ganar en empate de especificidad. */
 html[data-descanso="calido"] {
   --gris-app: #f3efe6;
@@ -459,6 +601,7 @@ html[data-descanso="calido"] {
   --surface-sunken: #ece7dc;
   --surface-bar: #f1ece2;
   --surface-header: #f7f3ea;
+  --surface-dropdown: #faf6ed;
   --surface-glass: rgba(250, 246, 237, 0.95);
 
   --text-body: #2c2823;
@@ -482,6 +625,7 @@ html.dark[data-descanso="calido"] {
   --surface-sunken: #1d1a16;
   --surface-bar: #1e1b17;
   --surface-header: #1e1b17;
+  --surface-dropdown: #23201c;
   --surface-glass: rgba(35, 32, 28, 0.95);
 
   --text-body: #e6dfd5;
@@ -489,6 +633,29 @@ html.dark[data-descanso="calido"] {
   --border-default: #332e28;
   --folder-card: #2a2621;
   --folder-card-stroke: #332e28;
+}
+
+/* Combinación Glass Spatial + Descanso cálido: conserva traslucidez con tinte papel/ámbar. */
+html[data-sistema="glass"][data-descanso="calido"] {
+  --surface-app: #efe9dd;
+  --surface-card: rgba(250, 246, 237, 0.66);
+  --surface-card-hover: rgba(250, 246, 237, 0.8);
+  --surface-sunken: rgba(60, 48, 32, 0.055);
+  --surface-bar: rgba(247, 242, 232, 0.6);
+  --surface-header: rgba(247, 243, 234, 0.74);
+  --surface-glass: rgba(250, 246, 237, 0.72);
+  --border-default: rgba(255, 252, 245, 0.7);
+}
+
+html.dark[data-sistema="glass"][data-descanso="calido"] {
+  --surface-app: #15120f;
+  --surface-card: rgba(35, 32, 28, 0.64);
+  --surface-card-hover: rgba(45, 41, 35, 0.74);
+  --surface-sunken: rgba(255, 245, 230, 0.055);
+  --surface-bar: rgba(30, 27, 23, 0.64);
+  --surface-header: rgba(30, 27, 23, 0.72);
+  --surface-glass: rgba(35, 32, 28, 0.72);
+  --border-default: rgba(255, 244, 228, 0.13);
 }
 
 /* En @layer base para que las utilidades transition-* de Tailwind sigan ganando. */
@@ -502,6 +669,33 @@ html.dark[data-descanso="calido"] {
       border-color 200ms var(--ease-standard),
       color 150ms var(--ease-standard);
   }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: var(--select-chevron);
+    background-position: right 0.65rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem 1rem;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  select:disabled {
+    cursor: not-allowed;
+  }
+
+  select option,
+  select optgroup {
+    background-color: var(--surface-dropdown);
+    color: var(--text-body);
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Garantiza espacio para el indicador desplegable incluso cuando el componente usa px-* de Tailwind v4 */
+select:not([multiple]):not([size]) {
+  padding-inline-end: 2.25rem;
 }
 
 html[data-sistema="visitors"] body {
@@ -533,4 +727,268 @@ html[data-sistema="visitors"] .bg-\[var\(--color-action\)\] {
 
 html[data-sistema="visitors"] .hover\:bg-\[var\(--color-action-hover\)\]:hover {
   background-color: #a9a6f8;
+}
+
+/* ── Comportamiento óptico, físico y espacial para Glass Spatial (visionOS / macOS) ── */
+@keyframes glass-modal-spatial-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+html[data-sistema="glass"] body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--surface-app);
+  background-image:
+    radial-gradient(circle at 12% 14%, rgba(255, 255, 255, 0.98) 0%, transparent 45%),
+    radial-gradient(circle at 86% 18%, rgba(186, 208, 240, 0.55) 0%, transparent 48%),
+    radial-gradient(circle at 75% 82%, rgba(205, 218, 238, 0.5) 0%, transparent 52%),
+    radial-gradient(circle at 20% 85%, rgba(255, 255, 255, 0.85) 0%, transparent 45%);
+  background-attachment: fixed;
+}
+
+html.dark[data-sistema="glass"] body {
+  background-image:
+    radial-gradient(circle at 12% 14%, rgba(45, 68, 108, 0.38) 0%, transparent 48%),
+    radial-gradient(circle at 88% 18%, rgba(34, 48, 78, 0.42) 0%, transparent 50%),
+    radial-gradient(circle at 50% 88%, rgba(26, 36, 58, 0.45) 0%, transparent 55%);
+}
+
+html[data-sistema="glass"][data-descanso="calido"] body {
+  background-image:
+    radial-gradient(circle at 12% 14%, rgba(255, 252, 244, 0.92) 0%, transparent 48%),
+    radial-gradient(circle at 86% 18%, rgba(226, 212, 188, 0.65) 0%, transparent 50%),
+    radial-gradient(circle at 50% 88%, rgba(235, 224, 204, 0.6) 0%, transparent 55%);
+}
+
+html.dark[data-sistema="glass"][data-descanso="calido"] body {
+  background-image:
+    radial-gradient(circle at 12% 14%, rgba(62, 50, 36, 0.42) 0%, transparent 48%),
+    radial-gradient(circle at 86% 18%, rgba(44, 36, 26, 0.48) 0%, transparent 50%),
+    radial-gradient(circle at 50% 88%, rgba(34, 28, 22, 0.52) 0%, transparent 55%);
+}
+
+/* Deja transparente el contenedor raíz de AppShell para que los paneles refracten la luz ambiental del body */
+html[data-sistema="glass"] .min-h-screen.bg-\[var\(--surface-app\)\] {
+  background-color: transparent;
+}
+
+html[data-sistema="glass"] header {
+  background-image: var(--glass-sheen);
+  backdrop-filter: var(--backdrop-glass-header);
+  -webkit-backdrop-filter: var(--backdrop-glass-header);
+  box-shadow: var(--shadow-panel);
+}
+
+html[data-sistema="glass"] :is(.surface, .bg-\[var\(--surface-card\)\]):not(select):not(tbody):not(tr):not(td) {
+  background-image: var(--glass-sheen);
+  backdrop-filter: var(--backdrop-glass);
+  -webkit-backdrop-filter: var(--backdrop-glass);
+  box-shadow: var(--elevation-card);
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-out);
+}
+
+html[data-sistema="glass"] :is(button, a):is(.surface, .bg-\[var\(--surface-card\)\]):hover,
+html[data-sistema="glass"] .surface.group:hover {
+  background-color: var(--surface-card-hover);
+  box-shadow: var(--elevation-card-hover);
+}
+
+html[data-sistema="glass"] :is(input, textarea) {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+html[data-sistema="glass"] select {
+  background-color: var(--surface-card);
+  background-image: var(--select-chevron);
+  backdrop-filter: var(--backdrop-glass);
+  -webkit-backdrop-filter: var(--backdrop-glass);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.65),
+    0 2px 8px -2px rgba(15, 23, 42, 0.08);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+html.dark[data-sistema="glass"] select {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+    0 4px 12px -2px rgba(0, 0, 0, 0.35);
+}
+
+html[data-sistema="glass"] select:hover:not(:disabled) {
+  background-color: var(--surface-card-hover);
+  border-color: var(--color-primary);
+}
+
+/* Estilizado espacial para listas desplegables modernas (Customizable Select en Chromium) */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  select::picker-icon {
+    display: none;
+  }
+
+  ::picker(select) {
+    margin-top: 0.35rem;
+    border-radius: var(--radius-2);
+    border: 1px solid var(--border-default);
+    background-color: var(--surface-dropdown);
+    color: var(--text-body);
+    padding: 0.35rem;
+    box-shadow: var(--elevation-modal);
+  }
+
+  html[data-sistema="glass"] ::picker(select) {
+    background-color: rgba(248, 250, 253, 0.88);
+    background-image: var(--glass-sheen);
+    backdrop-filter: var(--backdrop-glass);
+    -webkit-backdrop-filter: var(--backdrop-glass);
+  }
+
+  html.dark[data-sistema="glass"] ::picker(select) {
+    background-color: rgba(24, 29, 42, 0.9);
+    background-image: var(--glass-sheen);
+    backdrop-filter: var(--backdrop-glass);
+    -webkit-backdrop-filter: var(--backdrop-glass);
+  }
+
+  select option {
+    border-radius: var(--radius-1);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    background-color: transparent;
+    color: var(--text-body);
+    cursor: pointer;
+    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out);
+  }
+
+  select option:hover,
+  select option:focus {
+    background-color: var(--color-primary-soft);
+    color: var(--color-primary);
+    outline: none;
+  }
+
+  select option:checked {
+    background-color: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  select option::checkmark {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  html[data-sistema="visitors"] select option:hover,
+  html[data-sistema="visitors"] select option:focus,
+  html[data-sistema="visitors"] select option:checked {
+    background-color: rgba(145, 141, 246, 0.16);
+    color: var(--text-body);
+  }
+
+  html[data-sistema="visitors"] select option::checkmark {
+    color: #7c77f2;
+  }
+
+  html.dark[data-sistema="visitors"] select option::checkmark {
+    color: #a9a6f8;
+  }
+}
+
+/* Hover consistente en filas de tablas para todos los sistemas visuales */
+tbody tr {
+  transition: background-color 140ms var(--ease-out);
+}
+
+tbody tr:hover {
+  background-color: rgba(0, 102, 204, 0.035);
+}
+
+html.dark tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+html[data-sistema="visitors"] tbody tr:hover {
+  background-color: rgba(24, 25, 37, 0.03);
+}
+
+html.dark[data-sistema="visitors"] tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Tablas y filas de listas en Glass Spatial */
+html[data-sistema="glass"] tbody.bg-\[var\(--surface-card\)\] {
+  background-color: transparent;
+}
+
+html[data-sistema="glass"] tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+html[data-sistema="glass"] tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.42);
+}
+
+html.dark[data-sistema="glass"] tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+html[data-sistema="glass"] .bg-\[var\(--color-action\)\] {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 4px 12px -2px rgba(0, 102, 204, 0.28);
+}
+
+html[data-sistema="glass"] :is(button:not(:disabled), a[class*="rounded"]) {
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+html[data-sistema="glass"] :is(button:not(:disabled), a[class*="rounded"]):active {
+  transform: scale(0.975);
+}
+
+html[data-sistema="glass"] .animate-modal-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation-duration: 220ms;
+}
+
+html[data-sistema="glass"] .animate-modal-dialog {
+  animation: glass-modal-spatial-in 260ms var(--ease-standard) forwards;
+}
+
+html[data-sistema="glass"] :is(button, textarea, input, select, a):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.24);
+}
+
+html.dark[data-sistema="glass"] :is(button, textarea, input, select, a):focus-visible {
+  box-shadow: 0 0 0 4px rgba(91, 163, 235, 0.28);
 }

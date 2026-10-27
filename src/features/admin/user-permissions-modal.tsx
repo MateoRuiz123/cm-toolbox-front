@@ -44,6 +44,9 @@ export const UserPermissionsModal = ({
   );
   const [roleId, setRoleId] = useState<RoleId>(initialUser?.roleId ?? "user");
   const [isBlocked, setIsBlocked] = useState(initialUser?.isBlocked ?? false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(
+    initialUser?.isSuperAdmin ?? false,
+  );
   const [notes, setNotes] = useState(initialUser?.notes ?? "");
   const [overridesMap, setOverridesMap] = useState<
     Record<string, OverrideChoice>
@@ -94,6 +97,7 @@ export const UserPermissionsModal = ({
     app: AdminAppItem,
     actionCode: string,
   ): boolean => {
+    if (isSuperAdmin) return true;
     if (isBlocked) return false;
     if (roleId === "admin") return true;
     const choice =
@@ -140,10 +144,11 @@ export const UserPermissionsModal = ({
     try {
       await onSave(normalizedEmail, {
         displayName: displayName.trim() || null,
-        roleId,
-        isBlocked,
+        roleId: isSuperAdmin ? "admin" : roleId,
+        isBlocked: isSuperAdmin ? false : isBlocked,
         notes: notes.trim() || null,
         permissions,
+        ...(actorIsSuperAdmin ? { isSuperAdmin } : {}),
       });
       onClose();
     } catch (error) {
@@ -158,7 +163,7 @@ export const UserPermissionsModal = ({
   };
 
   const effectiveSummary = useMemo(() => {
-    if (isBlocked) return [];
+    if (isBlocked && !isSuperAdmin) return [];
     return apps
       .filter((app) => isEffectiveActionAllowed(app, "view"))
       .map((app) => {
@@ -175,7 +180,7 @@ export const UserPermissionsModal = ({
           extraLabel: extra.length > 0 ? extra.join(", ") : "Solo consulta",
         };
       });
-  }, [apps, roleId, overridesMap, isBlocked]);
+  }, [apps, roleId, overridesMap, isBlocked, isSuperAdmin]);
 
   return (
     <div
@@ -525,8 +530,8 @@ export const UserPermissionsModal = ({
               <label className="flex items-center gap-2.5 rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={isBlocked}
-                  disabled={isSelf}
+                  checked={isBlocked && !isSuperAdmin}
+                  disabled={isSelf || isSuperAdmin}
                   onChange={(e) => setIsBlocked(e.target.checked)}
                   className="size-4 rounded-[2px] border-[var(--border-default)] text-[var(--state-error)]"
                 />
@@ -537,6 +542,31 @@ export const UserPermissionsModal = ({
             </div>
           </div>
 
+          {actorIsSuperAdmin ? (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[var(--radius-1)] border border-[var(--state-warning)]/40 bg-[var(--alert-warning-bg)] px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={isSuperAdmin}
+                disabled={isSelf}
+                onChange={(e) => setIsSuperAdmin(e.target.checked)}
+                aria-describedby="super-admin-help"
+                className="mt-0.5 size-4 rounded-[2px] border-[var(--border-default)]"
+              />
+              <span>
+                <span className="block text-xs font-bold text-[var(--state-warning)]">
+                  Acceso total (super-administrador)
+                </span>
+                <span
+                  id="super-admin-help"
+                  className="block text-[11px] text-[var(--text-muted)]"
+                >
+                  Todas las herramientas y acciones, incluidas las nuevas. No se
+                  puede bloquear y solo otro super-administrador puede quitarlo.
+                </span>
+              </span>
+            </label>
+          ) : null}
+
           {/* Resumen en vivo de qué verá el usuario */}
           <div className="rounded-[var(--radius-2)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)]/30 p-4">
             <span className="block text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">
@@ -545,11 +575,11 @@ export const UserPermissionsModal = ({
             {isBlocked ? (
               <p className="mt-1 text-xs font-semibold text-[var(--state-error)]">
                 ⛔ Cuenta suspendida: al iniciar sesión verá la pantalla de
-                Acceso Restringido y no podrá entrar al Hub.
+                Acceso Restringido y no podrá entrar al portal.
               </p>
             ) : effectiveSummary.length === 0 ? (
               <p className="mt-1 text-xs text-[var(--state-warning)]">
-                ⚠️ Podrá entrar al Hub pero verá todas las herramientas con
+                ⚠️ Podrá entrar al portal pero verá todas las herramientas con
                 &ldquo;Permiso requerido&rdquo;.
               </p>
             ) : (

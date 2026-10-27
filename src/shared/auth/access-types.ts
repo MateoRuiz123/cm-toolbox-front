@@ -1,6 +1,6 @@
 export type RoleId = string;
 
-export type AppStatus = "active" | "maintenance" | "disabled";
+export type AppStatus = "active" | "maintenance" | "disabled" | "hidden";
 
 export type AppIconType = "diagnostico" | "pubsub" | "auditoria" | "docs";
 
@@ -53,6 +53,19 @@ export const DEFAULT_APPS_CATALOG: readonly EffectiveAppAccess[] = [
     displayOrder: 20,
     canAccess: true,
     allowedActions: ["view", "view_prod"],
+  },
+  {
+    id: "docs",
+    name: "Documentación de APIs",
+    description:
+      "Consulta la especificación OpenAPI vigente de las APIs de integración, con acceso controlado. Reemplaza el envío de archivos PDF.",
+    route: "/docs",
+    icon: "docs",
+    tags: ["OpenAPI", "Integraciones", "Catálogo"],
+    status: "active",
+    displayOrder: 25,
+    canAccess: true,
+    allowedActions: ["view", "publish", "manage"],
   },
   {
     id: "auditoria",

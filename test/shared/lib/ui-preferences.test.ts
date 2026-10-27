@@ -59,10 +59,12 @@ describe("ui-preferences", () => {
     expect(obtenerPreferenciaSistema()).toBe("visitors");
   });
 
-  it("usa SIGO cuando no hay sistema guardado y persiste Visitors", () => {
+  it("usa SIGO cuando no hay sistema guardado y persiste Visitors y Glass", () => {
     expect(obtenerPreferenciaSistema()).toBe("sigo");
     guardarPreferenciaSistema("visitors");
     expect(obtenerPreferenciaSistema()).toBe("visitors");
+    guardarPreferenciaSistema("glass");
+    expect(obtenerPreferenciaSistema()).toBe("glass");
     guardarPreferenciaSistema("sigo");
     expect(obtenerPreferenciaSistema()).toBe("sigo");
   });

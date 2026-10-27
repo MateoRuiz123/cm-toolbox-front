@@ -5,8 +5,8 @@ import { useAuth } from "../auth/use-auth";
 import { useAccess } from "../auth/access-context";
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  sub_admin: "Sub-Admin",
+  admin: "Administrador",
+  sub_admin: "Subadministrador",
   user: "Operador",
 };
 
@@ -23,7 +23,10 @@ export const AppHeader = () => {
   const puedeAdministrar = canManageApps || canManageUsers;
   const herramientasRapidas = apps.filter(
     (app) =>
-      app.canAccess && app.status !== "disabled" && app.route.startsWith("/"),
+      app.canAccess &&
+      app.status !== "disabled" &&
+      app.status !== "hidden" &&
+      app.route.startsWith("/"),
   );
   const obtenerNombreCorto = (appId: string, nombre: string) => {
     if (appId === "diagnostico") return "Diagnóstico";

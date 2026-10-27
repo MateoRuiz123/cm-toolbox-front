@@ -1,0 +1,51 @@
+# Infra local para `pnpm dev` (Postgres + Redis).
+# Arranca el script scripts/dev-with-backends.mjs; no hace falta
+# docker compose a mano en access-ms.
+#
+# Requiere hermanos en ../cm-toolbox-access-ms y ../cm-docs-ms
+# (o TOOLBOX_LOCAL_ROOT apuntando a la carpeta que los contiene).
+
+# Mismo proyecto que el compose de access-ms: reutiliza contenedores y volumen
+# en vez de chocar por container_name.
+name: cm-toolbox-access-ms
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cm-toolbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: toolbox
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: cm_toolbox_access
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ${TOOLBOX_LOCAL_ROOT:-..}/cm-toolbox-access-ms/sql/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+      - ${TOOLBOX_LOCAL_ROOT:-..}/cm-toolbox-access-ms/sql/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
+      - ${TOOLBOX_LOCAL_ROOT:-..}/cm-toolbox-access-ms/sql/003_views_and_queries.sql:/docker-entrypoint-initdb.d/003_views_and_queries.sql:ro
+      - ${TOOLBOX_LOCAL_ROOT:-..}/cm-toolbox-access-ms/sql/004_app_id_on_update_cascade.sql:/docker-entrypoint-initdb.d/004_app_id_on_update_cascade.sql:ro
+      - ${TOOLBOX_LOCAL_ROOT:-..}/cm-toolbox-access-ms/sql/005_seed_docs_app.sql:/docker-entrypoint-initdb.d/005_seed_docs_app.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U toolbox -d cm_toolbox_access"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: cm-toolbox-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+    name: cm-toolbox-access-ms_pgdata

@@ -74,7 +74,7 @@ export const DynamicAppRoutePage = ({ app }: DynamicAppRoutePageProps) => {
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border-default)] pt-6">
             <p className="text-xs text-[var(--text-muted)]">
               El control de acceso y estado operativo de esta herramienta ya
-              está activo en el Hub.
+              está activo en el portal.
             </p>
             <Link
               to="/"

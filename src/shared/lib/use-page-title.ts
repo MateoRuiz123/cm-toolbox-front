@@ -28,6 +28,20 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
     description:
       "Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test) para troubleshooting operativo.",
   },
+  "/docs": {
+    title: "Documentación de APIs | Coordinadora Toolbox",
+    description:
+      "Consulta la especificación OpenAPI vigente de las APIs de integración con acceso controlado.",
+  },
+  "/cliente/login": {
+    title: "Acceso clientes | Documentación",
+    description:
+      "Inicio de sesión para consultar documentación de APIs de integración.",
+  },
+  "/cliente/docs": {
+    title: "Documentación de APIs",
+    description: "Catálogo de documentación OpenAPI para clientes.",
+  },
   "/admin": {
     title: "Administración y Permisos | Coordinadora Toolbox",
     description:
@@ -73,7 +87,11 @@ export const usePageTitle = () => {
       ? METADATA_MAP["/diagnostico"]
       : pathname.startsWith("/logs")
         ? METADATA_MAP["/logs"]
-        : METADATA_MAP[pathname] || METADATA_MAP["/404"];
+        : pathname.startsWith("/docs")
+          ? METADATA_MAP["/docs"]
+          : pathname.startsWith("/cliente/docs")
+            ? METADATA_MAP["/cliente/docs"]
+            : METADATA_MAP[pathname] || METADATA_MAP["/404"];
 
     document.title = meta.title;
 

@@ -1,9 +1,9 @@
 # Contrato HTTP — Documentación de APIs
 
-Contrato entre `cm-toolbox-front` (`src/features/docs/api/`) y `cm-docs-ms`.  
+Contrato entre `cm-toolbox-front` (`src/features/docs/api/`) y `cm-docs-ms`.
 Estilo alineado a [diagnostico-api-contrato.md](../diagnostico-api-contrato.md).
 
-**Base same-origin (navegador):** `/docs-api`  
+**Base same-origin (navegador):** `/docs-api`
 **Upstream:** `DOCS_API_UPSTREAM` (nginx/Vite proxea y no se hornea en el bundle).
 
 El MS expone rutas bajo `/v1`. El proxy del toolbox debe reenviar `/docs-api/*` al host del MS de forma que el servicio reciba `/v1/*` (strip del prefijo `/docs-api` o configuración equivalente documentada en el runbook).
@@ -21,6 +21,17 @@ El MS expone rutas bajo `/v1`. El proxy del toolbox debe reenviar `/docs-api/*` 
 | OpenAPI response | `application/json` (preferido); YAML opcional con `Accept: application/yaml` |
 | IDs | slug kebab-case: `api-guia` |
 | Fechas | ISO-8601 UTC |
+| Endpoints | **Sin rutas nuevas** para fase clientes: mismos `GET /v1/apis` y `GET .../openapi`; cambia solo el claim del token |
+
+### Tokens de ejemplo (semántica)
+
+| Tipo sesión | Audiencias efectivas típicas | Ve en catálogo |
+| --- | --- | --- |
+| Interno (Google / toolbox) | `internal` | APIs con `internal` |
+| Cliente `acme` | `client:acme` | Solo APIs con `client:acme` |
+| Cliente sin match | `client:x` sin APIs | `{ "data": [] }` |
+
+No hay endpoint distinto por puerta; el front interno y `/cliente` llaman el mismo contrato.
 
 ---
 
@@ -249,7 +260,11 @@ El OpenAPI se tipa como `unknown` o `Record<string, unknown>` al recibirlo; el v
 | Token válido, catálogo vacío | 200 `{ "data": [] }` |
 | Token sin audiencia a `apiId` | 404 en openapi |
 | Token con acceso | 200 OpenAPI con campo `openapi` |
+| Token `client:acme`, API solo `internal` | 404 en openapi (mismo mensaje) |
+| Token `client:acme`, API `client:acme` | 200 OpenAPI |
+| Token `client:acme`, lista | No incluye APIs solo `client:otro` ni solo `internal` |
 | Publish sin rol (si C) | 403 |
+| Publish con token solo cliente (si C) | 403 |
 | Publish YAML inválido (si C) | 400 |
 
 ---

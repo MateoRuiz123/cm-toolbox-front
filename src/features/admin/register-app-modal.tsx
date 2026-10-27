@@ -10,6 +10,8 @@ import type {
 interface RegisterAppModalProps {
   readonly initialApp: AdminAppItem | null;
   readonly roles: readonly AdminRoleItem[];
+  readonly canEditId?: boolean;
+  readonly onRenameId?: (appId: string, newId: string) => Promise<void>;
   readonly onSave: (payload: UpsertAdminAppPayload) => Promise<void>;
   readonly onClose: () => void;
 }
@@ -33,6 +35,8 @@ const DEFAULT_VIEW_ACTION: AdminAppActionItem = {
 export const RegisterAppModal = ({
   initialApp,
   roles,
+  canEditId = false,
+  onRenameId,
   onSave,
   onClose,
 }: RegisterAppModalProps) => {
@@ -156,8 +160,18 @@ export const RegisterAppModal = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
+    if (isEditing && initialApp && cleanId !== initialApp.id && !canEditId) {
+      setErrorMsg(
+        "Solo un super-admin puede cambiar el ID de una herramienta.",
+      );
+      return;
+    }
+
     setSaving(true);
     try {
+      if (isEditing && initialApp && cleanId !== initialApp.id && onRenameId) {
+        await onRenameId(initialApp.id, cleanId);
+      }
       await onSave({
         id: cleanId,
         name: name.trim(),
@@ -203,10 +217,10 @@ export const RegisterAppModal = ({
             >
               {isEditing
                 ? `Editar herramienta: ${initialApp?.name}`
-                : "Registrar nueva herramienta en el Hub"}
+                : "Registrar nueva herramienta en el portal"}
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              Configura la tarjeta que aparecerá en el Hub, su ruta y sus
+              Configura la tarjeta que aparecerá en el portal, su ruta y sus
               permisos disponibles.
             </p>
           </div>
@@ -233,7 +247,7 @@ export const RegisterAppModal = ({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <label className="block sm:col-span-2">
               <span className="text-xs font-bold text-[var(--text-body)]">
-                Nombre de la herramienta (Título en el Hub)
+                Nombre de la herramienta (título en el portal)
               </span>
               <input
                 type="text"
@@ -245,14 +259,15 @@ export const RegisterAppModal = ({
               />
             </label>
 
-            <label className="block">
+            <label className="block" htmlFor="admin-app-id">
               <span className="text-xs font-bold text-[var(--text-body)]">
                 ID único (appId)
               </span>
               <input
+                id="admin-app-id"
                 type="text"
                 required
-                disabled={isEditing}
+                disabled={isEditing && !canEditId}
                 value={appId}
                 onChange={(e) => {
                   setAutoSlug(false);
@@ -261,6 +276,12 @@ export const RegisterAppModal = ({
                 placeholder="validador-tarifas"
                 className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 font-mono text-sm text-[var(--text-body)] disabled:opacity-60"
               />
+              {isEditing && canEditId && (
+                <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                  Cambiar el ID mueve permisos y rutas fijas. Para Documentación
+                  de APIs el id debe ser docs.
+                </span>
+              )}
             </label>
           </div>
 
@@ -333,7 +354,9 @@ export const RegisterAppModal = ({
                 className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
               >
                 <option value="diagnostico">Checklist / Diagnóstico</option>
-                <option value="pubsub">Servidores / Logs / PubSub</option>
+                <option value="pubsub">
+                  Servidores / Registros / Mensajería
+                </option>
                 <option value="auditoria">Documento / Auditoría</option>
                 <option value="docs">Catálogo / API Docs</option>
               </select>
@@ -348,16 +371,19 @@ export const RegisterAppModal = ({
                 onChange={(e) => setStatus(e.target.value as AppStatus)}
                 className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
               >
-                <option value="active">Activa (Disponible)</option>
-                <option value="maintenance">En mantenimiento (Admin)</option>
-                <option value="disabled">Desactivada (En construcción)</option>
+                <option value="active">Activa (disponible)</option>
+                <option value="maintenance">
+                  En mantenimiento (solo administrador)
+                </option>
+                <option value="disabled">En construcción</option>
+                <option value="hidden">Oculta del portal</option>
               </select>
             </label>
           </div>
 
           <label className="block">
             <span className="text-xs font-bold text-[var(--text-body)]">
-              Descripción para la tarjeta del Hub
+              Descripción para la tarjeta del portal
             </span>
             <textarea
               required
@@ -385,7 +411,7 @@ export const RegisterAppModal = ({
 
             <label className="block">
               <span className="text-xs font-bold text-[var(--text-body)]">
-                Orden en el Hub
+                Orden en el portal
               </span>
               <input
                 type="number"

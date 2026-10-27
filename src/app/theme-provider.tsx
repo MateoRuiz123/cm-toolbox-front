@@ -62,7 +62,7 @@ const conTransicionSuave = (aplicar: () => void) => {
 /** Sincroniza y expone el tema visual de la aplicación. */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
-  const [sistema, setSistema] = useState<SistemaVisual>(
+  const [sistema, setSistemaEstado] = useState<SistemaVisual>(
     obtenerPreferenciaSistema,
   );
   const [descanso, setDescansoEstado] = useState<ModoDescanso>(
@@ -75,8 +75,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const raiz = document.documentElement;
     raiz.classList.toggle("dark", theme === "dark");
-    if (sistema === "visitors") {
-      raiz.dataset.sistema = "visitors";
+    if (sistema === "visitors" || sistema === "glass") {
+      raiz.dataset.sistema = sistema;
       cargarFuenteVisitors();
     } else {
       delete raiz.dataset.sistema;
@@ -101,6 +101,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const nextTheme = theme === "light" ? "dark" : "light";
     conTransicionSuave(() => setTheme(nextTheme));
   }, [theme]);
+
+  const setSistema = useCallback((siguiente: SistemaVisual) => {
+    conTransicionSuave(() => setSistemaEstado(siguiente));
+  }, []);
 
   const setDescanso = useCallback((siguiente: ModoDescanso) => {
     conTransicionSuave(() => setDescansoEstado(siguiente));
@@ -130,6 +134,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       theme,
       toggleTheme,
       sistema,
+      setSistema,
       descanso,
       setDescanso,
       toggleDescanso,

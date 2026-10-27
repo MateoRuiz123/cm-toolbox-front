@@ -44,4 +44,20 @@ test.describe("Navegación del portal", () => {
       page.getByRole("heading", { name: /contacto y soporte de ti/i }),
     ).toBeVisible();
   });
+
+  test("permite cambiar el sistema visual a Glass Spatial en apariencia", async ({
+    page,
+  }) => {
+    await page.goto("/configuracion");
+    await dismissCookieBanner(page);
+
+    await expect(
+      page.getByRole("heading", { name: /apariencia del toolbox/i }),
+    ).toBeVisible();
+
+    const glassRadio = page.getByRole("radio", { name: /glass spatial/i });
+    await glassRadio.click();
+    await expect(glassRadio).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-sistema", "glass");
+  });
 });

@@ -42,7 +42,11 @@ export const UsersPermissionsTab = ({
     : (actorRoleObj?.hierarchyLevel ?? 50);
 
   const computeUserAppAccess = (user: AdminUserItem, app: AdminAppItem) => {
-    if (user.isBlocked || app.status === "disabled") {
+    if (
+      user.isBlocked ||
+      app.status === "disabled" ||
+      app.status === "hidden"
+    ) {
       return { canEnter: false, extraActions: [] as string[] };
     }
     if (user.isSuperAdmin || user.roleId === "admin") {
@@ -101,8 +105,9 @@ export const UsersPermissionsTab = ({
   });
 
   const canActorEditTarget = (target: AdminUserItem): boolean => {
+    if (actorIsSuperAdmin) return true;
     if (target.isSuperAdmin) return false;
-    if (actorIsSuperAdmin || actorRoleId === "admin") return true;
+    if (actorRoleId === "admin") return true;
     const targetRoleObj = roles.find((r) => r.id === target.roleId);
     const targetLevel = targetRoleObj?.hierarchyLevel ?? 10;
     return targetLevel < actorLevel;
@@ -192,7 +197,7 @@ export const UsersPermissionsTab = ({
                     key={user.email}
                     className="hover:bg-[var(--surface-sunken)]/40"
                   >
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       <div className="font-mono text-xs font-bold text-[var(--text-body)]">
                         {user.email}
                       </div>
@@ -208,49 +213,49 @@ export const UsersPermissionsTab = ({
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--color-primary)]">
+                        <span className="inline-flex items-center rounded-full border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--color-primary)]">
                           {roleObj?.name ?? user.roleId}
                         </span>
                         {user.isSuperAdmin && (
-                          <span className="rounded-full border border-[var(--state-warning)]/40 bg-[var(--alert-warning-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
-                            Super Admin (Protegido)
+                          <span className="inline-flex items-center rounded-full border border-[var(--state-warning)]/40 bg-[var(--alert-warning-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
+                            Acceso total
                           </span>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                       {user.isBlocked ? (
-                        <span className="rounded-full border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--state-error)]">
+                        <span className="inline-flex items-center rounded-full border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--state-error)]">
                           Bloqueado
                         </span>
                       ) : (
-                        <span className="rounded-full border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--state-success)]">
+                        <span className="inline-flex items-center rounded-full border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--state-success)]">
                           Activo
                         </span>
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 align-middle">
                       {accessibleApps.length === 0 ? (
                         <span className="text-xs text-[var(--text-muted)]">
                           Sin herramientas habilitadas
                         </span>
                       ) : (
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {accessibleApps.map(({ app, access }) => (
                             <span
                               key={app.id}
-                              className="rounded-[var(--radius-pill)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2.5 py-0.5 text-[11px] text-[var(--text-body)]"
+                              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2.5 py-1 text-[11px] leading-tight text-[var(--text-body)]"
                             >
-                              <strong className="text-[var(--state-success)]">
+                              <strong className="font-semibold text-[var(--state-success)]">
                                 ✓ {app.name}
                               </strong>
                               {access.extraActions.length > 0 && (
-                                <span className="ml-1 text-[10px] text-[var(--text-muted)]">
-                                  ({access.extraActions.join(", ")})
+                                <span className="text-[10px] text-[var(--text-muted)]">
+                                  · {access.extraActions.join(", ")}
                                 </span>
                               )}
                             </span>
@@ -259,7 +264,7 @@ export const UsersPermissionsTab = ({
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3.5 text-right align-middle whitespace-nowrap">
                       {editable ? (
                         <button
                           type="button"

@@ -60,6 +60,19 @@ describe("ConfiguracionPage", () => {
     expect(safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA)).toBe("sigo");
   });
 
+  it("marca Glass Spatial en el documento y lo persiste", async () => {
+    const user = userEvent.setup();
+    renderPagina();
+
+    await user.click(screen.getByRole("radio", { name: /glass spatial/i }));
+
+    expect(
+      screen.getByRole("radio", { name: /glass spatial/i }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.dataset.sistema).toBe("glass");
+    expect(safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA)).toBe("glass");
+  });
+
   it("activa y desactiva el descanso visual cálido", async () => {
     const user = userEvent.setup();
     renderPagina();

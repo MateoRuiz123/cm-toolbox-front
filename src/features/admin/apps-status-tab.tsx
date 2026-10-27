@@ -10,6 +10,8 @@ import { RegisterAppModal } from "./register-app-modal";
 interface AppsStatusTabProps {
   readonly apps: readonly AdminAppItem[];
   readonly roles: readonly AdminRoleItem[];
+  readonly canEditId?: boolean;
+  readonly onRenameId?: (appId: string, newId: string) => Promise<void>;
   readonly onUpdateStatus: (appId: string, status: AppStatus) => Promise<void>;
   readonly onUpsertApp: (payload: UpsertAdminAppPayload) => Promise<void>;
 }
@@ -23,12 +25,17 @@ const STATUS_BADGE: Readonly<
       "border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] text-[var(--state-success)]",
   },
   maintenance: {
-    label: "En mantenimiento (Solo Admin)",
+    label: "En mantenimiento (solo administrador)",
     className:
       "border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)] text-[var(--state-warning)]",
   },
   disabled: {
-    label: "Desactivada",
+    label: "En construcción",
+    className:
+      "border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)]",
+  },
+  hidden: {
+    label: "Oculta del portal",
     className:
       "border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)]",
   },
@@ -37,6 +44,8 @@ const STATUS_BADGE: Readonly<
 export const AppsStatusTab = ({
   apps,
   roles,
+  canEditId = false,
+  onRenameId,
   onUpdateStatus,
   onUpsertApp,
 }: AppsStatusTabProps) => {
@@ -66,7 +75,7 @@ export const AppsStatusTab = ({
       <div className="flex flex-col justify-between gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-sm font-bold text-[var(--text-body)]">
-            Catálogo de Herramientas del Hub
+            Catálogo de herramientas del portal
           </h2>
           <p className="text-xs text-[var(--text-muted)]">
             Activa, pon en mantenimiento o registra nuevas herramientas para que
@@ -180,13 +189,12 @@ export const AppsStatusTab = ({
                     }
                     className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-1.5 text-xs font-bold text-[var(--text-body)] disabled:opacity-50"
                   >
-                    <option value="active">Activa (Disponible)</option>
+                    <option value="active">Activa (disponible)</option>
                     <option value="maintenance">
-                      En mantenimiento (Solo Admin)
+                      En mantenimiento (solo administrador)
                     </option>
-                    <option value="disabled">
-                      Desactivada (En construcción)
-                    </option>
+                    <option value="disabled">En construcción</option>
+                    <option value="hidden">Oculta del portal</option>
                   </select>
                 </div>
               </div>
@@ -199,6 +207,8 @@ export const AppsStatusTab = ({
         <RegisterAppModal
           initialApp={editingApp}
           roles={roles}
+          canEditId={canEditId}
+          onRenameId={onRenameId}
           onSave={onUpsertApp}
           onClose={() => setModalOpen(false)}
         />

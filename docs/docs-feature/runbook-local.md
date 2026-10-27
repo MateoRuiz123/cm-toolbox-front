@@ -8,8 +8,10 @@ Pasos para desarrollar y validar la feature en local. El agente debe poder segui
 
 ```text
 Browser :3000  →  Vite (cm-toolbox-front)
-                    ├─ /docs          → SPA
-                    └─ /docs-api/*    → proxy → cm-docs-ms :8082
+                    ├─ /docs              → SPA (internos)
+                    ├─ /cliente/login     → SPA (fase clientes)
+                    ├─ /cliente/docs*     → SPA (fase clientes)
+                    └─ /docs-api/*        → proxy → cm-docs-ms :8082
 ```
 
 ---
@@ -23,15 +25,17 @@ Browser :3000  →  Vite (cm-toolbox-front)
 
 ---
 
-## 1. Levantar `cm-docs-ms` (cuando exista el repo)
+## 1. Levantar `cm-docs-ms`
+
+Repo: `~/Escritorio/local/cm-docs-ms` (hermano del front).
 
 ```bash
-cd /path/to/cm-docs-ms
+cd ~/Escritorio/local/cm-docs-ms
 pnpm install
-cp .env.example .env
+cp -n .env.example .env
 ```
 
-`.env` mínimo:
+`.env` mínimo (driver local / tests):
 
 ```bash
 PORT=8082
@@ -42,7 +46,21 @@ SPECS_LOCAL_DIR=./data/specs
 CATALOG_PATH=./data/catalog.json
 ```
 
-Semilla de ejemplo `data/catalog.json`:
+Persistencia Postgres (misma instancia que access-ms, puerto host `5433`):
+
+```bash
+docker exec cm-toolbox-postgres psql -U toolbox -d postgres \
+  -c "CREATE DATABASE cm_toolbox_docs OWNER toolbox;"
+docker exec -i cm-toolbox-postgres psql -U toolbox -d cm_toolbox_docs < sql/001_docs_schema.sql
+docker exec -i cm-toolbox-postgres psql -U toolbox -d cm_toolbox_docs < sql/002_seed_docs.sql
+```
+
+```bash
+SPECS_DRIVER=postgres
+DATABASE_URL=postgres://toolbox@localhost:5433/cm_toolbox_docs
+```
+
+Semilla de ejemplo `data/catalog.json` (MVP B: basta `api-demo`; para fase clientes añadir las otras; equivalente SQL en `sql/002_seed_docs.sql`):
 
 ```json
 {
@@ -55,12 +73,30 @@ Semilla de ejemplo `data/catalog.json`:
       "audiences": ["internal"],
       "objectKey": "api-demo/current.json",
       "updatedAt": "2026-10-10T00:00:00.000Z"
+    },
+    {
+      "id": "api-cliente-demo",
+      "name": "API Cliente Demo",
+      "description": "Solo client:demo",
+      "version": "1.0.0",
+      "audiences": ["client:demo"],
+      "objectKey": "api-cliente-demo/current.json",
+      "updatedAt": "2026-10-10T00:00:00.000Z"
+    },
+    {
+      "id": "api-cliente-otro",
+      "name": "API Cliente Otro",
+      "description": "Solo client:otro",
+      "version": "1.0.0",
+      "audiences": ["client:otro"],
+      "objectKey": "api-cliente-otro/current.json",
+      "updatedAt": "2026-10-10T00:00:00.000Z"
     }
   ]
 }
 ```
 
-Colocar el OpenAPI en `data/specs/api-demo/current.json`.
+Colocar OpenAPI en `data/specs/<apiId>/current.json` para cada entrada.
 
 ```bash
 pnpm dev
@@ -137,14 +173,14 @@ Cuando se cablee producción local con `docker compose` del front:
 
 ## 5. Pruebas humo
 
-| Paso | Comando / acción | OK si |
-| --- | --- | --- |
-| Health MS | `curl :8082/health` | 200 |
-| Catálogo vía proxy | `curl :3000/docs-api/v1/apis` | JSON `data` |
-| UI lista | Abrir `/docs` | Cards visibles |
-| UI visor | Abrir `/docs/api-demo` | Paths del OpenAPI renderizados |
-| Unit front | `pnpm test` (cliente docs) | Verde |
-| Unit MS | `pnpm test` en cm-docs-ms | Verde |
+| Paso               | Comando / acción              | OK si                          |
+| ------------------ | ----------------------------- | ------------------------------ |
+| Health MS          | `curl :8082/health`           | 200                            |
+| Catálogo vía proxy | `curl :3000/docs-api/v1/apis` | JSON `data`                    |
+| UI lista           | Abrir `/docs`                 | Cards visibles                 |
+| UI visor           | Abrir `/docs/api-demo`        | Paths del OpenAPI renderizados |
+| Unit front         | `pnpm test` (cliente docs)    | Verde                          |
+| Unit MS            | `pnpm test` en cm-docs-ms     | Verde                          |
 
 ---
 
@@ -165,6 +201,42 @@ Repetir humo: sin login no hay `/docs`; con login el Bearer llega al MS.
 
 ---
 
+## 6b. Simular token / audiencia cliente (fase clientes)
+
+Sin Keycloak de clientes todavía, en `AUTH_MODE=disabled` (solo no-prod):
+
+```bash
+# Ejemplo — si el MS implementa el override de dev documentado en back.md:
+curl -s http://localhost:3000/docs-api/v1/apis \
+  -H "X-Dev-Audiences: client:demo"
+```
+
+Esperado: solo `api-cliente-demo` en `data` (no `api-demo` ni `api-cliente-otro`).
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  http://localhost:3000/docs-api/v1/apis/api-demo/openapi \
+  -H "X-Dev-Audiences: client:demo"
+# → 404
+
+curl -s -o /dev/null -w "%{http_code}\n" \
+  http://localhost:3000/docs-api/v1/apis/api-cliente-demo/openapi \
+  -H "X-Dev-Audiences: client:demo"
+# → 200
+```
+
+Con Keycloak real de clientes:
+
+1. Front: `VITE_KEYCLOAK_CLIENT_ID_CLIENTES=…` + vars de realm.
+2. Abrir `http://localhost:3000/cliente/login` (sin Google).
+3. Login usuario+clave de prueba → `/cliente/docs`.
+4. Confirmar que `/` y `/docs` del hub no son usables con esa sesión.
+5. Repetir con usuario `client:otro` y verificar aislamiento A/B.
+
+Detalle de CA: [auth-clientes.md](./auth-clientes.md).
+
+---
+
 ## 7. Fase C (solo si check GO)
 
 1. Usuario con rol publish.
@@ -182,22 +254,26 @@ curl -X POST http://localhost:3000/docs-api/v1/apis/api-demo/specs \
 
 ## 8. Troubleshooting
 
-| Síntoma | Revisar |
-| --- | --- |
-| 502 en `/docs-api` | MS caído; `DOCS_API_UPSTREAM`; rewrite del proxy |
-| Catálogo vacío | `catalog.json`; audiencias `internal`; driver local |
-| 401 con auth | Token no enviado; issuer/audience del MS |
-| Visor en blanco | Spec inválida; CSP; error de import del visor |
-| CORS en dev directo al :8082 | Usar siempre el proxy `:3000/docs-api`, no el host del MS desde el browser |
+| Síntoma                         | Revisar                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| 502 en `/docs-api`              | MS caído; `DOCS_API_UPSTREAM`; rewrite del proxy                           |
+| Catálogo vacío                  | `catalog.json`; audiencias `internal` o `client:*`; driver local           |
+| 401 con auth                    | Token no enviado; issuer/audience del MS                                   |
+| Cliente ve docs internas        | Claim mapeo; seed `audiences`; no añadir `internal` al token cliente       |
+| Cliente A ve APIs de B          | Filtro intersect; probar con `X-Dev-Audiences` o dos usuarios              |
+| Visor en blanco                 | Spec inválida; CSP; error de import del visor                              |
+| CORS en dev directo al :8082    | Usar siempre el proxy `:3000/docs-api`, no el host del MS desde el browser |
+| `/cliente/login` muestra Google | Client OIDC / pantalla equivocada (ADR-010)                                |
 
 ---
 
-## 9. Definición de listo para pasar al agente de implementación
+## 9. Estado post-implementación
 
-El agente puede empezar cuando existan:
+- [x] Paquete `docs/docs-feature/*`
+- [x] `cm-docs-ms` con seed `api-demo` / clientes
+- [x] Front B + C + puerta `/cliente` (sesión OIDC + guards + 401)
+- [x] MS `KEYCLOAK_AUDIENCE` multi-aud
+- [ ] Client OIDC Keycloak de clientes en identidad (prod) — [peticion-iam-keycloak.md](./peticion-iam-keycloak.md)
+- [ ] App `docs` en access-ms de cada ambiente (si aplica)
 
-- [x] Este paquete `docs/docs-feature/*`
-- [ ] Repo `cm-docs-ms` creado (o instrucción de crearlo desde plantilla logs)
-- [ ] Una spec real o `api-demo` de prueba
-
-Orden de trabajo recomendado del agente: **MS B → proxy front → UI lista → visor → tests → (check C)**.
+Operación diaria / checklist: [guia-operativa.md](./guia-operativa.md).

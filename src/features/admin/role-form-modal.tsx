@@ -317,7 +317,8 @@ export const RoleFormModal = ({
                     Puede administrar herramientas y roles
                   </span>
                   <span className="text-[11px] text-[var(--text-muted)]">
-                    Permite prender/apagar aplicaciones del Hub y editar roles.
+                    Permite prender/apagar aplicaciones del portal y editar
+                    roles.
                   </span>
                 </div>
               </label>

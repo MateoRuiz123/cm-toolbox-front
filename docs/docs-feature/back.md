@@ -5,15 +5,17 @@ Documento técnico **detallado** del microservicio. Un agente debe poder crear e
 **Companion:** [front.md](./front.md)
 **Índice:** [README.md](./README.md)
 **Contrato normativo:** [contrato-http.md](./contrato-http.md)
-**Otros:** [decisiones.md](./decisiones.md) · [seguridad.md](./seguridad.md) · [check-opcion-c.md](./check-opcion-c.md) · [runbook-local.md](./runbook-local.md)
+**Otros:** [decisiones.md](./decisiones.md) · [seguridad.md](./seguridad.md) · [check-opcion-c.md](./check-opcion-c.md) · [runbook-local.md](./runbook-local.md) · [auth-clientes.md](./auth-clientes.md)
 
-| Campo | Valor |
-| --- | --- |
-| Nombre servicio | `cm-docs-ms` |
-| Consumidor | `cm-toolbox-front` vía `/docs-api/` |
-| Arquitectura | Hexagonal + Inversify |
-| Runtime default | Express (como `cm-logs-ms`) |
-| Opción | **B** obligatoria; **C** solo con check GO |
+| Campo           | Valor                                     |
+| --------------- | ----------------------------------------- |
+| Nombre servicio | `cm-docs-ms`                              |
+| Ubicación local | `~/Escritorio/local/cm-docs-ms`           |
+| Consumidor      | `cm-toolbox-front` vía `/docs-api/`       |
+| Arquitectura    | Hexagonal + Inversify                     |
+| Runtime         | Express (como `cm-logs-ms`)               |
+| Estado          | **Implementado** (B + C + claims cliente) |
+| Operación       | [guia-operativa.md](./guia-operativa.md)  |
 
 ---
 
@@ -32,13 +34,14 @@ No modifica APIs de negocio. No genera PDF. No es CMS de texto libre.
 
 ## 2. Actores y responsabilidades
 
-| Actor | Interacción con el MS |
-| --- | --- |
-| SPA toolbox | Llama `/v1/*` con Bearer |
-| nginx toolbox | Proxy, `TRUST_PROXY=1` |
-| Publicador (C) | `POST .../specs` con rol |
-| CI (later) | Puede escribir al storage sin pasar por POST (alternativa a C UI) |
-| Probe k8s/Cloud Run | `GET /health*` sin auth |
+| Actor                  | Interacción con el MS                                             |
+| ---------------------- | ----------------------------------------------------------------- |
+| SPA toolbox (internos) | Llama `/v1/*` con Bearer (Google / client OIDC interno)           |
+| SPA puerta clientes    | Misma `/v1/*` con Bearer del client OIDC clientes                 |
+| nginx toolbox          | Proxy, `TRUST_PROXY=1`                                            |
+| Publicador (C)         | `POST .../specs` con rol (solo internos)                          |
+| CI (later)             | Puede escribir al storage sin pasar por POST (alternativa a C UI) |
+| Probe k8s/Cloud Run    | `GET /health*` sin auth                                           |
 
 ---
 
@@ -48,7 +51,7 @@ No modifica APIs de negocio. No genera PDF. No es CMS de texto libre.
 
 1. Request `GET /v1/apis` + Bearer.
 2. Middleware valida JWT (o bypass solo si `AUTH_MODE=disabled` y no-prod).
-3. Extrae subject + audiencias efectivas del token (MVP: `['internal']`).
+3. Extrae subject + audiencias efectivas del token (MVP B: `['internal']`; fase clientes: mapeo claim → `client:<id>`).
 4. Lee catálogo (JSON/Firestore).
 5. Filtra APIs cuya `audiences` intersecta.
 6. Responde `{ data: DocsApiSummary[] }` sin exponer `objectKey` ni secrets.
@@ -78,36 +81,40 @@ No modifica APIs de negocio. No genera PDF. No es CMS de texto libre.
 
 ## 4. Criterios de aceptación (back)
 
-| ID | Dado | Cuando | Entonces | Bloqueante |
-| --- | --- | --- | --- | --- |
-| CA-B01 | MS arriba | `GET /health` | 200 | Sí |
-| CA-B02 | Sin Authorization | `GET /v1/apis` | 401 | Sí |
-| CA-B03 | Token válido, 2 APIs internal | `GET /v1/apis` | 200 con esas 2 | Sí |
-| CA-B04 | Token sin audiencia a `api-x` | `GET .../openapi` | 404 mismo mensaje que inexistente | Sí |
-| CA-B05 | Token con acceso | `GET .../openapi` | 200 body con `openapi: "3.x"` | Sí |
-| CA-B06 | `apiId` inválido (`../etc`) | cualquier ruta | 400 o 404; sin path traversal | Sí |
-| CA-B07 | `AUTH_MODE=keycloak` sin config en prod | Boot | Fail-closed (no arranca) | Sí |
-| CA-B08 | Driver local + catalog seed | Dev | Flujos B-A/B-B OK sin GCP | Sí |
-| CA-B09 | Publish sin rol (C) | POST specs | 403 | No (solo C) |
-| CA-B10 | YAML OpenAPI válido + rol (C) | POST specs | 201; GET openapi refleja cambio | No (solo C) |
-| CA-B11 | Archivo no OpenAPI (C) | POST specs | 400 con `message` | No (solo C) |
+| ID     | Dado                                    | Cuando                               | Entonces                          | Bloqueante             |
+| ------ | --------------------------------------- | ------------------------------------ | --------------------------------- | ---------------------- |
+| CA-B01 | MS arriba                               | `GET /health`                        | 200                               | Sí                     |
+| CA-B02 | Sin Authorization                       | `GET /v1/apis`                       | 401                               | Sí                     |
+| CA-B03 | Token válido, 2 APIs internal           | `GET /v1/apis`                       | 200 con esas 2                    | Sí                     |
+| CA-B04 | Token sin audiencia a `api-x`           | `GET .../openapi`                    | 404 mismo mensaje que inexistente | Sí                     |
+| CA-B05 | Token con acceso                        | `GET .../openapi`                    | 200 body con `openapi: "3.x"`     | Sí                     |
+| CA-B06 | `apiId` inválido (`../etc`)             | cualquier ruta                       | 400 o 404; sin path traversal     | Sí                     |
+| CA-B07 | `AUTH_MODE=keycloak` sin config en prod | Boot                                 | Fail-closed (no arranca)          | Sí                     |
+| CA-B08 | Driver local + catalog seed             | Dev                                  | Flujos B-A/B-B OK sin GCP         | Sí                     |
+| CA-B09 | Publish sin rol (C)                     | POST specs                           | 403                               | No (solo C)            |
+| CA-B10 | YAML OpenAPI válido + rol (C)           | POST specs                           | 201; GET openapi refleja cambio   | No (solo C)            |
+| CA-B11 | Archivo no OpenAPI (C)                  | POST specs                           | 400 con `message`                 | No (solo C)            |
+| CA-B12 | Token `client:a` (fase clientes)        | `GET /v1/apis`                       | Solo APIs con `client:a`          | No (fase clientes)     |
+| CA-B13 | Token `client:a`                        | OpenAPI solo `client:b` o `internal` | 404 genérico                      | No (fase clientes)     |
+| CA-B14 | Token solo cliente                      | POST specs (C)                       | 403                               | No (fase clientes / C) |
 
 ---
 
 ## 5. Reglas de negocio / dominio
 
-| ID | Regla | Impacto |
-| --- | --- | --- |
-| RB-01 | Formato canónico = OpenAPI 3.x | Crítico |
-| RB-02 | Authz por `audiences[]` en metadata | Crítico |
-| RB-03 | Sin audiencia → respuesta idéntica a “no existe” (404) | Alto |
-| RB-04 | MVP audiencias efectivas = `internal` para todo token válido del toolbox | Alto |
-| RB-05 | Publish solo con `docs:publish` | Alto (C) |
-| RB-06 | Spec en storage normalizada a JSON | Medio |
-| RB-07 | `apiId` slug `^[a-z0-9]+(?:-[a-z0-9]+)*$` | Alto |
-| RB-08 | No loguear Bearer ni body completo del spec en info | Alto |
-| RB-09 | Rate limit en `/v1/*` | Medio |
-| RB-10 | PDF / email no son responsabilidad de este MS | Crítico (fuera) |
+| ID     | Regla                                                                                       | Impacto         |
+| ------ | ------------------------------------------------------------------------------------------- | --------------- |
+| RB-01  | Formato canónico = OpenAPI 3.x                                                              | Crítico         |
+| RB-02  | Authz por `audiences[]` en metadata                                                         | Crítico         |
+| RB-03  | Sin audiencia → respuesta idéntica a “no existe” (404)                                      | Alto            |
+| RB-04  | MVP B: audiencias efectivas = `internal` para token del toolbox interno                     | Alto            |
+| RB-04b | Fase clientes: claim → `client:<id>`; **no** añadir `internal` por defecto a tokens cliente | Alto            |
+| RB-05  | Publish solo con `docs:publish`                                                             | Alto (C)        |
+| RB-06  | Spec en storage normalizada a JSON                                                          | Medio           |
+| RB-07  | `apiId` slug `^[a-z0-9]+(?:-[a-z0-9]+)*$`                                                   | Alto            |
+| RB-08  | No loguear Bearer ni body completo del spec en info                                         | Alto            |
+| RB-09  | Rate limit en `/v1/*`                                                                       | Medio           |
+| RB-10  | PDF / email no son responsabilidad de este MS                                               | Crítico (fuera) |
 
 ---
 
@@ -153,7 +160,7 @@ cm-docs-ms/
         JsonFileCatalogRepository.ts
       storage/
         LocalFsSpecRepository.ts
-        GcsSpecRepository.ts   # deploy
+        # (GCS no implementado — solo LocalFsSpecRepository)
     setup/
       Envs.ts
       Types.ts
@@ -196,18 +203,20 @@ writeCurrent(objectKey: string, content: string): Promise<void>  // C
 ```ts
 {
   subject: string
-  audiences: string[]   // MVP: ['internal']
-  canPublish: boolean   // claim docs:publish
+  audiences: string[]   // MVP B: ['internal']; fase clientes: ['client:<id>']
+  canPublish: boolean   // claim docs:publish; false para tokens cliente
 }
 ```
 
 Servicios aplican: `filter(doc => doc.audiences.some(a => claims.audiences.includes(a)))`.
 
+Mapeo JWT → audiences (configurable): ver [auth-clientes.md](./auth-clientes.md) §6 y env `DOCS_CLIENT_AUDIENCE_CLAIM` / `DOCS_CLIENT_AUDIENCE_PREFIX`.
+
 ---
 
 ## 8. Modelo de catálogo (archivo)
 
-`data/catalog.json` ejemplo:
+`data/catalog.json` ejemplo (MVP B + seed fase clientes):
 
 ```json
 {
@@ -215,16 +224,38 @@ Servicios aplican: `filter(doc => doc.audiences.some(a => claims.audiences.inclu
     {
       "id": "api-demo",
       "name": "API Demo",
-      "description": "Spec de prueba local",
+      "description": "Spec de prueba local (solo internos)",
       "version": "1.0.0",
       "audiences": ["internal"],
       "objectKey": "api-demo/current.json",
+      "updatedAt": "2026-10-10T00:00:00.000Z",
+      "updatedBy": null
+    },
+    {
+      "id": "api-cliente-demo",
+      "name": "API Cliente Demo",
+      "description": "Visible solo para client:demo",
+      "version": "1.0.0",
+      "audiences": ["client:demo"],
+      "objectKey": "api-cliente-demo/current.json",
+      "updatedAt": "2026-10-10T00:00:00.000Z",
+      "updatedBy": null
+    },
+    {
+      "id": "api-cliente-otro",
+      "name": "API Cliente Otro",
+      "description": "Visible solo para client:otro (prueba negativa)",
+      "version": "1.0.0",
+      "audiences": ["client:otro"],
+      "objectKey": "api-cliente-otro/current.json",
       "updatedAt": "2026-10-10T00:00:00.000Z",
       "updatedBy": null
     }
   ]
 }
 ```
+
+En MVP B puro puede dejarse solo `api-demo`. Las entradas `client:*` sirven para humo de aislamiento (CA-B12/B13).
 
 Reglas:
 
@@ -237,14 +268,14 @@ Reglas:
 
 Detalle completo: [contrato-http.md](./contrato-http.md).
 
-| Método | Path | Auth | Opción |
-| --- | --- | --- | --- |
-| GET | `/health` | No | B |
-| GET | `/health/live` | No | B |
-| GET | `/v1/apis` | Bearer | B |
-| GET | `/v1/apis/:apiId` | Bearer | B |
-| GET | `/v1/apis/:apiId/openapi` | Bearer | B |
-| POST | `/v1/apis/:apiId/specs` | Bearer + publish | C |
+| Método | Path                      | Auth             | Opción |
+| ------ | ------------------------- | ---------------- | ------ |
+| GET    | `/health`                 | No               | B      |
+| GET    | `/health/live`            | No               | B      |
+| GET    | `/v1/apis`                | Bearer           | B      |
+| GET    | `/v1/apis/:apiId`         | Bearer           | B      |
+| GET    | `/v1/apis/:apiId/openapi` | Bearer           | B      |
+| POST   | `/v1/apis/:apiId/specs`   | Bearer + publish | C      |
 
 Mensaje 404 fijo: `No se encontró la documentación solicitada.`
 
@@ -252,59 +283,63 @@ Mensaje 404 fijo: `No se encontró la documentación solicitada.`
 
 ## 10. Auth middleware — comportamiento
 
-| `AUTH_MODE` | NODE_ENV/prod | Comportamiento |
-| --- | --- | --- |
-| `disabled` | no-prod | Inyecta claims MVP `internal`, `canPublish=true` (solo dev) |
-| `disabled` | producción | **No arrancar** |
-| `keycloak` | cualquiera | JWKS; sin token → 401; token malo → 401 |
+| `AUTH_MODE` | NODE_ENV/prod | Comportamiento                                                                                                                                       |
+| ----------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disabled`  | no-prod       | Inyecta claims MVP `internal`, `canPublish=true` (solo dev). Opcional: header/dev override `X-Dev-Audiences: client:demo` para simular fase clientes |
+| `disabled`  | producción    | **No arrancar**                                                                                                                                      |
+| `keycloak`  | cualquiera    | JWKS; sin token → 401; token malo → 401                                                                                                              |
 
 Mapeo claim publish: configurable por env `DOCS_PUBLISH_CLAIM=docs:publish` (nombre exacto pendiente IAM).
+
+Mapeo audiencias cliente: `DOCS_CLIENT_AUDIENCE_CLAIM` + `DOCS_CLIENT_AUDIENCE_PREFIX` (default prefijo `client:`).
 
 ---
 
 ## 11. Validaciones
 
-| ID | Validación | Error |
-| --- | --- | --- |
-| VAL-01 | Header Authorization presente (modo keycloak) | 401 |
-| VAL-02 | `apiId` slug | 400 o 404 |
-| VAL-03 | OpenAPI parse + campo `openapi` ~ `^3\.` | 400 (C) |
-| VAL-04 | Tamaño ≤ 2 MiB | 413 (C) |
-| VAL-05 | Content-Type / extensión allowlist | 415 (C) |
-| VAL-06 | `canPublish` | 403 (C) |
+| ID     | Validación                                    | Error     |
+| ------ | --------------------------------------------- | --------- |
+| VAL-01 | Header Authorization presente (modo keycloak) | 401       |
+| VAL-02 | `apiId` slug                                  | 400 o 404 |
+| VAL-03 | OpenAPI parse + campo `openapi` ~ `^3\.`      | 400 (C)   |
+| VAL-04 | Tamaño ≤ 2 MiB                                | 413 (C)   |
+| VAL-05 | Content-Type / extensión allowlist            | 415 (C)   |
+| VAL-06 | `canPublish`                                  | 403 (C)   |
 
 ---
 
 ## 12. Variables de entorno
 
-| Variable | Default | Notas |
-| --- | --- | --- |
-| `PORT` | `8082` | Evitar choque con logs `:8081` |
-| `CORS_ORIGINS` | `http://localhost:3000` | Lista coma-separada |
-| `AUTH_MODE` | `disabled` dev / `keycloak` prod | |
-| `KEYCLOAK_ISSUER` | — | |
-| `KEYCLOAK_AUDIENCE` | — | |
-| `KEYCLOAK_JWKS_URL` | `{issuer}/protocol/openid-connect/certs` | |
-| `DOCS_PUBLISH_CLAIM` | `docs:publish` | |
-| `TRUST_PROXY` | `0` local / `1` detrás nginx | |
-| `SPECS_DRIVER` | `local` \| `gcs` | |
-| `SPECS_LOCAL_DIR` | `./data/specs` | |
-| `GCS_BUCKET` | — | Si gcs |
-| `CATALOG_PATH` | `./data/catalog.json` | |
-| `RATE_LIMIT_WINDOW_MS` | p.ej. `60000` | |
-| `RATE_LIMIT_MAX` | p.ej. `120` | Más bajo en POST |
+| Variable                      | Default                                  | Notas                               |
+| ----------------------------- | ---------------------------------------- | ----------------------------------- |
+| `PORT`                        | `8082`                                   | Evitar choque con logs `:8081`      |
+| `CORS_ORIGINS`                | `http://localhost:3000`                  | Lista coma-separada                 |
+| `AUTH_MODE`                   | `disabled` dev / `keycloak` prod         |                                     |
+| `KEYCLOAK_ISSUER`             | —                                        |                                     |
+| `KEYCLOAK_AUDIENCE`           | —                                        |                                     |
+| `KEYCLOAK_JWKS_URL`           | `{issuer}/protocol/openid-connect/certs` |                                     |
+| `DOCS_PUBLISH_CLAIM`          | `docs:publish`                           |                                     |
+| `DOCS_CLIENT_AUDIENCE_CLAIM`  | —                                        | Fase clientes: nombre del claim JWT |
+| `DOCS_CLIENT_AUDIENCE_PREFIX` | `client:`                                | Prefijo si el claim trae solo el id |
+| `TRUST_PROXY`                 | `0` local / `1` detrás nginx             |                                     |
+| `SPECS_DRIVER`                | `local` \| `gcs`                         |                                     |
+| `SPECS_LOCAL_DIR`             | `./data/specs`                           |                                     |
+| `GCS_BUCKET`                  | —                                        | Si gcs                              |
+| `CATALOG_PATH`                | `./data/catalog.json`                    |                                     |
+| `RATE_LIMIT_WINDOW_MS`        | p.ej. `60000`                            |                                     |
+| `RATE_LIMIT_MAX`              | p.ej. `120`                              | Más bajo en POST                    |
 
 ---
 
 ## 13. Observabilidad
 
-| Evento | Nivel | Campos |
-| --- | --- | --- |
-| request `/v1/apis` | info | method, path, status, durationMs, subject (hash/id) |
-| openapi 404 authz | info | apiId, subject |
-| openapi 500 missing blob | error | apiId, objectKey |
-| publish success | info | apiId, version, subject |
-| publish rejected | warn | apiId, reason (validation/forbidden) |
+| Evento                   | Nivel | Campos                                              |
+| ------------------------ | ----- | --------------------------------------------------- |
+| request `/v1/apis`       | info  | method, path, status, durationMs, subject (hash/id) |
+| openapi 404 authz        | info  | apiId, subject                                      |
+| openapi 500 missing blob | error | apiId, objectKey                                    |
+| publish success          | info  | apiId, version, subject                             |
+| publish rejected         | warn  | apiId, reason (validation/forbidden)                |
 
 No loguear: Authorization, body del spec, PII de clientes finales.
 
@@ -318,11 +353,12 @@ Cumplir [seguridad.md](./seguridad.md): enumeración, rate limit, fail-closed, A
 
 ## 15. Pruebas mínimas (MS)
 
-| Suite | Casos |
-| --- | --- |
-| Unit | Filter audiencias; slug validation; OpenAPI parse |
-| Integration HTTP | CA-B01…CA-B08 con supertest/jest |
-| C | CA-B09…CA-B11 si GO |
+| Suite            | Casos                                                                          |
+| ---------------- | ------------------------------------------------------------------------------ |
+| Unit             | Filter audiencias; slug validation; OpenAPI parse; mapeo claim → `client:<id>` |
+| Integration HTTP | CA-B01…CA-B08 con supertest/jest                                               |
+| C                | CA-B09…CA-B11 si GO                                                            |
+| Fase clientes    | CA-B12…CA-B14 (token `client:a` vs `client:b` / `internal`)                    |
 
 ---
 
@@ -338,16 +374,18 @@ Cumplir [seguridad.md](./seguridad.md): enumeración, rate limit, fail-closed, A
 8. Adapter GCS.
 9. (Check C) PublishSpecService + POST + tests.
 10. Cablear proxy en toolbox ([front.md](./front.md) §12).
+11. **(Fase clientes)** mapeo claims + seed `client:*` + tests CA-B12…B14 ([auth-clientes.md](./auth-clientes.md)).
 
 ---
 
 ## 17. Definición de hecho (back)
 
-- [ ] CA-B01 … CA-B08
-- [ ] README con curl de humo
-- [ ] Driver local usable sin GCP
-- [ ] Listo para `DOCS_API_UPSTREAM`
-- [ ] C implementada o diferida con nota en check-opcion-c.md
+- [x] CA-B01 … CA-B08 (tests + humo)
+- [x] README con curl de humo
+- [x] Driver local usable sin GCP
+- [x] Fase clientes: CA-B12…B14 (tests `X-Dev-Audiences`)
+- [x] Listo para `DOCS_API_UPSTREAM`
+- [x] C implementada (check GO)
 
 ---
 

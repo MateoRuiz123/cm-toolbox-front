@@ -17,11 +17,14 @@ flowchart LR
   ReactRouter --> Hub["/ /hub"]
   ReactRouter --> Diag["/diagnostico"]
   ReactRouter --> Logs["/logs"]
+  ReactRouter --> Docs["/docs"]
   ReactRouter --> Admin["/admin (RBAC)"]
   ReactRouter --> Legal["/privacidad /terminos /contacto"]
+  Cliente["/cliente"] --> DocsMs
   Diag -->|POST diagnostico| ApiInternos[cm-api-internos]
   Diag -->|POST migracion/guia| ApiInternos
   Logs -->|REST / WS| LogsMs[cm-logs-ms]
+  Docs -->|REST /docs-api| DocsMs[cm-docs-ms]
   Admin -->|REST /v1/admin/*| AccessMs[cm-toolbox-access-ms]
 ```
 
@@ -33,6 +36,8 @@ flowchart LR
 | `/hub`         | Alias del hub (misma pantalla que `/`)                              |
 | `/diagnostico` | Consulta de remisiones/despachos, re-migración, lista/cuadrícula    |
 | `/logs`        | Visor de logs GKE en tiempo real (Test y Producción)                |
+| `/docs`        | Catálogo y visor OpenAPI (internos)                                 |
+| `/cliente/*`   | Puerta clientes (login + docs, sin hub)                             |
 | `/admin`       | Administración de usuarios, roles, herramientas del Hub y auditoría |
 | `/privacidad`  | Política de datos (Ley 1581)                                        |
 | `/terminos`    | Términos de uso interno                                             |
@@ -50,24 +55,28 @@ cp .env.example .env
 pnpm dev
 ```
 
+`pnpm dev` levanta Vite y los MS hermanos (`cm-toolbox-access-ms`, `cm-docs-ms`, `cm-logs-ms`) en `../` — no incluye `cm-api-internos`. También intenta `docker compose up -d` en access (Postgres/Redis). Solo front: `pnpm dev:front`. Si los repos no están al lado: `TOOLBOX_LOCAL_ROOT=/ruta/a/local pnpm dev`.
+
 Vite sirve en `http://localhost:3000`. No subas `.env` a Git.
 
 En `pnpm dev` no se pide Keycloak. Para probar el login local: `VITE_AUTH_FORCE_KEYCLOAK=true` en `.env`. El `pnpm build` de deploy siempre exige auth.
 
 ### Variables
 
-| Variable                   | Uso                                                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                     | Vite local (default `3000`). nginx/Cloud Run usa `8080`                                                                      |
-| `DIAGNOSTICO_API_UPSTREAM` | Host del API de migración, solo en el servidor (Vite/nginx). El navegador llama `/migracion/diagnostico` y `/migracion/guia` |
-| `LOGS_API_UPSTREAM`        | Host de `cm-logs-ms` (default `http://localhost:8081`). El navegador llama `/logs-api/*`                                     |
-| `ACCESS_API_UPSTREAM`      | Host de `cm-toolbox-access-ms` (default `http://localhost:8083`). El navegador llama `/access-api/*`                         |
-| `VITE_PUBSUB_SUBSCRIPTION` | Emulación Pub/Sub en re-migración (el API puede ignorarla)                                                                   |
-| `VITE_KEYCLOAK_URL`        | Opcional. Issuer Keycloak; si falta se usa el default corporativo                                                            |
-| `VITE_KEYCLOAK_REALM`      | Opcional. Realm; solo junto con las otras dos                                                                                |
-| `VITE_KEYCLOAK_CLIENT_ID`  | Opcional. Client del SPA; solo junto con las otras dos                                                                       |
-| `VITE_KEYCLOAK_ENV`        | `dev` \| `test` \| `prod` (default `dev`)                                                                                    |
-| `VITE_AUTH_FORCE_KEYCLOAK` | Solo local. `true` fuerza Keycloak en `pnpm dev`                                                                             |
+| Variable                           | Uso                                                                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                             | Vite local (default `3000`). nginx/Cloud Run usa `8080`                                                                      |
+| `DIAGNOSTICO_API_UPSTREAM`         | Host del API de migración, solo en el servidor (Vite/nginx). El navegador llama `/migracion/diagnostico` y `/migracion/guia` |
+| `LOGS_API_UPSTREAM`                | Host de `cm-logs-ms` (default `http://localhost:8081`). El navegador llama `/logs-api/*`                                     |
+| `ACCESS_API_UPSTREAM`              | Host de `cm-toolbox-access-ms` (default `http://localhost:8083`). El navegador llama `/access-api/*`                         |
+| `DOCS_API_UPSTREAM`                | Host de `cm-docs-ms` (default `http://localhost:8082`). El navegador llama `/docs-api/*`                                     |
+| `VITE_KEYCLOAK_CLIENT_ID_CLIENTES` | Client OIDC para `/cliente` (sin Google). Ver `docs/docs-feature/auth-clientes.md`                                           |
+| `VITE_PUBSUB_SUBSCRIPTION`         | Emulación Pub/Sub en re-migración (el API puede ignorarla)                                                                   |
+| `VITE_KEYCLOAK_URL`                | Opcional. Issuer Keycloak; si falta se usa el default corporativo                                                            |
+| `VITE_KEYCLOAK_REALM`              | Opcional. Realm; solo junto con las otras dos                                                                                |
+| `VITE_KEYCLOAK_CLIENT_ID`          | Opcional. Client del SPA; solo junto con las otras dos                                                                       |
+| `VITE_KEYCLOAK_ENV`                | `dev` \| `test` \| `prod` (default `dev`)                                                                                    |
+| `VITE_AUTH_FORCE_KEYCLOAK`         | Solo local. `true` fuerza Keycloak en `pnpm dev`                                                                             |
 
 Las tres variables Keycloak opcionales solo aplican si se definen **las tres**; si no, `@itcoordinadora/cm-sigoo-temp-ui` resuelve el issuer según `VITE_KEYCLOAK_ENV`. Por eso no están en `env/azure.env`: un token `#{...}#` sin variable en la Library quedaría literal y construiría un cliente Keycloak inválido.
 
@@ -84,6 +93,12 @@ Timeout de diagnóstico: 120 s. Timeout de re-migración de una guía: 30 s.
 Keycloak con IdP Google (`idpHint: google`). Access token (`token_sigoo`) en `localStorage`; tokens de reanudación Keycloak en `sessionStorage`. Tema claro/oscuro y vista lista/cuadrícula en `localStorage`; sobreviven al logout.
 
 Decisión de seguridad sobre tokens, CSP y riesgo XSS: [docs/seguridad-tokens-y-csp.md](docs/seguridad-tokens-y-csp.md).
+
+Documentación de APIs (feature completa): [docs/docs-feature/guia-operativa.md](docs/docs-feature/guia-operativa.md) — qué correr, variables, IAM y checklist.
+
+Local con Keycloak test + MS locales: [docs/local-como-test.md](docs/local-como-test.md).
+
+`pnpm dev` levanta infra (`docker-compose.dev.yml`: Postgres + Redis), access/docs/logs y Vite. Solo UI: `pnpm dev:front`.
 
 Si no hay variables Keycloak, se usan los defaults de `@itcoordinadora/cm-sigoo-temp-ui` según `VITE_KEYCLOAK_ENV`.
 

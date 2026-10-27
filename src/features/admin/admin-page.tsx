@@ -10,6 +10,7 @@ import {
   fetchAdminAuditLogs,
   fetchAdminRoles,
   fetchAdminUsers,
+  renameAdminAppId,
   updateAdminAppStatus,
   upsertAdminApp,
   upsertAdminRole,
@@ -157,6 +158,10 @@ export const AdminPage = () => {
     await Promise.all([loadAdminData(), refreshAccess()]);
   };
 
+  const handleRenameApp = async (appId: string, newId: string) => {
+    await renameAdminAppId(appId, newId);
+  };
+
   const handleUpsertApp = async (payload: UpsertAdminAppPayload) => {
     await upsertAdminApp(payload);
     await Promise.all([loadAdminData(), refreshAccess()]);
@@ -214,13 +219,13 @@ export const AdminPage = () => {
             amplitude={3}
           />
           <p className="mt-1 text-xs sm:text-sm text-[var(--text-muted)]">
-            Gestiona usuarios, plantillas de roles, nuevas herramientas del Hub
-            y bitácora de auditoría.
+            Gestiona usuarios, plantillas de roles, nuevas herramientas del
+            portal y bitácora de auditoría.
           </p>
         </div>
 
         {esAuthBypassActivo() && (
-          <div className="rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-3 text-xs">
+          <div className="shrink-0 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-3 text-xs sm:min-w-[24rem]">
             <label
               htmlFor="dev-role-simulator"
               className="block font-bold text-[var(--text-body)]"
@@ -231,13 +236,13 @@ export const AdminPage = () => {
               id="dev-role-simulator"
               value={devImpersonatedEmail ?? "dev.local@coordinadora.com"}
               onChange={(e) => void switchDevUser(e.target.value)}
-              className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-body)]"
+              className="mt-1.5 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] py-1.5 pl-3 pr-9 font-mono text-xs text-[var(--text-body)]"
             >
               <option value="dev.local@coordinadora.com">
-                dev.local@coordinadora.com (Super Admin)
+                dev.local@coordinadora.com (Superadministrador)
               </option>
               <option value="subadmin.local@coordinadora.com">
-                subadmin.local@coordinadora.com (Sub-Admin)
+                subadmin.local@coordinadora.com (Subadministrador)
               </option>
               <option value="operador.local@coordinadora.com">
                 operador.local@coordinadora.com (Operador)
@@ -272,7 +277,7 @@ export const AdminPage = () => {
 
         <div className="rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Apps Disponibles
+            Disponibles
           </span>
           <div className="mt-1 text-2xl font-extrabold text-[var(--state-success)]">
             {activeAppsCount}{" "}
@@ -284,7 +289,7 @@ export const AdminPage = () => {
 
         <div className="rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-            Apps en Mantenimiento
+            En mantenimiento
           </span>
           <div className="mt-1 text-2xl font-extrabold text-[var(--state-warning)]">
             {maintenanceAppsCount}
@@ -335,7 +340,7 @@ export const AdminPage = () => {
                     : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
                 }`}
               >
-                Aplicaciones del Hub ({apps.length})
+                Aplicaciones del portal ({apps.length})
               </button>
 
               <button
@@ -409,13 +414,15 @@ export const AdminPage = () => {
             <AppsStatusTab
               apps={apps}
               roles={roles}
+              canEditId={isSuperAdmin}
+              onRenameId={handleRenameApp}
               onUpdateStatus={handleUpdateAppStatus}
               onUpsertApp={handleUpsertApp}
             />
           )}
 
           {activeTab === "audit" && canManageApps && (
-            <AuditLogsTab items={auditLogs} />
+            <AuditLogsTab logs={auditLogs} />
           )}
         </>
       )}

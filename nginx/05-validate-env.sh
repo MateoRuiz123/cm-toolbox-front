@@ -38,6 +38,17 @@ if [ -n "$logs_upstream" ]; then
   esac
 fi
 
+docs_upstream="${DOCS_API_UPSTREAM:-}"
+if [ -n "$docs_upstream" ]; then
+  case "$docs_upstream" in
+    http://* | https://*) ;;
+    *) fallar "DOCS_API_UPSTREAM debe incluir el esquema http:// o https:// (valor: '$docs_upstream')." ;;
+  esac
+  case "${docs_upstream#*://}" in
+    */*) fallar "DOCS_API_UPSTREAM solo admite esquema://host[:puerto], sin path (valor: '$docs_upstream')." ;;
+  esac
+fi
+
 # nginx escucha en $PORT dentro de este mismo contenedor: apuntar el upstream ahí
 # genera un proxy recursivo que termina en 502.
 case "$upstream" in

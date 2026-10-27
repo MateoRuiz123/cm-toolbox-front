@@ -26,9 +26,17 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const port = Number(env.PORT || process.env.PORT) || 3000;
   const logsApiUpstream =
-    env.LOGS_API_UPSTREAM || process.env.LOGS_API_UPSTREAM || "http://localhost:8081";
+    env.LOGS_API_UPSTREAM ||
+    process.env.LOGS_API_UPSTREAM ||
+    "http://localhost:8081";
   const accessApiUpstream =
-    env.ACCESS_API_UPSTREAM || process.env.ACCESS_API_UPSTREAM || "http://localhost:8083";
+    env.ACCESS_API_UPSTREAM ||
+    process.env.ACCESS_API_UPSTREAM ||
+    "http://localhost:8083";
+  const docsApiUpstream =
+    env.DOCS_API_UPSTREAM ||
+    process.env.DOCS_API_UPSTREAM ||
+    "http://localhost:8082";
   const diagnosticoUpstream = resolveDiagnosticoUpstream(env);
   const proxy = {
     "/migracion": {
@@ -46,7 +54,13 @@ export default defineConfig(({ mode }) => {
     "/access-api": {
       target: accessApiUpstream,
       changeOrigin: true,
-      rewrite: (requestPath: string) => requestPath.replace(/^\/access-api/, ""),
+      rewrite: (requestPath: string) =>
+        requestPath.replace(/^\/access-api/, ""),
+    },
+    "/docs-api": {
+      target: docsApiUpstream,
+      changeOrigin: true,
+      rewrite: (requestPath: string) => requestPath.replace(/^\/docs-api/, ""),
     },
   };
 

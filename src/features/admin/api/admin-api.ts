@@ -94,6 +94,8 @@ export interface UpsertAdminUserPayload {
   readonly isBlocked: boolean;
   readonly notes: string | null;
   readonly permissions: readonly UserPermissionOverrideItem[];
+  /** Acceso total (super-admin). Solo se envía si el actor es super-admin. */
+  readonly isSuperAdmin?: boolean;
 }
 
 export interface AuditLogItem {
@@ -144,6 +146,21 @@ export const upsertAdminApp = async (
     headers: buildAccessHeaders(true),
     body: JSON.stringify(payload),
   });
+  return parseJsonOrThrow<AdminAppItem>(response);
+};
+
+export const renameAdminAppId = async (
+  appId: string,
+  newId: string,
+): Promise<AdminAppItem> => {
+  const response = await fetch(
+    `${ADMIN_BASE_PATH}/apps/${encodeURIComponent(appId)}/id`,
+    {
+      method: "PATCH",
+      headers: buildAccessHeaders(true),
+      body: JSON.stringify({ newId }),
+    },
+  );
   return parseJsonOrThrow<AdminAppItem>(response);
 };
 

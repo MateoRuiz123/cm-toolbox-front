@@ -14,12 +14,11 @@ interface AppAccessGuardProps {
  */
 export const AppAccessGuard = ({ appId, children }: AppAccessGuardProps) => {
   const { apps, canAccessApp } = useAccess();
+  const appInfo = apps.find((a) => a.id === appId);
 
-  if (canAccessApp(appId)) {
+  if (appInfo?.status !== "hidden" && canAccessApp(appId)) {
     return <>{children}</>;
   }
-
-  const appInfo = apps.find((a) => a.id === appId);
   const isMaintenance = appInfo?.status === "maintenance";
 
   const titulo = isMaintenance
@@ -62,10 +61,10 @@ export const AppAccessGuard = ({ appId, children }: AppAccessGuardProps) => {
           as="h1"
           className="mb-2 text-xl font-bold tracking-tight text-[var(--text-body)] sm:text-2xl"
           accessibleTitle={titulo}
-          before={
-            isMaintenance ? "Herramienta en " : "Permiso requerido para "
+          before={isMaintenance ? "Herramienta en " : "Permiso requerido para "}
+          accent={
+            isMaintenance ? "mantenimiento operativo" : "esta herramienta"
           }
-          accent={isMaintenance ? "mantenimiento operativo" : "esta herramienta"}
           amplitude={3}
         />
 

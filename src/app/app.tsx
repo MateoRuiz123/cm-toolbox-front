@@ -1,6 +1,10 @@
 import { lazy, Suspense, type ComponentProps } from "react";
 import { KeycloakProvider } from "@itcoordinadora/cm-sigoo-temp-ui";
 import { Route, Routes, useLocation } from "react-router";
+import {
+  BlockInternalOnClienteDoor,
+  RedirectClienteAwayFromHub,
+} from "../features/docs-cliente/auth/cliente-door-guards";
 import { HubPage } from "../features/hub/hub-page";
 import { NotFoundPage } from "../features/not-found/not-found-page";
 import { esAuthBypassActivo } from "../shared/auth/auth-bypass";
@@ -15,6 +19,12 @@ import { AppFooter } from "../shared/ui/app-footer";
 import { AppHeader } from "../shared/ui/app-header";
 import { CookieBanner } from "../shared/ui/cookie-banner";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
+
+/** Títulos de documento en la puerta /cliente (fuera del AppShell). */
+const ClientePageTitle = () => {
+  usePageTitle();
+  return null;
+};
 
 const DiagnosticoPage = lazy(() =>
   import("../features/diagnostico/diagnostico-page").then((m) => ({
@@ -62,6 +72,48 @@ const ConfiguracionPage = lazy(() =>
   })),
 );
 
+const InternalDocsPage = lazy(() =>
+  import("../features/docs/internal-docs-pages").then((m) => ({
+    default: m.InternalDocsPage,
+  })),
+);
+
+const InternalDocsViewerPage = lazy(() =>
+  import("../features/docs/internal-docs-pages").then((m) => ({
+    default: m.InternalDocsViewerPage,
+  })),
+);
+
+const DocsAdminPage = lazy(() =>
+  import("../features/docs/admin/docs-admin-page").then((m) => ({
+    default: m.DocsAdminPage,
+  })),
+);
+
+const DocsNewApiPage = lazy(() =>
+  import("../features/docs/admin/new-api-form").then((m) => ({
+    default: m.DocsNewApiPage,
+  })),
+);
+
+const DocsClientsPage = lazy(() =>
+  import("../features/docs/admin/clients-page").then((m) => ({
+    default: m.ClientsPage,
+  })),
+);
+
+const ClienteLoginPage = lazy(() =>
+  import("../features/docs-cliente/cliente-login-page").then((m) => ({
+    default: m.ClienteLoginPage,
+  })),
+);
+
+const ClienteDocsRoutes = lazy(() =>
+  import("../features/docs-cliente/cliente-docs-routes").then((m) => ({
+    default: m.ClienteDocsRoutes,
+  })),
+);
+
 /** Indicador de carga para páginas de feature resueltas con import dinámico. */
 const RouteFallback = () => (
   <div
@@ -73,13 +125,16 @@ const RouteFallback = () => (
   </div>
 );
 
-const STATIC_TOOL_IDS = new Set(["diagnostico", "logs"]);
+const STATIC_TOOL_IDS = new Set(["diagnostico", "logs", "docs"]);
 
 export const AppRoutes = () => {
   usePageTitle();
   const { apps } = useAccess();
   const dynamicInternalApps = apps.filter(
-    (app) => !STATIC_TOOL_IDS.has(app.id) && app.route.startsWith("/"),
+    (app) =>
+      !STATIC_TOOL_IDS.has(app.id) &&
+      app.status !== "hidden" &&
+      app.route.startsWith("/"),
   );
 
   return (
@@ -99,6 +154,46 @@ export const AppRoutes = () => {
         element={
           <AppAccessGuard appId="logs">
             <LogsPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/docs"
+        element={
+          <AppAccessGuard appId="docs">
+            <InternalDocsPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/docs/admin"
+        element={
+          <AppAccessGuard appId="docs">
+            <DocsAdminPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/docs/admin/nueva"
+        element={
+          <AppAccessGuard appId="docs">
+            <DocsNewApiPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/docs/admin/clientes"
+        element={
+          <AppAccessGuard appId="docs">
+            <DocsClientsPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/docs/:apiId"
+        element={
+          <AppAccessGuard appId="docs">
+            <InternalDocsViewerPage />
           </AppAccessGuard>
         }
       />
@@ -156,18 +251,44 @@ const AppShell = () => {
   );
 };
 
+const ClienteArea = () => (
+  <BlockInternalOnClienteDoor>
+    <ClientePageTitle />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/cliente/login" element={<ClienteLoginPage />} />
+        <Route path="/cliente/*" element={<ClienteDocsRoutes />} />
+      </Routes>
+    </Suspense>
+  </BlockInternalOnClienteDoor>
+);
+
 /** Punto de composición de la aplicación bajo el SIGO Droop Design System y Auth corporativa. */
-export const App = () =>
-  esAuthBypassActivo() ? (
-    <AppShell />
-  ) : (
-    <KeycloakProvider
-      keycloak={
-        keycloakClient as unknown as ComponentProps<
-          typeof KeycloakProvider
-        >["keycloak"]
-      }
-    >
-      <AppShell />
-    </KeycloakProvider>
+export const App = () => {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/cliente")) {
+    return (
+      <ErrorBoundary>
+        <ClienteArea />
+      </ErrorBoundary>
+    );
+  }
+
+  return (
+    <RedirectClienteAwayFromHub>
+      {esAuthBypassActivo() ? (
+        <AppShell />
+      ) : (
+        <KeycloakProvider
+          keycloak={
+            keycloakClient as unknown as ComponentProps<
+              typeof KeycloakProvider
+            >["keycloak"]
+          }
+        >
+          <AppShell />
+        </KeycloakProvider>
+      )}
+    </RedirectClienteAwayFromHub>
   );
+};
