@@ -228,8 +228,16 @@ const AppShell = () => {
               isFullHeightTool ? "lg:h-dvh lg:min-h-0 lg:overflow-hidden" : ""
             }`}
           >
+            <a
+              href="#contenido-principal"
+              className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:m-0 focus:inline-flex focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-1)] focus:bg-[var(--color-action)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--color-action-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)] focus:[clip:auto]"
+            >
+              Saltar al contenido
+            </a>
             <AppHeader />
             <main
+              id="contenido-principal"
+              tabIndex={-1}
               className={
                 isFullHeightTool
                   ? "flex-1 lg:min-h-0 lg:overflow-hidden"

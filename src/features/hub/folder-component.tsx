@@ -1,82 +1,85 @@
-import { useState } from 'react'
-import type { ComponentProps } from 'react'
-import { motion } from 'motion/react'
-import { cn } from '../../shared/lib/utils'
+import { useState } from "react";
+import type { ComponentProps } from "react";
+import { motion } from "motion/react";
+import { cn } from "../../shared/lib/utils";
 
 const themes = {
   blue: {
-    backFill: 'var(--folder-back)',
-    backInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0',
-    backInsetShadow: 'inset 0 0 6px 2px rgba(255,255,255,0.35)',
-    flapFill: 'var(--folder-flap)',
+    backFill: "var(--folder-back)",
+    backInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0",
+    backInsetShadow: "inset 0 0 6px 2px rgba(255,255,255,0.35)",
+    flapFill: "var(--folder-flap)",
     flapFillOpacity: 0.85,
-    flapStroke: 'var(--folder-stroke)',
-    flapInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0',
-    cardFill: 'var(--folder-card)',
-    cardStroke: 'var(--folder-card-stroke)',
-    cardLineFill: 'var(--folder-line)',
-    cardInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0',
+    flapStroke: "var(--folder-stroke)",
+    flapInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0",
+    cardFill: "var(--folder-card)",
+    cardStroke: "var(--folder-card-stroke)",
+    cardLineFill: "var(--folder-line)",
+    cardInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0",
   },
   orange: {
-    backFill: '#eb5d2c',
-    backInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0',
-    backInsetShadow: 'inset 0 0 6px 2px rgba(255,255,255,0.35)',
-    flapFill: '#bc4a23',
+    backFill: "var(--naranja-coordinadora)",
+    backInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0",
+    backInsetShadow: "inset 0 0 6px 2px rgba(255,255,255,0.35)",
+    flapFill: "var(--naranja-dark)",
     flapFillOpacity: 0.85,
-    flapStroke: '#ef7d56',
-    flapInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0',
-    cardFill: '#ffffff',
-    cardStroke: '#e0e0e0',
-    cardLineFill: '#ef7d56',
-    cardInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0',
+    flapStroke: "var(--naranja-light)",
+    flapInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0",
+    cardFill: "var(--surface-card)",
+    cardStroke: "var(--border-default)",
+    cardLineFill: "var(--naranja-light)",
+    cardInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0",
   },
   dark: {
-    backFill: '#1b263b',
-    backInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.37 0',
-    backInsetShadow: 'inset 0 0 6px 2px rgba(255,255,255,0.37)',
-    flapFill: '#0d1b2a',
+    backFill: "var(--folder-back)",
+    backInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.37 0",
+    backInsetShadow: "inset 0 0 6px 2px rgba(255,255,255,0.37)",
+    flapFill: "var(--folder-flap)",
     flapFillOpacity: 0.85,
-    flapStroke: '#2b3d5b',
-    flapInsetColor: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0',
-    cardFill: '#242d3d',
-    cardStroke: '#3a4a63',
-    cardLineFill: '#0066cc',
-    cardInsetColor: '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0',
+    flapStroke: "var(--folder-stroke)",
+    flapInsetColor: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0",
+    cardFill: "var(--folder-card)",
+    cardStroke: "var(--folder-card-stroke)",
+    cardLineFill: "var(--folder-line)",
+    cardInsetColor: "0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.15 0",
   },
-} as const
+} as const;
 
 const sizeScales = {
   sm: 0.5,
   md: 0.75,
   lg: 1,
-} as const
+} as const;
 
-export type FolderComponentProps = Omit<ComponentProps<'div'>, 'color'> & {
-  color?: keyof typeof themes
-  size?: keyof typeof sizeScales
-}
+export type FolderComponentProps = Omit<ComponentProps<"div">, "color"> & {
+  color?: keyof typeof themes;
+  size?: keyof typeof sizeScales;
+};
 
-const BASE_WIDTH = 321
-const BASE_HEIGHT = 270
+const BASE_WIDTH = 321;
+const BASE_HEIGHT = 270;
 
 const FLAP_PATH =
-  'M0 25C0 11.1929 11.1929 0 25 0H136.084C143.044 0 149.689 2.90139 154.42 8.00608L178.08 33.5343C182.811 38.639 189.456 41.5404 196.416 41.5404H296C309.807 41.5404 321 52.7333 321 66.5404V216C321 229.807 309.807 241 296 241H25C11.1929 241 0 229.807 0 216V25Z'
+  "M0 25C0 11.1929 11.1929 0 25 0H136.084C143.044 0 149.689 2.90139 154.42 8.00608L178.08 33.5343C182.811 38.639 189.456 41.5404 196.416 41.5404H296C309.807 41.5404 321 52.7333 321 66.5404V216C321 229.807 309.807 241 296 241H25C11.1929 241 0 229.807 0 216V25Z";
 
 export const FolderComponent = ({
-  color = 'blue',
-  size = 'md',
+  color = "blue",
+  size = "md",
   className,
   ...props
 }: FolderComponentProps) => {
-  const theme = themes[color] ?? themes.blue
-  const scale = sizeScales[size]
-  const [isHovered, setIsHovered] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
+  const theme = themes[color] ?? themes.blue;
+  const scale = sizeScales[size];
+  const [isHovered, setIsHovered] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div
       data-slot="folder"
-      className={cn('relative flex items-center justify-center select-none', className)}
+      className={cn(
+        "relative flex items-center justify-center select-none",
+        className,
+      )}
       {...props}
     >
       <div
@@ -87,8 +90,8 @@ export const FolderComponent = ({
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => {
-          setIsHovered(false)
-          setIsOpen(false)
+          setIsHovered(false);
+          setIsOpen(false);
         }}
         onClick={() => setIsOpen((o) => !o)}
       >
@@ -122,7 +125,7 @@ export const FolderComponent = ({
                 rotate: isOpen ? 16 : isHovered ? 12 : 8,
               }}
               transition={{
-                type: 'spring',
+                type: "spring",
                 stiffness: 120,
                 damping: 13,
                 delay: isOpen ? 0.08 : 0.05,
@@ -138,7 +141,7 @@ export const FolderComponent = ({
                 rotate: isOpen ? -3 : isHovered ? -1 : 2,
               }}
               transition={{
-                type: 'spring',
+                type: "spring",
                 stiffness: 120,
                 damping: 13,
                 delay: isOpen ? 0.04 : 0.02,
@@ -154,7 +157,7 @@ export const FolderComponent = ({
                 rotate: isOpen ? -12 : isHovered ? -8 : -4,
               }}
               transition={{
-                type: 'spring',
+                type: "spring",
                 stiffness: 120,
                 damping: 13,
                 delay: 0,
@@ -167,8 +170,8 @@ export const FolderComponent = ({
           <motion.div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-4"
             style={{
-              transformOrigin: 'bottom center',
-              transformStyle: 'preserve-3d',
+              transformOrigin: "bottom center",
+              transformStyle: "preserve-3d",
               width: 321,
               height: 241,
             }}
@@ -176,7 +179,7 @@ export const FolderComponent = ({
               rotateX: isOpen ? -45 : isHovered ? -25 : 0,
             }}
             transition={{
-              type: 'spring',
+              type: "spring",
               stiffness: 120,
               damping: 14,
             }}
@@ -202,10 +205,10 @@ export const FolderComponent = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-type Theme = (typeof themes)[keyof typeof themes]
+type Theme = (typeof themes)[keyof typeof themes];
 
 const Card = ({ id: _id, theme }: { id: number; theme: Theme }) => {
   return (
@@ -242,5 +245,5 @@ const Card = ({ id: _id, theme }: { id: number; theme: Theme }) => {
         </span>
       </div>
     </div>
-  )
-}
+  );
+};

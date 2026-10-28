@@ -25,8 +25,14 @@ export const DiagnosticoPage = () => {
   );
   const [data, setData] = useState<DiagnosticoOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [campoInvalido, setCampoInvalido] = useState<
+    "remisiones" | "despachos" | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [showJson, setShowJson] = useState(false);
+  const [autofocusRemisiones] = useState(
+    () => globalThis.matchMedia?.("(pointer: fine)")?.matches ?? false,
+  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -42,11 +48,13 @@ export const DiagnosticoPage = () => {
     despachosTexto: string,
   ) => {
     setError(null);
+    setCampoInvalido(null);
     const codigosRemision = splitCodigos(remisionesTexto);
     const despachos = parseDespachos(despachosTexto);
 
     if (despachos.error) {
       setError(despachos.error);
+      setCampoInvalido("despachos");
       return;
     }
     if (codigosRemision.length === 0 && despachos.values.length === 0) {
@@ -92,6 +100,7 @@ export const DiagnosticoPage = () => {
     setRemisionesRaw("");
     setDespachosRaw("");
     setError(null);
+    setCampoInvalido(null);
   };
 
   const tieneContenido =
@@ -123,13 +132,15 @@ export const DiagnosticoPage = () => {
         previo.trim() ? `${previo.trimEnd()}\n${texto}` : texto,
       );
       setError(null);
+      setCampoInvalido(null);
     } catch {
       setError("No se pudo leer el portapapeles. Pega con Ctrl+V.");
+      setCampoInvalido(null);
     }
   };
 
   const botonPegarClass =
-    "cursor-pointer rounded-[var(--radius-1)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]";
+    "inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-[var(--radius-1)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]";
 
   return (
     <div className="mx-auto w-full max-w-[1680px] px-4 pb-20 pt-6 sm:px-8 sm:pt-8">
@@ -197,21 +208,24 @@ export const DiagnosticoPage = () => {
                 </div>
                 <textarea
                   id="diagnostico-remisiones"
-                  autoFocus
+                  autoFocus={autofocusRemisiones}
                   onKeyDown={handleAtajoConsulta}
                   value={remisionesRaw}
                   onChange={(event) => {
                     setRemisionesRaw(event.target.value);
-                    if (error) setError(null);
+                    if (error) {
+                      setError(null);
+                      setCampoInvalido(null);
+                    }
                   }}
-                  aria-invalid={Boolean(error)}
+                  aria-invalid={campoInvalido === "remisiones"}
                   aria-describedby={error ? "form-error-msg" : undefined}
                   placeholder={"20018012531\n20018012532"}
                   rows={5}
-                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
-                    error
-                      ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
-                      : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus-visible:ring-1 ${
+                    campoInvalido === "remisiones"
+                      ? "border-[var(--state-error)] focus-visible:border-[var(--state-error)] focus-visible:ring-[var(--state-error)]"
+                      : "border-[var(--border-default)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]"
                   }`}
                 />
               </div>
@@ -244,16 +258,19 @@ export const DiagnosticoPage = () => {
                   value={despachosRaw}
                   onChange={(event) => {
                     setDespachosRaw(event.target.value);
-                    if (error) setError(null);
+                    if (error) {
+                      setError(null);
+                      setCampoInvalido(null);
+                    }
                   }}
-                  aria-invalid={Boolean(error)}
+                  aria-invalid={campoInvalido === "despachos"}
                   aria-describedby={error ? "form-error-msg" : undefined}
                   placeholder={"56727471\n56727472"}
                   rows={4}
-                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
-                    error
-                      ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
-                      : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  className={`mt-1.5 w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus-visible:ring-1 ${
+                    campoInvalido === "despachos"
+                      ? "border-[var(--state-error)] focus-visible:border-[var(--state-error)] focus-visible:ring-[var(--state-error)]"
+                      : "border-[var(--border-default)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]"
                   }`}
                 />
               </div>
@@ -298,7 +315,7 @@ export const DiagnosticoPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] disabled:cursor-wait disabled:opacity-60"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:cursor-wait disabled:opacity-60"
               >
                 {loading && (
                   <span
@@ -313,7 +330,7 @@ export const DiagnosticoPage = () => {
                 <button
                   type="button"
                   onClick={handleCancelar}
-                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--surface-bar)]"
+                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-sm font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-bar)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
                 >
                   Cancelar
                 </button>
@@ -351,7 +368,7 @@ export const DiagnosticoPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowJson(true)}
-                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--color-primary)] bg-transparent px-5 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--color-primary)] bg-transparent px-5 py-2 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
                 >
                   Ver respuesta JSON completa
                 </button>
@@ -398,13 +415,13 @@ export const DiagnosticoPage = () => {
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-[var(--text-muted)]">
-                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[var(--radius-pill)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Múltiples remisiones
                 </span>
-                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[var(--radius-pill)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Despachos completos
                 </span>
-                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[var(--radius-pill)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Reintento con 1 clic
                 </span>
               </div>

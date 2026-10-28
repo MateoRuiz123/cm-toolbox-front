@@ -1,5 +1,4 @@
 import { ThemeToggle } from "./theme-toggle";
-import { NotificationBell } from "./rare/notification-bell";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../auth/use-auth";
 import { useAccess } from "../auth/access-context";
@@ -190,12 +189,6 @@ export const AppHeader = () => {
             )}
           </div>
         )}
-
-        <NotificationBell
-          count={0}
-          size={36}
-          title="Notificaciones operativas"
-        />
 
         <button
           type="button"

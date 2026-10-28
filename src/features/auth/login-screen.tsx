@@ -91,7 +91,10 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
         </p>
 
         {errorLogin && (
-          <div className="mb-6 rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] p-3 text-left text-xs text-[var(--state-error)]">
+          <div
+            role="alert"
+            className="mb-6 rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] p-3 text-left text-xs text-[var(--state-error)]"
+          >
             <p className="font-semibold mb-1">
               Error al conectar con la autenticación
             </p>
@@ -103,7 +106,7 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
           type="button"
           onClick={handleLogin}
           disabled={iniciando}
-          className="flex w-full items-center justify-center gap-3 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-6 py-3 text-base font-medium text-white shadow-md transition-all hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+          className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-6 py-3 text-base font-medium text-[var(--color-accent-contrast)] shadow-md transition-all hover:bg-[var(--color-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <div className="flex items-center justify-center size-6 rounded-full bg-white p-0.5 shadow-xs">
             <GoogleIcon />

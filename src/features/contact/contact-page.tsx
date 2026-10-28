@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 
 interface FormContactState {
@@ -16,8 +16,20 @@ interface FormContactErrors {
   mensaje?: string;
 }
 
+const ASUNTO_LABELS: Record<string, string> = {
+  diagnostico: "Fallo en Diagnóstico o Re-migración de Guía",
+  logs: "Incidencia en el Visor de Logs",
+  permisos: "Solicitud de Acceso o Permisos",
+  pubsub: "Incidencia en Tópicos Pub/Sub",
+  otro: "Otra Consulta / Sugerencia",
+};
+
+const CONTACTO_TI = "soporte.ti@coordinadora.com";
+
+const ERROR_FIELD_ORDER = ["nombre", "email", "asunto", "mensaje"] as const;
+
+/** Formulario de contacto que abre el cliente de correo (sin backend de envío). */
 export const ContactPage = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormContactState>({
     nombre: "",
     email: "",
@@ -25,9 +37,16 @@ export const ContactPage = () => {
     mensaje: "",
   });
   const [errors, setErrors] = useState<FormContactErrors>({});
-  const [enviando, setEnviando] = useState(false);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
 
-  const validate = (): boolean => {
+  useEffect(() => {
+    if (showErrorSummary && Object.keys(errors).length > 0) {
+      errorSummaryRef.current?.focus();
+    }
+  }, [showErrorSummary, errors]);
+
+  const validate = (): FormContactErrors => {
     const nuevosErrores: FormContactErrors = {};
 
     if (!formData.nombre.trim()) {
@@ -53,33 +72,56 @@ export const ContactPage = () => {
         "Describe tu consulta con al menos 10 caracteres.";
     }
 
-    setErrors(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
+    return nuevosErrores;
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validate()) return;
+    const nuevosErrores = validate();
+    setErrors(nuevosErrores);
 
-    setEnviando(true);
-    setTimeout(() => {
-      setEnviando(false);
-      navigate("/gracias");
-    }, 400);
+    if (Object.keys(nuevosErrores).length > 0) {
+      setShowErrorSummary(true);
+      return;
+    }
+
+    setShowErrorSummary(false);
+    const asuntoLabel =
+      ASUNTO_LABELS[formData.asunto] ?? formData.asunto.trim();
+    const subject = encodeURIComponent(`[Toolbox] ${asuntoLabel}`);
+    const body = encodeURIComponent(
+      [
+        `Nombre: ${formData.nombre.trim()}`,
+        `Correo: ${formData.email.trim()}`,
+        `Motivo: ${asuntoLabel}`,
+        "",
+        formData.mensaje.trim(),
+      ].join("\n"),
+    );
+    globalThis.location.href = `mailto:${CONTACTO_TI}?subject=${subject}&body=${body}`;
   };
+
+  const errorEntries = ERROR_FIELD_ORDER.filter((key) => errors[key]).map(
+    (key) => ({
+      key,
+      message: errors[key] as string,
+      href: `#${key}`,
+    }),
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="mb-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-primary)] hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
         >
           <svg
             className="size-4"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -113,7 +155,6 @@ export const ContactPage = () => {
       </header>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Columna Izquierda: Información de Contacto Real */}
         <section
           style={{ boxShadow: "var(--shadow-1)" }}
           className="surface space-y-6 rounded-[var(--radius-2)] border border-[var(--border-default)] p-6 sm:p-8"
@@ -130,6 +171,7 @@ export const ContactPage = () => {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -165,6 +207,7 @@ export const ContactPage = () => {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -194,6 +237,7 @@ export const ContactPage = () => {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -210,10 +254,10 @@ export const ContactPage = () => {
                 <span className="block text-[var(--text-muted)]">
                   Soporte Técnico TI:{" "}
                   <a
-                    href="mailto:soporte.ti@coordinadora.com"
+                    href={`mailto:${CONTACTO_TI}`}
                     className="text-[var(--color-primary)] hover:underline"
                   >
-                    soporte.ti@coordinadora.com
+                    {CONTACTO_TI}
                   </a>
                 </span>
                 <span className="block text-[var(--text-muted)]">
@@ -235,6 +279,7 @@ export const ContactPage = () => {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -259,7 +304,6 @@ export const ContactPage = () => {
           </div>
         </section>
 
-        {/* Columna Derecha: Formulario de Contacto / Reporte con validación accesible */}
         <section
           style={{ boxShadow: "var(--shadow-1)" }}
           className="surface rounded-[var(--radius-2)] border border-[var(--border-default)] p-6 sm:p-8"
@@ -268,9 +312,39 @@ export const ContactPage = () => {
             Envíanos un Mensaje
           </h2>
           <p className="text-xs text-[var(--text-muted)] mb-6">
-            Diligencia el formulario para reportar incidencias en cualquier
-            herramienta, solicitar acceso o formular dudas técnicas.
+            Diligencia el formulario para abrir tu cliente de correo con el
+            mensaje precargado hacia soporte TI. No se envía desde el servidor.
           </p>
+
+          {showErrorSummary && errorEntries.length > 0 && (
+            <div
+              ref={errorSummaryRef}
+              id="form-error-summary"
+              role="alert"
+              tabIndex={-1}
+              aria-labelledby="form-error-summary-title"
+              className="mb-4 rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] p-3 text-left outline-none"
+            >
+              <h3
+                id="form-error-summary-title"
+                className="text-sm font-bold text-[var(--state-error)]"
+              >
+                Hay un problema con el formulario
+              </h3>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--alert-error-fg)]">
+                {errorEntries.map((entry) => (
+                  <li key={entry.key}>
+                    <a
+                      href={entry.href}
+                      className="underline hover:text-[var(--state-error)]"
+                    >
+                      {entry.message}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
@@ -282,7 +356,9 @@ export const ContactPage = () => {
               </label>
               <input
                 id="nombre"
+                name="nombre"
                 type="text"
+                autoComplete="name"
                 value={formData.nombre}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, nombre: e.target.value }));
@@ -291,11 +367,11 @@ export const ContactPage = () => {
                 }}
                 aria-invalid={Boolean(errors.nombre)}
                 aria-describedby={errors.nombre ? "nombre-error" : undefined}
-                placeholder="Ej. Juan Pérez"
-                className={`w-full rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
+                placeholder="Ej. Juan Pérez…"
+                className={`w-full rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus-visible:ring-1 ${
                   errors.nombre
-                    ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
-                    : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    ? "border-[var(--state-error)] focus-visible:border-[var(--state-error)] focus-visible:ring-[var(--state-error)]"
+                    : "border-[var(--border-default)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]"
                 }`}
               />
               {errors.nombre && (
@@ -318,7 +394,11 @@ export const ContactPage = () => {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
+                inputMode="email"
+                spellCheck={false}
                 value={formData.email}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, email: e.target.value }));
@@ -327,11 +407,11 @@ export const ContactPage = () => {
                 }}
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? "email-error" : undefined}
-                placeholder="usuario@coordinadora.com"
-                className={`w-full rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
+                placeholder="usuario@coordinadora.com…"
+                className={`w-full rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus-visible:ring-1 ${
                   errors.email
-                    ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
-                    : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    ? "border-[var(--state-error)] focus-visible:border-[var(--state-error)] focus-visible:ring-[var(--state-error)]"
+                    : "border-[var(--border-default)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]"
                 }`}
               />
               {errors.email && (
@@ -354,11 +434,13 @@ export const ContactPage = () => {
               </label>
               <select
                 id="asunto"
+                name="asunto"
                 value={formData.asunto}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, asunto: e.target.value }))
                 }
-                className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                aria-invalid={Boolean(errors.asunto)}
+                className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-body)] focus:outline-none focus-visible:border-[var(--color-primary)] focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]"
               >
                 <option value="diagnostico">
                   Fallo en Diagnóstico o Re-migración de Guía
@@ -379,6 +461,7 @@ export const ContactPage = () => {
               </label>
               <textarea
                 id="mensaje"
+                name="mensaje"
                 rows={4}
                 value={formData.mensaje}
                 onChange={(e) => {
@@ -388,11 +471,11 @@ export const ContactPage = () => {
                 }}
                 aria-invalid={Boolean(errors.mensaje)}
                 aria-describedby={errors.mensaje ? "mensaje-error" : undefined}
-                placeholder="Indica el código de remisión o descripción de la incidencia..."
-                className={`w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 ${
+                placeholder="Indica el código de remisión o descripción de la incidencia…"
+                className={`w-full resize-y rounded-[var(--radius-1)] border bg-[var(--surface-card)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:outline-none focus-visible:ring-1 ${
                   errors.mensaje
-                    ? "border-[var(--state-error)] focus:border-[var(--state-error)] focus:ring-[var(--state-error)]"
-                    : "border-[var(--border-default)] focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    ? "border-[var(--state-error)] focus-visible:border-[var(--state-error)] focus-visible:ring-[var(--state-error)]"
+                    : "border-[var(--border-default)] focus-visible:border-[var(--color-primary)] focus-visible:ring-[var(--color-primary)]"
                 }`}
               />
               {errors.mensaje && (
@@ -408,29 +491,23 @@ export const ContactPage = () => {
 
             <button
               type="submit"
-              disabled={enviando}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-60"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-3 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
             >
-              {enviando ? (
-                <span>Enviando mensaje...</span>
-              ) : (
-                <>
-                  <span>Enviar mensaje</span>
-                  <svg
-                    className="size-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M14 5l7 7m0 0l-7 7m7-7H3"
-                    />
-                  </svg>
-                </>
-              )}
+              <span>Abrir correo con el mensaje</span>
+              <svg
+                className="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M14 5l7 7m0 0l-7 7m7-7H3"
+                />
+              </svg>
             </button>
           </form>
         </section>

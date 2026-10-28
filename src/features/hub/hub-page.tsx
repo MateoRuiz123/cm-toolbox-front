@@ -147,7 +147,7 @@ const AppCard = ({
         disponible
           ? esVisitors
             ? "border-[var(--border-default)]"
-            : "border-[var(--border-default)] hover:-translate-y-1 hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-4)]"
+            : "border-[var(--border-default)] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-4)]"
           : "border-[var(--border-default)] opacity-75 border-dashed bg-[var(--surface-sunken)]/50"
       }`}
     >
@@ -199,7 +199,7 @@ const AppCard = ({
               href={ruta}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
             >
               <span>Abrir herramienta</span>
               {HubArrowIcon}
@@ -207,7 +207,7 @@ const AppCard = ({
           ) : (
             <SmoothLinkScramble
               to={ruta}
-              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition hover:bg-[var(--color-action-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
               accessibleLabel="Abrir herramienta"
               before="Abrir "
               scrambleText="herramienta"
@@ -218,7 +218,7 @@ const AppCard = ({
           <button
             type="button"
             disabled
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-disabled)] cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-sm font-semibold text-[var(--text-disabled)] cursor-not-allowed"
           >
             <span>{obtenerCtaDeshabilitadoLabel()}</span>
           </button>
@@ -284,7 +284,7 @@ export const HubPage = () => {
           >
             <a
               href="#herramientas"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
             >
               <span>Ver herramientas</span>
               {HubArrowIcon}
@@ -293,8 +293,8 @@ export const HubPage = () => {
               to="/contacto"
               className={
                 esVisitors
-                  ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-transparent px-5 py-2.5 text-sm font-medium text-[var(--text-muted)] transition hover:text-[var(--text-body)]"
-                  : "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--border-default)]"
+                  ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-transparent px-5 py-2.5 text-sm font-medium text-[var(--text-muted)] transition hover:text-[var(--text-body)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  : "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-sm font-semibold text-[var(--text-body)] transition hover:bg-[var(--border-default)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
               }
               accessibleLabel="Contacto y Soporte"
               before="Contacto y "
@@ -313,7 +313,7 @@ export const HubPage = () => {
       {esVisitors && (
         <div
           className="mb-16 flex items-center justify-center rounded-[var(--radius-3)] px-6 py-12"
-          style={{ background: "linear-gradient(to right, #2c78fc, #918df6)" }}
+          style={{ background: "var(--visitors-hero-gradient)" }}
         >
           <FolderComponent size="sm" color="blue" />
         </div>

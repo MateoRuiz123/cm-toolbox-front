@@ -364,6 +364,15 @@ html[data-sistema="visitors"] {
   --color-action-hover: #a9a6f8;
   --color-action-contrast: #181925;
 
+  /* Visitors accents (DESIGN_Visitors): Sky + Lavender hero band */
+  --color-sky: #2c78fc;
+  --color-lavender: #918df6;
+  --visitors-hero-gradient: linear-gradient(
+    to right,
+    var(--color-sky),
+    var(--color-lavender)
+  );
+
   --state-success: #137434;
   --verde-exito: #137434;
   --ok: #137434;
@@ -430,6 +439,14 @@ html.dark[data-sistema="visitors"] {
   --color-action: #918df6;
   --color-action-hover: #a9a6f8;
   --color-action-contrast: #181925;
+
+  --color-sky: #2c78fc;
+  --color-lavender: #918df6;
+  --visitors-hero-gradient: linear-gradient(
+    to right,
+    var(--color-sky),
+    var(--color-lavender)
+  );
 
   --state-success: #33c758;
   --state-success-on: #0d2a16;

@@ -79,10 +79,20 @@ describe("DiagnosticoPage", () => {
     expect(await screen.findByText("Resultado del Lote")).toBeInTheDocument();
   });
 
-  it("enfoca remisiones al abrir y consulta con Ctrl+Enter", async () => {
+  it("enfoca remisiones en pointer fino y consulta con Ctrl+Enter", async () => {
     vi.mocked(diagnosticarMigracion).mockResolvedValue(
       diagnosticoOutputFixture,
     );
+    vi.spyOn(globalThis, "matchMedia").mockImplementation((query) => ({
+      matches: query === "(pointer: fine)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
     const user = userEvent.setup();
     render(<DiagnosticoPage />);
 
