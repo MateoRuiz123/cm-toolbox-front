@@ -9,6 +9,7 @@ import {
 import { ClienteAuthGate } from "./auth/cliente-auth-gate";
 import { logoutCliente } from "./auth/cliente-session";
 import { obtenerTokenCliente } from "./auth/cliente-token";
+import { ClientePerfilPage } from "./cliente-perfil-page";
 import { ClienteShell } from "./cliente-shell";
 
 export const ClienteDocsRoutes = () => {
@@ -35,8 +36,9 @@ export const ClienteDocsRoutes = () => {
     <ClienteAuthGate>
       <ClienteShell onLogout={handleLogout}>
         <Routes>
+          {/* Relativas al splat de /cliente/* (resto: "docs", "docs/:apiId"). */}
           <Route
-            path="/cliente/docs"
+            path="docs"
             element={
               <DocsPage
                 basePath="/cliente/docs"
@@ -45,7 +47,7 @@ export const ClienteDocsRoutes = () => {
             }
           />
           <Route
-            path="/cliente/docs/:apiId"
+            path="docs/:apiId"
             element={
               <DocsViewerPage
                 basePath="/cliente/docs"
@@ -54,7 +56,11 @@ export const ClienteDocsRoutes = () => {
               />
             }
           />
-          <Route path="*" element={<Navigate to="/cliente/docs" replace />} />
+          <Route
+            path="perfil"
+            element={<ClientePerfilPage onUnauthorized={handleUnauthorized} />}
+          />
+          <Route path="*" element={<Navigate to="docs" replace />} />
         </Routes>
       </ClienteShell>
     </ClienteAuthGate>

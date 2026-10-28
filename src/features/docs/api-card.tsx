@@ -12,7 +12,7 @@ export const ApiCard = ({
   basePath = "/docs",
   canManage = false,
 }: ApiCardProps) => (
-  <article className="rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-app)] p-5 transition hover:border-[var(--color-primary)]">
+  <article className="surface rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-5 transition hover:border-[var(--color-primary)]">
     <Link
       to={`${basePath}/${api.id}`}
       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"

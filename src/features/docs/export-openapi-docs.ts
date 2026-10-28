@@ -1,4 +1,4 @@
-import { openApiToMarkdown, openApiToPrintHtml } from "./openapi-to-markdown";
+import { openApiToMarkdown } from "./openapi-to-markdown";
 
 const slugFileName = (title: string, ext: string): string => {
   const base = title
@@ -41,21 +41,4 @@ export const downloadOpenApiMarkdown = (
     new Blob([markdown], { type: "text/markdown;charset=utf-8" }),
     slugFileName(title, "md"),
   );
-};
-
-/**
- * Abre una vista imprimible para guardar PDF (mismo contenido que el Markdown
- * de integración, análogo a `api_documentacion.pdf`).
- */
-export const exportOpenApiPdf = (document: unknown): void => {
-  const html = openApiToPrintHtml(document);
-  const popup = window.open("", "_blank", "noopener,noreferrer");
-  if (!popup) {
-    throw new Error(
-      "El navegador bloqueó la ventana de exportación. Permite popups e inténtalo de nuevo.",
-    );
-  }
-  popup.document.open();
-  popup.document.write(html);
-  popup.document.close();
 };

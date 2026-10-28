@@ -82,7 +82,7 @@ export const fetchDocsCatalog = async (
   signal?: AbortSignal,
 ): Promise<DocsApiSummary[]> => {
   const res = await fetch(`${API_BASE}/apis`, {
-    headers: authHeaders(),
+    headers: authHeaders({ includeManageBypass: true }),
     signal: withTimeout(CATALOG_TIMEOUT_MS, signal),
   });
   if (!res.ok) {
@@ -308,10 +308,7 @@ export const resendClientActivation = async (
     },
   );
   if (!res.ok) {
-    await parseError(
-      res,
-      "No fue posible reenviar el enlace de activación.",
-    );
+    await parseError(res, "No fue posible reenviar el enlace de activación.");
   }
   const headerUrl = res.headers.get("X-Activation-Url") ?? undefined;
   return { activationUrl: headerUrl };
@@ -330,10 +327,37 @@ export const updateAdminClientStatus = async (
     },
   );
   if (!res.ok) {
-    await parseError(
-      res,
-      "No fue posible actualizar el estado del cliente.",
-    );
+    await parseError(res, "No fue posible actualizar el estado del cliente.");
+  }
+  const body = (await res.json()) as DocsClientResponse;
+  return body.data;
+};
+
+export const fetchClienteProfile = async (
+  signal?: AbortSignal,
+): Promise<DocsClient> => {
+  const res = await fetch(`${API_BASE}/me`, {
+    headers: authHeaders(),
+    signal: withTimeout(CATALOG_TIMEOUT_MS, signal),
+  });
+  if (!res.ok) {
+    await parseError(res, "No pudimos cargar tu perfil.");
+  }
+  const body = (await res.json()) as DocsClientResponse;
+  return body.data;
+};
+
+export const updateClienteProfile = async (payload: {
+  readonly name?: string;
+  readonly email?: string;
+}): Promise<DocsClient> => {
+  const res = await fetch(`${API_BASE}/me`, {
+    method: "PATCH",
+    headers: authHeaders({ includeJson: true }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    await parseError(res, "No pudimos guardar los cambios del perfil.");
   }
   const body = (await res.json()) as DocsClientResponse;
   return body.data;

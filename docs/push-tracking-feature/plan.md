@@ -16,10 +16,10 @@ Este plan **no asume** el contrato final del microservicio. Antes de implementar
 
 ## Cuándo usar este documento
 
-1. Ya hay (o se acaba de mergear) health y/o diagnóstico en `cm-push-tracking-mio`, **o**
-2. Quieres que el agente compare el estado actual del MS contra este plan y complete front (+ proxy/back del portal si aplica).
+El paquete detallado está en los hermanos de esta carpeta (`front.md`, `back.md`, `contrato-http.md`, `decisiones.md`, `seguridad.md`, `runbook-local.md`). Este `plan.md` es el prompt de fases.
 
-Copiar la sección [Prompt para el agente](#prompt-para-el-agente) en una sesión nueva (modo Agent / `/sdd` + `/sdd-build` según complejidad).
+1. Ya existe la API de diagnóstico **fuera** de `cm-push-tracking-mio` (endpoint nuevo o microservicio nuevo), **o**
+2. Quieres cerrar esa pregunta y comparar el MS de ingesta contra [back.md](./back.md) antes de escribir UI.
 
 ---
 
@@ -27,7 +27,7 @@ Copiar la sección [Prompt para el agente](#prompt-para-el-agente) en una sesió
 
 | Repo                   | Rol                                                                                                                              |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `cm-push-tracking-mio` | Fuente de verdad del health + diagnóstico operativo (endpoints, contratos, checks)                                               |
+| `cm-push-tracking-mio` | Ingesta y tareas. No aloja el diagnóstico del portal.                                                                            |
 | `cm-toolbox-front`     | UI de la feature, cliente HTTP, hub, proxy Vite/nginx, tests                                                                     |
 | `cm-api-internos`      | Solo si el diseño elige BFF/proxy en el portal (patrón de migración). No obligatorio si el toolbox habla directo al MS vía proxy |
 
@@ -35,7 +35,9 @@ Rutas locales de referencia (ajustar si el workspace cambia):
 
 - Front: `/home/mateor/Escritorio/local/cm-toolbox-front`
 - MS: `/home/mateor/Escritorio/cm/push-tracking/cm-push-tracking-mio`
+- Workspace MS: `/home/mateor/Escritorio/cm/push-tracking/push-tracking-mio.code-workspace`
 - API portal (patrón): `/home/mateor/Escritorio/cm/MIGRACION - api_internos/cm-api-internos`
+- Docs feature (este paquete): `docs/push-tracking-feature/`
 
 ---
 
@@ -89,11 +91,12 @@ Si faltan endpoints en el MS: **parar la UI**, listar el gap y proponer contrato
 
 Tras Fase 0, elegir **una** opción y justificarla con evidencia:
 
-| Opción                      | Cuándo                                                                   | Implicación en toolbox                                     |
-| --------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **A — Proxy directo al MS** | El MS expone health + diagnóstico consumibles desde el portal            | Proxy Vite/nginx + paths same-origin (como `/migracion/*`) |
-| **B — BFF en api-internos** | Se necesita orquestación, auth corporativa o no exponer el MS al browser | Endpoints en portal + proxy del front a esos paths         |
-| **C — Híbrido**             | Health en un sitio y operativo en otro                                   | Documentar ambos paths en `docs/` del front                |
+| Opción | Cuándo | Implicación |
+| --- | --- | --- |
+| **Endpoint nuevo** | Un servicio que ya existe (y no es el de ingesta) puede leer tracking | El portal proxea ese path |
+| **Microservicio nuevo** | Hace falta un proceso solo de lectura, aparte de `cm-push-tracking-mio` | Otro repo, otro puerto, mismo proxy `/push-tracking-api` |
+
+No hay opción “meter `/health` y `/diagnostico` en `cm-push-tracking-mio`”.
 
 Reglas:
 
@@ -110,7 +113,7 @@ Referencia de patrón (no copiar dominio de migración):
 | Referencia        | Path                                                                                                                               |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Feature existente | `src/features/diagnostico/`                                                                                                        |
-| Contrato doc      | `docs/diagnostico-api-contrato.md`                                                                                                 |
+| Contrato doc      | `../diagnostico-api-contrato.md`                                                                                                 |
 | Hub               | `src/features/hub/hub-page.tsx`                                                                                                    |
 | Rutas lazy        | `src/app/app.tsx`                                                                                                                  |
 | Env/proxy         | `src/shared/lib/env.ts`, `vite.config.ts`, `nginx/default.conf.template`                                                           |
@@ -162,8 +165,8 @@ Actúa como Senior Full Stack del toolbox de Coordinadora. Trabaja en Agent mode
 CONTEXTO
 - Front del portal: /home/mateor/Escritorio/local/cm-toolbox-front
 - Microservicio a diagnosticar: /home/mateor/Escritorio/cm/push-tracking/cm-push-tracking-mio
-- Patrón de referencia (migración, NO mezclar dominio): feature src/features/diagnostico/, docs/diagnostico-api-contrato.md, proxy /migracion → DIAGNOSTICO_API_UPSTREAM
-- Plan fuente: docs/plan-diagnostico-push-tracking.md (léelo completo)
+- Patrón de referencia (migración, NO mezclar dominio): feature src/features/diagnostico/, ../diagnostico-api-contrato.md, proxy /migracion → DIAGNOSTICO_API_UPSTREAM
+- Plan fuente: docs/push-tracking-feature/plan.md (léelo completo)
 
 OBJETIVO
 Crear una FEATURE NUEVA en el toolbox (ruta y carpeta propias, distinta de /diagnostico) para diagnosticar cm-push-tracking-mio en DOS modos:
@@ -174,7 +177,7 @@ FASE 0 — OBLIGATORIA (ANTES DE CODIFICAR)
 1. Refresca y consulta graphify en ambos repos si aplica.
 2. Analiza el estado ACTUAL de cm-push-tracking-mio (código, routes, specs, docs). NO asumas el contrato de este plan: puede haber endpoints, DTOs, checks, auth o prefijos NUEVOS.
 3. Entrega la tabla de hallazgos del plan (health path, diagnóstico path, auth, shapes, checks, novedades, gaps).
-4. Si faltan endpoints de health u operativo en el MS: DETENTE, documenta el gap y propone contrato mínimo. No inventes APIs en el front.
+4. Si el diagnóstico todavía no tiene hogar (ni endpoint nuevo ni MS nuevo): DETENTE. No lo agregues a `cm-push-tracking-mio` y no inventes APIs en el front.
 5. Elige opción de integración A (proxy al MS), B (BFF api-internos) o C (híbrido) con justificación breve.
 
 FASE 1 — DISEÑO CORTO

@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { diagnosticarMigracion } from "./api/diagnostico-api";
 import type { DiagnosticoOutput } from "./api/types";
 import { parseDespachos, splitCodigos } from "../../shared/lib/split-codigos";
@@ -11,8 +17,12 @@ import { guardarConsultaSesion, leerConsultaSesion } from "./consulta-sesion";
 
 /** Pantalla principal de consulta de diagnósticos de migración bajo el sistema SIGO Droop. */
 export const DiagnosticoPage = () => {
-  const [remisionesRaw, setRemisionesRaw] = useState(() => leerConsultaSesion().remisiones);
-  const [despachosRaw, setDespachosRaw] = useState(() => leerConsultaSesion().despachos);
+  const [remisionesRaw, setRemisionesRaw] = useState(
+    () => leerConsultaSesion().remisiones,
+  );
+  const [despachosRaw, setDespachosRaw] = useState(
+    () => leerConsultaSesion().despachos,
+  );
   const [data, setData] = useState<DiagnosticoOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +31,10 @@ export const DiagnosticoPage = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    guardarConsultaSesion({ remisiones: remisionesRaw, despachos: despachosRaw });
+    guardarConsultaSesion({
+      remisiones: remisionesRaw,
+      despachos: despachosRaw,
+    });
   }, [remisionesRaw, despachosRaw]);
 
   const ejecutarConsulta = async (
@@ -143,7 +156,6 @@ export const DiagnosticoPage = () => {
 
           <form
             onSubmit={handleSubmit}
-            style={{ boxShadow: "var(--shadow-panel)" }}
             className="surface rounded-[var(--radius-2)] border border-[var(--border-default)] p-5 sm:p-6"
           >
             <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
@@ -348,10 +360,7 @@ export const DiagnosticoPage = () => {
           )}
 
           {!data && !loading && (
-            <div
-              style={{ boxShadow: "var(--shadow-panel)" }}
-              className="surface flex flex-col items-center justify-center rounded-[var(--radius-2)] border border-[var(--border-default)] p-8 text-center sm:p-14"
-            >
+            <div className="surface flex flex-col items-center justify-center rounded-[var(--radius-2)] border border-[var(--border-default)] p-8 text-center sm:p-14">
               <div className="flex size-14 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] sm:size-16">
                 <svg
                   aria-hidden="true"
@@ -389,13 +398,13 @@ export const DiagnosticoPage = () => {
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs text-[var(--text-muted)]">
-                <span className="rounded-[16px] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Múltiples remisiones
                 </span>
-                <span className="rounded-[16px] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Despachos completos
                 </span>
-                <span className="rounded-[16px] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
+                <span className="rounded-[16px] bg-[var(--surface-sunken)] px-3 py-1 font-semibold">
                   Reintento con 1 clic
                 </span>
               </div>

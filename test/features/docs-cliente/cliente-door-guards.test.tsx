@@ -6,6 +6,7 @@ import {
   RedirectClienteAwayFromHub,
 } from "../../../src/features/docs-cliente/auth/cliente-door-guards";
 import * as clienteToken from "../../../src/features/docs-cliente/auth/cliente-token";
+import * as authBypass from "../../../src/shared/auth/auth-bypass";
 import * as internalToken from "../../../src/shared/auth/token";
 
 describe("cliente door guards (CA-C04)", () => {
@@ -13,7 +14,8 @@ describe("cliente door guards (CA-C04)", () => {
     vi.restoreAllMocks();
   });
 
-  it("bloquea sesión interna en /cliente sin token cliente", () => {
+  it("bloquea sesión interna en /cliente sin token cliente (sin bypass)", () => {
+    vi.spyOn(authBypass, "esAuthBypassActivo").mockReturnValue(false);
     vi.spyOn(internalToken, "obtenerToken").mockReturnValue("jwt-interno");
     vi.spyOn(clienteToken, "obtenerTokenCliente").mockReturnValue(null);
 
@@ -29,6 +31,22 @@ describe("cliente door guards (CA-C04)", () => {
       screen.getByRole("heading", { name: /acceso solo para clientes/i }),
     ).toBeInTheDocument();
     expect(screen.queryByText("contenido cliente")).not.toBeInTheDocument();
+  });
+
+  it("permite /cliente con sesión interna cuando el bypass local está activo", () => {
+    vi.spyOn(authBypass, "esAuthBypassActivo").mockReturnValue(true);
+    vi.spyOn(internalToken, "obtenerToken").mockReturnValue("jwt-interno");
+    vi.spyOn(clienteToken, "obtenerTokenCliente").mockReturnValue(null);
+
+    render(
+      <MemoryRouter>
+        <BlockInternalOnClienteDoor>
+          <p>contenido cliente</p>
+        </BlockInternalOnClienteDoor>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("contenido cliente")).toBeInTheDocument();
   });
 
   it("permite /cliente cuando no hay token interno", () => {

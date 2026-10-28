@@ -98,6 +98,8 @@ Documentación de APIs (feature completa): [docs/docs-feature/guia-operativa.md]
 
 Local con Keycloak test + MS locales: [docs/local-como-test.md](docs/local-como-test.md).
 
+Diagnóstico push-tracking (plan): [docs/push-tracking-feature/](docs/push-tracking-feature/README.md).
+
 `pnpm dev` levanta infra (`docker-compose.dev.yml`: Postgres + Redis), access/docs/logs y Vite. Solo UI: `pnpm dev:front`.
 
 Si no hay variables Keycloak, se usan los defaults de `@itcoordinadora/cm-sigoo-temp-ui` según `VITE_KEYCLOAK_ENV`.

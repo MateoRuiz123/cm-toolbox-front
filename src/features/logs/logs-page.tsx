@@ -309,7 +309,6 @@ export const LogsPage = () => {
 
             <form
               onSubmit={handleFormSubmit}
-              style={{ boxShadow: "var(--shadow-panel)" }}
               className="surface rounded-[var(--radius-2)] border border-[var(--border-default)] p-5 sm:p-6"
             >
               <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
@@ -482,10 +481,7 @@ export const LogsPage = () => {
 
           <section className="min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
             {showViewer ? (
-              <div
-                style={{ boxShadow: "var(--shadow-panel)" }}
-                className="surface flex h-[70dvh] min-h-[420px] flex-col overflow-hidden rounded-[var(--radius-2)] border border-[var(--border-default)] lg:h-auto lg:min-h-0 lg:flex-1"
-              >
+              <div className="surface flex h-[70dvh] min-h-[420px] flex-col overflow-hidden rounded-[var(--radius-2)] border border-[var(--border-default)] lg:h-auto lg:min-h-0 lg:flex-1">
                 <LogsViewer
                   logs={logs}
                   isStreaming={isStreaming}
@@ -494,10 +490,7 @@ export const LogsPage = () => {
                 />
               </div>
             ) : (
-              <div
-                style={{ boxShadow: "var(--shadow-panel)" }}
-                className="surface flex flex-col items-center justify-center rounded-[var(--radius-2)] border border-[var(--border-default)] p-8 text-center sm:p-14"
-              >
+              <div className="surface flex flex-col items-center justify-center rounded-[var(--radius-2)] border border-[var(--border-default)] p-8 text-center sm:p-14">
                 <div className="flex size-14 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] sm:size-16">
                   <svg
                     aria-hidden="true"

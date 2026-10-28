@@ -1,28 +1,43 @@
 # Aprender front con este proyecto
 
-Esta guía recorre el código real de la pantalla de diagnóstico. No necesitas experiencia previa con React.
+Guía del portal real. La segunda mitad recorre la pantalla de diagnóstico (el ejemplo más completo de formulario + resultado). No necesitas experiencia previa con React.
 
 ## 1. Mapa del proyecto
 
 ```text
 src/
 ├── app/
-│   ├── app.tsx                 Une la aplicación, ErrorBoundary y el fondo
-│   └── theme-provider.tsx      Guarda y aplica claro/oscuro (safeStorage)
-├── features/diagnostico/
-│   ├── diagnostico-page.tsx    Layout split de 2 columnas, formulario, cancelación y estado
-│   ├── diagnostico-skeleton.tsx Esqueleto de carga con animación de pulsación
-│   ├── resultado-diagnostico.tsx Buscador, filtros, acordeón, selector y copia de fallidas
-│   ├── guia-gallery-card.tsx   Tarjeta para vista en cuadrícula amplia (hasta 3-4 cols)
-│   ├── guia-detalle-modal.tsx  Modal dialog con scroll-lock, trampa de foco y checks
-│   └── check-row.tsx           Fila desplegable de cada check
+│   ├── app.tsx                 Rutas, AuthGate, AccessProvider, lazy pages
+│   └── theme-provider.tsx      Claro/oscuro (safeStorage)
+├── features/
+│   ├── hub/                    Catálogo de herramientas según permisos
+│   ├── admin/                  RBAC: usuarios, apps, auditoría
+│   ├── docs/                   Catálogo OpenAPI interno + admin
+│   ├── docs-cliente/           Puerta /cliente (login distinto)
+│   ├── diagnostico/            Diagnóstico de migración (api-internos)
+│   ├── logs/                   Visor de logs
+│   └── configuracion/          Preferencias de UI
 ├── shared/
-│   ├── api/                    Tipos y llamadas HTTP (diagnóstico y reintento con AbortSignal)
-│   ├── lib/                    Parseo de códigos, safeStorage y validación de env
-│   └── ui/                     Piezas visuales reutilizables (ErrorBoundary, CopyButton, etc.)
-├── index.css                   Colores y estilos globales
+│   ├── auth/                   Keycloak, access-ms, guards
+│   ├── lib/                    env, safeStorage, títulos
+│   └── ui/                     Header, ErrorBoundary, piezas reutilizables
+├── index.css                   Tokens de color
 └── main.tsx                    Enciende React
 ```
+
+Diagnóstico (el recorrido de las secciones 3 en adelante):
+
+```text
+features/diagnostico/
+├── diagnostico-page.tsx
+├── diagnostico-skeleton.tsx
+├── resultado-diagnostico.tsx
+├── guia-gallery-card.tsx
+├── guia-detalle-modal.tsx
+└── check-row.tsx
+```
+
+Documentación por feature: `docs/docs-feature/`, `docs/rbac-feature/`, `docs/push-tracking-feature/`.
 
 ## 2. Ejecutarlo
 
@@ -32,9 +47,9 @@ cp .env.example .env
 pnpm dev
 ```
 
-Abre la URL que imprime Vite (normalmente `http://localhost:5173`).
+`pnpm dev` levanta Postgres, Redis, access, docs, logs y Vite en `http://localhost:3000`. Solo la UI: `pnpm dev:front`. Detalle: [local-como-test.md](./local-como-test.md).
 
-En `.env`, configura el host del API (el navegador solo ve `/migracion/…`):
+El navegador no llama hosts de API directo. Diagnóstico sale por `/migracion/…` (proxy Vite o nginx):
 
 ```bash
 DIAGNOSTICO_API_UPSTREAM=http://localhost:8080/cm-api-internos

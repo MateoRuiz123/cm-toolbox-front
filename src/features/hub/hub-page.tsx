@@ -232,14 +232,19 @@ export const HubPage = () => {
   const { apps } = useAccess();
   const { sistema } = useTheme();
   const esVisitors = sistema === "visitors";
+  const esGlass = sistema === "glass";
+  /** Solo SIGO usa marco de tarjeta en el hero; Visitors/Glass van abiertos. */
+  const heroConMarco = sistema === "sigo";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <div
         className={
-          esVisitors
-            ? "mb-10"
-            : "mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-xs"
+          heroConMarco
+            ? "mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-xs"
+            : esGlass
+              ? "mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8"
+              : "mb-10"
         }
       >
         <div

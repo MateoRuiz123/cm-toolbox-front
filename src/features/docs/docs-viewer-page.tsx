@@ -2,10 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { DocsApiError, fetchOpenApi } from "./api/docs-api";
 import { DocsEmptyState } from "./empty-state";
-import {
-  downloadOpenApiMarkdown,
-  exportOpenApiPdf,
-} from "./export-openapi-docs";
+import { downloadOpenApiMarkdown } from "./export-openapi-docs";
+import { ExportPdfModal } from "./export-pdf-modal";
 import { OpenApiViewer } from "./openapi-viewer";
 import { EditApiForm } from "./admin/edit-api-form";
 import { PublishSpecForm } from "./admin/publish-spec-form";
@@ -32,7 +30,7 @@ export const DocsViewerPage = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [versionHint, setVersionHint] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   const load = useCallback(async () => {
     if (!validId) {
@@ -96,28 +94,14 @@ export const DocsViewerPage = ({
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setExportError(null);
-                try {
-                  exportOpenApiPdf(doc);
-                } catch (err) {
-                  setExportError(
-                    err instanceof Error
-                      ? err.message
-                      : "No fue posible exportar el PDF.",
-                  );
-                }
-              }}
+              onClick={() => setShowPdfModal(true)}
               className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-primary-contrast)] transition hover:bg-[var(--color-primary-hover)]"
             >
               Exportar PDF
             </button>
             <button
               type="button"
-              onClick={() => {
-                setExportError(null);
-                downloadOpenApiMarkdown(doc);
-              }}
+              onClick={() => downloadOpenApiMarkdown(doc)}
               className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)]"
             >
               Descargar Markdown
@@ -128,11 +112,6 @@ export const DocsViewerPage = ({
               </p>
             ) : null}
           </div>
-          {exportError ? (
-            <p className="mb-4 text-sm text-[var(--state-error)]" role="alert">
-              {exportError}
-            </p>
-          ) : null}
           <OpenApiViewer document={doc} />
           {canManage ? <EditApiForm apiId={apiId} /> : null}
           {showPublish ? (
@@ -142,6 +121,12 @@ export const DocsViewerPage = ({
                 setVersionHint(version);
                 void load();
               }}
+            />
+          ) : null}
+          {showPdfModal ? (
+            <ExportPdfModal
+              openApiDocument={doc}
+              onClose={() => setShowPdfModal(false)}
             />
           ) : null}
         </>

@@ -161,8 +161,9 @@ export const ClientsPage = () => {
           {activationUrl ? (
             <div className="mt-3">
               <p className="text-xs text-[var(--text-muted)]">
-                En local no hay SMTP; copia el enlace de activación de un solo
-                uso:
+                En local no hay SMTP; copia el enlace, ábrelo y pulsa Entrar
+                (dev). El token del query solo identifica el cliente en humo
+                local:
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <code className="break-all rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-body)]">
