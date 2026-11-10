@@ -1,19 +1,15 @@
-import { lazy, Suspense, type ComponentProps } from "react";
-import { KeycloakProvider } from "@itcoordinadora/cm-sigoo-temp-ui";
+import { lazy, Suspense } from "react";
 import { Route, Routes, useLocation } from "react-router";
 import {
   BlockInternalOnClienteDoor,
   RedirectClienteAwayFromHub,
 } from "../features/docs-cliente/auth/cliente-door-guards";
-import { HubPage } from "../features/hub/hub-page";
-import { NotFoundPage } from "../features/not-found/not-found-page";
 import { esAuthBypassActivo } from "../shared/auth/auth-bypass";
 import { AccessProvider, useAccess } from "../shared/auth/access-context";
 import { AppAccessGuard } from "../shared/auth/app-access-guard";
 import { DynamicAppRoutePage } from "../shared/auth/dynamic-app-route-page";
 import { AuthProvider } from "../shared/auth/auth-context";
 import { AuthGate } from "../shared/auth/auth-gate";
-import { keycloakClient } from "../shared/auth/keycloak-client";
 import { usePageTitle } from "../shared/lib/use-page-title";
 import { AppFooter } from "../shared/ui/app-footer";
 import { AppHeader } from "../shared/ui/app-header";
@@ -25,6 +21,24 @@ const ClientePageTitle = () => {
   usePageTitle();
   return null;
 };
+
+const CorporateKeycloakProvider = lazy(() =>
+  import("../shared/auth/corporate-keycloak-provider").then((m) => ({
+    default: m.CorporateKeycloakProvider,
+  })),
+);
+
+const HubPage = lazy(() =>
+  import("../features/hub/hub-page").then((m) => ({
+    default: m.HubPage,
+  })),
+);
+
+const NotFoundPage = lazy(() =>
+  import("../features/not-found/not-found-page").then((m) => ({
+    default: m.NotFoundPage,
+  })),
+);
 
 const DiagnosticoPage = lazy(() =>
   import("../features/diagnostico/diagnostico-page").then((m) => ({
@@ -287,15 +301,11 @@ export const App = () => {
       {esAuthBypassActivo() ? (
         <AppShell />
       ) : (
-        <KeycloakProvider
-          keycloak={
-            keycloakClient as unknown as ComponentProps<
-              typeof KeycloakProvider
-            >["keycloak"]
-          }
-        >
-          <AppShell />
-        </KeycloakProvider>
+        <Suspense fallback={<RouteFallback />}>
+          <CorporateKeycloakProvider>
+            <AppShell />
+          </CorporateKeycloakProvider>
+        </Suspense>
       )}
     </RedirectClienteAwayFromHub>
   );

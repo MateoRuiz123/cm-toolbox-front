@@ -73,6 +73,28 @@ export default defineConfig(({ mode }) => {
     },
     server: { port, proxy },
     preview: { port, proxy },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("@mui") || id.includes("@emotion")) {
+              return "vendor-mui";
+            }
+            if (id.includes("keycloak-js") || id.includes("@itcoordinadora")) {
+              return "vendor-auth";
+            }
+            if (
+              id.includes("node_modules/react/") ||
+              id.includes("node_modules/react-dom/") ||
+              id.includes("node_modules/react-router/")
+            ) {
+              return "vendor-react";
+            }
+          },
+        },
+      },
+    },
     test: {
       include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
       exclude: ["**/node_modules/**", "**/dist/**", "utils/**"],

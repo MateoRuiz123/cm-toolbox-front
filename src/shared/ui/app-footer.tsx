@@ -1,7 +1,8 @@
 import { Link } from "react-router";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const AppFooter = () => {
-  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="mt-16 border-t border-[var(--border-default)] bg-[var(--surface-header)] text-xs text-[var(--text-muted)] transition-colors">
@@ -61,7 +62,7 @@ export const AppFooter = () => {
 
         <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-default)] pt-6 sm:flex-row">
           <p className="text-[11px] text-[var(--text-muted)]">
-            &copy; {currentYear} Coordinadora Mercantil S.A. Todos los derechos
+            &copy; {CURRENT_YEAR} Coordinadora Mercantil S.A. Todos los derechos
             reservados.
           </p>
           <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">

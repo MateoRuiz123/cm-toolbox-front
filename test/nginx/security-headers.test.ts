@@ -35,5 +35,7 @@ describe("nginx/default.conf.template — cabeceras de seguridad", () => {
     expect(template).toContain("X-Content-Type-Options nosniff");
     expect(template).toContain("Referrer-Policy same-origin");
     expect(template).toContain("X-Frame-Options SAMEORIGIN");
+    expect(template).toContain("Strict-Transport-Security");
+    expect(template).toContain("Permissions-Policy");
   });
 });

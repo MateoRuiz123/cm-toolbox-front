@@ -17,11 +17,13 @@ const renderRoute = (path: string) =>
   );
 
 describe("AppRoutes", () => {
-  it("mantiene /hub como alias del portal", () => {
+  it("mantiene /hub como alias del portal", async () => {
     renderRoute("/hub");
 
     expect(
-      screen.getByRole("heading", { name: /portal de aplicaciones de apoyo/i }),
+      await screen.findByRole("heading", {
+        name: /portal de aplicaciones de apoyo/i,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -33,11 +35,11 @@ describe("AppRoutes", () => {
     ).toBeInTheDocument();
   });
 
-  it("muestra 404 para rutas desconocidas", () => {
+  it("muestra 404 para rutas desconocidas", async () => {
     renderRoute("/ruta-inexistente");
 
     expect(
-      screen.getByText("La página solicitada no está disponible"),
+      await screen.findByText("La página solicitada no está disponible"),
     ).toBeInTheDocument();
   });
 });

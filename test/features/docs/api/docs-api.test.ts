@@ -40,10 +40,10 @@ describe("docs-api", () => {
     const data = await fetchDocsCatalog();
     expect(data).toHaveLength(1);
     expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe("/docs-api/v1/apis");
-    expect(
-      (vi.mocked(fetch).mock.calls[0]?.[1]?.headers as Record<string, string>)
-        .Authorization,
-    ).toBe("Bearer test-token");
+    const callHeaders = vi.mocked(fetch).mock.calls[0]?.[1]?.headers as
+      | Record<string, string>
+      | undefined;
+    expect(callHeaders?.Authorization).toBe("Bearer test-token");
   });
 
   it("propaga 404 genérico", async () => {

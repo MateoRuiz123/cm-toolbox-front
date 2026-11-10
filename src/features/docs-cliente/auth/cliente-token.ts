@@ -1,25 +1,19 @@
-import { safeSessionStorage, safeStorage } from "@/shared/lib/safe-storage";
+import { createTokenStorage } from "@/shared/auth/token-storage-factory";
 
 const TOKEN_KEY = "token_docs_cliente";
 const SESION_KEY = "sesion_keycloak_docs_cliente";
 
-export const guardarTokenCliente = (token?: string | null): void => {
-  if (token?.trim()) {
-    safeStorage.setItem(TOKEN_KEY, token.trim());
-  }
-};
+const clienteTokenStorage = createTokenStorage(TOKEN_KEY, SESION_KEY);
 
-export const obtenerTokenCliente = (): string | null =>
-  safeStorage.getItem(TOKEN_KEY);
+export const guardarTokenCliente = clienteTokenStorage.guardarToken;
+
+export const obtenerTokenCliente = clienteTokenStorage.obtenerToken;
 
 export const guardarSesionCliente = (tokens: {
   token: string;
   refreshToken: string;
 }): void => {
-  safeSessionStorage.setItem(SESION_KEY, JSON.stringify(tokens));
+  clienteTokenStorage.guardarSesionTokens(tokens);
 };
 
-export const limpiarTokenCliente = (): void => {
-  safeStorage.removeItem(TOKEN_KEY);
-  safeSessionStorage.removeItem(SESION_KEY);
-};
+export const limpiarTokenCliente = clienteTokenStorage.limpiarToken;

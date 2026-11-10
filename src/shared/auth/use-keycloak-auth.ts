@@ -50,6 +50,15 @@ export const extraerIdentidadToken = (
   };
 };
 
+const attachKeycloakListeners = (
+  kc: Keycloak,
+  onSuccess: () => void,
+  onExpired: () => void,
+) => {
+  kc.onAuthSuccess = onSuccess;
+  kc.onTokenExpired = onExpired;
+};
+
 /**
  * Hook para gestionar la sesión corporativa con Keycloak (Google IdP).
  * Autenticación directa con el token emitido por Keycloak.
@@ -64,12 +73,12 @@ export const useKeycloakAuth = (): SesionCorporativa => {
   const [intento, setIntento] = useState(0);
 
   useEffect(() => {
-    keycloak.onAuthSuccess = () => {
+    const handleAuthSuccess = () => {
       console.info("[Auth] Evento onAuthSuccess recibido de Keycloak.");
       setIntento((valor) => valor + 1);
     };
 
-    keycloak.onTokenExpired = () => {
+    const handleTokenExpired = () => {
       console.info("[Auth] Token corporativo expirado, renovando...");
       keycloak
         .updateToken(30)
@@ -89,6 +98,8 @@ export const useKeycloakAuth = (): SesionCorporativa => {
           setEstadoAuth("sin_sesion");
         });
     };
+
+    attachKeycloakListeners(keycloak, handleAuthSuccess, handleTokenExpired);
   }, [keycloak]);
 
   useEffect(() => {

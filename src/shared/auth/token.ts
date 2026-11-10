@@ -1,67 +1,40 @@
-import { safeSessionStorage, safeStorage } from '../lib/safe-storage'
+import {
+  createTokenStorage,
+  type TokensSesionBase,
+} from "./token-storage-factory";
 
-const TOKEN_KEY = 'token_sigoo'
-const SESION_KEY = 'sesion_keycloak'
+const TOKEN_KEY = "token_sigoo";
+const SESION_KEY = "sesion_keycloak";
 
-export interface TokensSesion {
-  token: string
-  refreshToken: string
-  idToken?: string
-}
+export interface TokensSesion extends TokensSesionBase {}
+
+const sigooTokenStorage = createTokenStorage<TokensSesion>(
+  TOKEN_KEY,
+  SESION_KEY,
+);
 
 /**
  * Guarda el token corporativo en almacenamiento seguro sin exponerlo en la UI.
  */
-export const guardarToken = (token?: string | null): void => {
-  if (token?.trim()) {
-    safeStorage.setItem(TOKEN_KEY, token.trim())
-  }
-}
+export const guardarToken = sigooTokenStorage.guardarToken;
 
 /**
  * Obtiene el token guardado para clientes HTTP futuros.
  */
-export const obtenerToken = (): string | null => safeStorage.getItem(TOKEN_KEY)
+export const obtenerToken = sigooTokenStorage.obtenerToken;
 
 /**
  * Persiste los tokens de la sesión en la pestaña actual para reanudarla tras
  * una recarga sin depender de cookies de terceros.
  */
-export const guardarSesionTokens = (tokens: Partial<TokensSesion>): void => {
-  if (!tokens.token?.trim() || !tokens.refreshToken?.trim()) {
-    return
-  }
-  safeSessionStorage.setItem(SESION_KEY, JSON.stringify(tokens))
-}
+export const guardarSesionTokens = sigooTokenStorage.guardarSesionTokens;
 
 /**
  * Recupera los tokens de la pestaña actual, si la sesión sigue vigente.
  */
-export const obtenerSesionTokens = (): TokensSesion | null => {
-  const crudo = safeSessionStorage.getItem(SESION_KEY)
-  if (!crudo) {
-    return null
-  }
-
-  try {
-    const datos = JSON.parse(crudo) as Partial<TokensSesion>
-    if (!datos.token || !datos.refreshToken) {
-      return null
-    }
-    return {
-      token: datos.token,
-      refreshToken: datos.refreshToken,
-      idToken: datos.idToken,
-    }
-  } catch {
-    return null
-  }
-}
+export const obtenerSesionTokens = sigooTokenStorage.obtenerSesionTokens;
 
 /**
  * Limpia los tokens almacenados al cerrar sesión o cuando dejan de ser válidos.
  */
-export const limpiarToken = (): void => {
-  safeStorage.removeItem(TOKEN_KEY)
-  safeSessionStorage.removeItem(SESION_KEY)
-}
+export const limpiarToken = sigooTokenStorage.limpiarToken;
