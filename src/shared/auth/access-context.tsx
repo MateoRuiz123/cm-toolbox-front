@@ -42,44 +42,19 @@ export const AccessProvider = ({
     string | null
   >(() => getDevImpersonatedEmail());
 
-  const loadAccess = useCallback(async () => {
-    if (estadoAuth !== "autenticado") return;
+  const loadAccess = useCallback(
+    async (isCancelled?: () => boolean) => {
+      if (estadoAuth !== "autenticado") return;
 
-    setLoadingAccess(true);
-    try {
-      const remoteProfile = await fetchMyAccess();
-      setProfile(remoteProfile);
-      setIsUserBlocked(false);
-      setBlockedMessage(null);
-    } catch (error) {
-      if (error instanceof AccessApiError && error.code === "USER_BLOCKED") {
-        setIsUserBlocked(true);
-        setBlockedMessage(error.message);
-        return;
-      }
-      setProfile(
-        buildFallbackAccessProfile(email || "dev.local@coordinadora.com"),
-      );
-      setIsUserBlocked(false);
-      setBlockedMessage(null);
-    } finally {
-      setLoadingAccess(false);
-    }
-  }, [estadoAuth, email]);
-
-  useEffect(() => {
-    let cancelado = false;
-    if (estadoAuth !== "autenticado") return;
-
-    fetchMyAccess()
-      .then((remoteProfile) => {
-        if (cancelado) return;
+      setLoadingAccess(true);
+      try {
+        const remoteProfile = await fetchMyAccess();
+        if (isCancelled?.()) return;
         setProfile(remoteProfile);
         setIsUserBlocked(false);
         setBlockedMessage(null);
-      })
-      .catch((error) => {
-        if (cancelado) return;
+      } catch (error) {
+        if (isCancelled?.()) return;
         if (error instanceof AccessApiError && error.code === "USER_BLOCKED") {
           setIsUserBlocked(true);
           setBlockedMessage(error.message);
@@ -90,17 +65,26 @@ export const AccessProvider = ({
         );
         setIsUserBlocked(false);
         setBlockedMessage(null);
-      })
-      .finally(() => {
-        if (!cancelado) {
+      } finally {
+        if (!isCancelled?.()) {
           setLoadingAccess(false);
         }
-      });
+      }
+    },
+    [estadoAuth, email],
+  );
 
+  useEffect(() => {
+    let cancelado = false;
+    if (estadoAuth !== "autenticado") {
+      setLoadingAccess(false);
+      return;
+    }
+    void loadAccess(() => cancelado);
     return () => {
       cancelado = true;
     };
-  }, [estadoAuth, email]);
+  }, [estadoAuth, loadAccess]);
 
   const switchDevUser = useCallback(
     async (nextEmail: string | null) => {

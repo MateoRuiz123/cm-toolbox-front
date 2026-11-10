@@ -229,7 +229,7 @@ const AppCard = ({
 };
 
 export const HubPage = () => {
-  const { apps } = useAccess();
+  const { apps, loadingAccess } = useAccess();
   const { sistema } = useTheme();
   const esVisitors = sistema === "visitors";
   const esGlass = sistema === "glass";
@@ -323,20 +323,30 @@ export const HubPage = () => {
         id="herramientas"
         className="grid scroll-mt-24 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
       >
-        {apps
-          .filter((app) => app.status !== "hidden")
-          .map((app) => (
-            <AppCard
-              key={app.id}
-              titulo={app.name}
-              descripcion={app.description}
-              ruta={app.route}
-              status={app.status}
-              canAccess={app.canAccess}
-              tags={app.tags}
-              icono={app.icon}
-            />
-          ))}
+        {loadingAccess ? (
+          <div
+            className="col-span-full flex min-h-[20vh] items-center justify-center text-sm text-[var(--text-muted)]"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            Cargando herramientas…
+          </div>
+        ) : (
+          apps
+            .filter((app) => app.status !== "hidden")
+            .map((app) => (
+              <AppCard
+                key={app.id}
+                titulo={app.name}
+                descripcion={app.description}
+                ruta={app.route}
+                status={app.status}
+                canAccess={app.canAccess}
+                tags={app.tags}
+                icono={app.icon}
+              />
+            ))
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
   "name": "cm-toolbox-front",
   "description": "Portal y Hub de herramientas de apoyo y diagnóstico",
   "private": true,
-  "version": "1.18.9",
+  "version": "1.18.10",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {

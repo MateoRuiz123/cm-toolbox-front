@@ -12,8 +12,23 @@ interface AppAccessGuardProps {
  * Guard de autorización por ruta de herramienta (CA-F03, CA-F05, CA-F06).
  * Bloquea el acceso directo por URL si la app está en mantenimiento, desactivada o sin permiso 'view'.
  */
+const AccessLoadingFallback = () => (
+  <div
+    className="flex min-h-[40vh] items-center justify-center bg-[var(--surface-app)] text-sm text-[var(--text-muted)]"
+    aria-busy="true"
+    aria-live="polite"
+  >
+    Cargando permisos…
+  </div>
+);
+
 export const AppAccessGuard = ({ appId, children }: AppAccessGuardProps) => {
-  const { apps, canAccessApp } = useAccess();
+  const { apps, canAccessApp, loadingAccess } = useAccess();
+
+  if (loadingAccess) {
+    return <AccessLoadingFallback />;
+  }
+
   const appInfo = apps.find((a) => a.id === appId);
 
   if (appInfo?.status !== "hidden" && canAccessApp(appId)) {

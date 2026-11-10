@@ -27,7 +27,11 @@ export interface HttpClient {
     body?: unknown,
     options?: RequestOptions,
   ) => Promise<T>;
-  put: <T>(path: string, body?: unknown, options?: RequestOptions) => Promise<T>;
+  put: <T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ) => Promise<T>;
   patch: <T>(
     path: string,
     body?: unknown,
@@ -156,75 +160,43 @@ export const createHttpClient = (basePath = ""): HttpClient => {
     }
   };
 
+  const withJsonBody = <T>(
+    method: "POST" | "PUT" | "PATCH",
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<T> => {
+    const headers = new Headers(options?.headers);
+    let payloadBody: BodyInit | undefined = undefined;
+    if (body !== undefined) {
+      if (
+        typeof body === "string" ||
+        body instanceof FormData ||
+        body instanceof Blob
+      ) {
+        payloadBody = body;
+      } else {
+        headers.set("Content-Type", "application/json");
+        payloadBody = JSON.stringify(body);
+      }
+    }
+    return request<T>(path, {
+      ...options,
+      method,
+      headers,
+      body: payloadBody,
+    });
+  };
+
   return {
     get: <T>(path: string, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "GET" }),
-    post: <T>(path: string, body?: unknown, options?: RequestOptions) => {
-      const headers = new Headers(options?.headers);
-      let payloadBody: BodyInit | undefined = undefined;
-      if (body !== undefined) {
-        if (
-          typeof body === "string" ||
-          body instanceof FormData ||
-          body instanceof Blob
-        ) {
-          payloadBody = body;
-        } else {
-          headers.set("Content-Type", "application/json");
-          payloadBody = JSON.stringify(body);
-        }
-      }
-      return request<T>(path, {
-        ...options,
-        method: "POST",
-        headers,
-        body: payloadBody,
-      });
-    },
-    put: <T>(path: string, body?: unknown, options?: RequestOptions) => {
-      const headers = new Headers(options?.headers);
-      let payloadBody: BodyInit | undefined = undefined;
-      if (body !== undefined) {
-        if (
-          typeof body === "string" ||
-          body instanceof FormData ||
-          body instanceof Blob
-        ) {
-          payloadBody = body;
-        } else {
-          headers.set("Content-Type", "application/json");
-          payloadBody = JSON.stringify(body);
-        }
-      }
-      return request<T>(path, {
-        ...options,
-        method: "PUT",
-        headers,
-        body: payloadBody,
-      });
-    },
-    patch: <T>(path: string, body?: unknown, options?: RequestOptions) => {
-      const headers = new Headers(options?.headers);
-      let payloadBody: BodyInit | undefined = undefined;
-      if (body !== undefined) {
-        if (
-          typeof body === "string" ||
-          body instanceof FormData ||
-          body instanceof Blob
-        ) {
-          payloadBody = body;
-        } else {
-          headers.set("Content-Type", "application/json");
-          payloadBody = JSON.stringify(body);
-        }
-      }
-      return request<T>(path, {
-        ...options,
-        method: "PATCH",
-        headers,
-        body: payloadBody,
-      });
-    },
+    post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+      withJsonBody<T>("POST", path, body, options),
+    put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+      withJsonBody<T>("PUT", path, body, options),
+    patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+      withJsonBody<T>("PATCH", path, body, options),
     delete: <T>(path: string, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "DELETE" }),
   };

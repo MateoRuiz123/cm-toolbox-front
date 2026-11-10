@@ -180,6 +180,26 @@ describe("AdminPage y AppAccessGuard", () => {
     ).toBeInTheDocument();
   });
 
+  it("AppAccessGuard no autoriza con fallback mientras loadingAccess es true", () => {
+    const loadingCtx = buildMockContext({
+      loadingAccess: true,
+      canAccessApp: () => true,
+    });
+
+    render(
+      <MemoryRouter>
+        <AccessContext.Provider value={loadingCtx}>
+          <AppAccessGuard appId="logs">
+            <div>Contenido Secreto</div>
+          </AppAccessGuard>
+        </AccessContext.Provider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Contenido Secreto")).not.toBeInTheDocument();
+    expect(screen.getByText(/Cargando permisos/i)).toBeInTheDocument();
+  });
+
   it("DynamicAppRoutePage renderiza automáticamente la vista protegida para una herramienta registrada en BD", () => {
     const customApp = {
       id: "validador-tarifas",

@@ -3,25 +3,20 @@ import type {
   LogStreamMessage,
   WorkloadInfo,
 } from "./logs-types";
+import { createHttpClient, HttpError } from "@/shared/api/http-client";
 import { obtenerToken } from "@/shared/auth/token";
 
 /** Prefijo same-origin; nginx (prod) y Vite (dev) lo enrutan a cm-logs-ms. */
 const LOGS_PROXY_PATH = "/logs-api";
 const API_URL = `${LOGS_PROXY_PATH}/api`;
 
+const logsHttp = createHttpClient(API_URL);
+
 const buildWsUrl = (): string => {
   const protocol = globalThis.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${globalThis.location.host}${LOGS_PROXY_PATH}/`;
 };
 let messageSequence = 0;
-
-const authHeaders = (includeJson = false): HeadersInit => {
-  const token = obtenerToken();
-  return {
-    ...(includeJson ? { "Content-Type": "application/json" } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-};
 
 export class LogsApiError extends Error {
   readonly status: number;
@@ -35,45 +30,53 @@ export class LogsApiError extends Error {
   }
 }
 
-const parseApiError = async (
-  res: Response,
+const toLogsApiError = (error: unknown, fallback: string): LogsApiError => {
+  if (error instanceof LogsApiError) {
+    return error;
+  }
+  if (error instanceof HttpError) {
+    const data =
+      error.data && typeof error.data === "object"
+        ? (error.data as { error?: unknown; code?: unknown })
+        : undefined;
+    const messageFromBody =
+      typeof data?.error === "string" ? data.error : undefined;
+    const codeFromBody = typeof data?.code === "string" ? data.code : undefined;
+    return new LogsApiError(
+      messageFromBody || error.message || fallback,
+      error.status,
+      codeFromBody || error.code,
+    );
+  }
+  return new LogsApiError(error instanceof Error ? error.message : fallback, 0);
+};
+
+const withLogsError = async <T>(
+  action: () => Promise<T>,
   fallback: string,
-): Promise<never> => {
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    code?: string;
-  };
-  throw new LogsApiError(data.error || fallback, res.status, data.code);
+): Promise<T> => {
+  try {
+    return await action();
+  } catch (error) {
+    throw toLogsApiError(error, fallback);
+  }
 };
 
 export type { LogEnvironment, LogStreamMessage, WorkloadInfo };
 
 export const authCluster = async (
   env: LogEnvironment,
-): Promise<{ ok: boolean; label: string }> => {
-  const res = await fetch(`${API_URL}/auth`, {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({ env }),
-  });
-  if (!res.ok) {
-    await parseApiError(res, "Error autenticando clusters");
-  }
-  return res.json() as Promise<{ ok: boolean; label: string }>;
-};
-
-export const fetchNamespaces = async (
-  env: LogEnvironment,
-): Promise<string[]> => {
-  const res = await fetch(
-    `${API_URL}/namespaces?env=${encodeURIComponent(env)}`,
-    { headers: authHeaders() },
+): Promise<{ ok: boolean; label: string }> =>
+  withLogsError(
+    () => logsHttp.post<{ ok: boolean; label: string }>("/auth", { env }),
+    "Error autenticando clusters",
   );
-  if (!res.ok) {
-    await parseApiError(res, "Error al cargar namespaces");
-  }
-  return res.json() as Promise<string[]>;
-};
+
+export const fetchNamespaces = async (env: LogEnvironment): Promise<string[]> =>
+  withLogsError(
+    () => logsHttp.get<string[]>(`/namespaces?env=${encodeURIComponent(env)}`),
+    "Error al cargar namespaces",
+  );
 
 export const fetchWorkloads = async (
   env: LogEnvironment,
@@ -89,36 +92,33 @@ export const fetchWorkloads = async (
   if (search?.trim()) {
     params.set("q", search.trim());
   }
-  const res = await fetch(`${API_URL}/workloads?${params.toString()}`, {
-    headers: authHeaders(),
-  });
-  if (!res.ok) {
-    await parseApiError(res, "Error al cargar workloads");
-  }
-  return res.json() as Promise<WorkloadInfo[]>;
+  return withLogsError(
+    () => logsHttp.get<WorkloadInfo[]>(`/workloads?${params.toString()}`),
+    "Error al cargar workloads",
+  );
 };
 
-export const logoutGcloudSession = async (): Promise<{ ok: boolean }> => {
-  const res = await fetch(`${API_URL}/auth/logout`, {
-    method: 'POST',
-    headers: authHeaders(true),
-  })
-  if (!res.ok) {
-    await parseApiError(res, 'Error al cerrar sesión GCP')
-  }
-  return res.json() as Promise<{ ok: boolean }>
-}
+export const logoutGcloudSession = async (): Promise<{ ok: boolean }> =>
+  withLogsError(
+    () => logsHttp.post<{ ok: boolean }>("/auth/logout"),
+    "Error al cerrar sesión GCP",
+  );
 
 export const createLogsWebSocket = (): WebSocket => new WebSocket(buildWsUrl());
 
 /** Envía el access token como primer mensaje; nunca lo expone en la URL del socket. */
 export const authenticateLogsWebSocket = (ws: WebSocket): void => {
-  ws.send(JSON.stringify({ action: "authenticate", token: obtenerToken() ?? "" }));
+  ws.send(
+    JSON.stringify({ action: "authenticate", token: obtenerToken() ?? "" }),
+  );
 };
 
 export const parseLogStreamMessage = (raw: string): LogStreamMessage | null => {
   try {
-    const parsed = JSON.parse(raw) as Omit<LogStreamMessage, "id" | "timestamp">;
+    const parsed = JSON.parse(raw) as Omit<
+      LogStreamMessage,
+      "id" | "timestamp"
+    >;
     const timestamp = Date.now();
     messageSequence += 1;
     return {

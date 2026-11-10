@@ -88,4 +88,37 @@ describe("HubPage", () => {
     expect(html).toContain("Auditoría de Facturación");
     expect(html).toContain("Próximamente");
   });
+
+  it("no lista herramientas mientras loadingAccess es true", () => {
+    const profile = buildFallbackAccessProfile();
+    const html = renderToString(
+      <AccessContext.Provider
+        value={{
+          profile,
+          roleId: profile.roleId,
+          isSuperAdmin: true,
+          canManageApps: true,
+          canManageUsers: true,
+          apps: profile.apps,
+          loadingAccess: true,
+          isUserBlocked: false,
+          blockedMessage: null,
+          devImpersonatedEmail: null,
+          canAccessApp: () => true,
+          canPerformAction: () => false,
+          refreshAccess: async () => undefined,
+          switchDevUser: async () => undefined,
+        }}
+      >
+        <ThemeProvider>
+          <MemoryRouter>
+            <HubPage />
+          </MemoryRouter>
+        </ThemeProvider>
+      </AccessContext.Provider>,
+    );
+
+    expect(html).toContain("Cargando herramientas");
+    expect(html).not.toContain("Diagnóstico de Migración");
+  });
 });
