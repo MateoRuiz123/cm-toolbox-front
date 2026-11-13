@@ -66,9 +66,13 @@ export type { LogEnvironment, LogStreamMessage, WorkloadInfo };
 
 export const authCluster = async (
   env: LogEnvironment,
-): Promise<{ ok: boolean; label: string }> =>
+): Promise<{ ok: boolean; label: string; project?: string }> =>
   withLogsError(
-    () => logsHttp.post<{ ok: boolean; label: string }>("/auth", { env }),
+    () =>
+      logsHttp.post<{ ok: boolean; label: string; project?: string }>(
+        "/auth",
+        { env },
+      ),
     "Error autenticando clusters",
   );
 

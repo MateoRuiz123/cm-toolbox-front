@@ -4,20 +4,57 @@ import type {
   LogSeverity,
   ProcessedLogLine,
 } from "./api/logs-types";
+import { buildGcpLogsExplorerUrl, buildGkeWorkloadUrl } from "./gcp-links";
 
 export interface LogsViewerTarget {
   readonly workload: string;
   readonly namespace: string;
   readonly cluster: string;
   readonly env: string;
+  readonly location?: string;
+  readonly project?: string;
 }
 
 interface LogsViewerProps {
   readonly logs: readonly LogStreamMessage[];
   readonly isStreaming: boolean;
   readonly onClear: () => void;
+  readonly onReload?: () => void;
   readonly target?: LogsViewerTarget;
 }
+
+const ExternalLinkIcon = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    className="size-3 shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M15 3h6v6" />
+    <path d="M10 14L21 3" />
+    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+  </svg>
+);
+
+const ReloadIcon = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    className="size-3 shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 11-2.64-6.36" />
+    <path d="M21 3v6h-6" />
+  </svg>
+);
 
 const detectSeverity = (text: string): LogSeverity => {
   const t = text.toLowerCase();
@@ -57,6 +94,7 @@ export const LogsViewer = ({
   logs,
   isStreaming,
   onClear,
+  onReload,
   target,
 }: LogsViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -175,6 +213,30 @@ export const LogsViewer = ({
             />
             {isStreaming ? "En vivo" : "Detenido"}
           </span>
+          {target && (
+            <div className="flex shrink-0 items-center gap-1">
+              <a
+                href={buildGkeWorkloadUrl(target)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir carga de trabajo en GKE (nueva pestaña)"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+              >
+                <ExternalLinkIcon />
+                Workload GKE
+              </a>
+              <a
+                href={buildGcpLogsExplorerUrl(target)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir en Cloud Logging (nueva pestaña)"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+              >
+                <ExternalLinkIcon />
+                Logs GCP
+              </a>
+            </div>
+          )}
         </div>
 
         <label className="min-w-36 flex-1">
@@ -218,6 +280,17 @@ export const LogsViewer = ({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {target && onReload && (
+            <button
+              type="button"
+              onClick={onReload}
+              title="Recargar streaming de logs"
+              className="flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              <ReloadIcon />
+              Recargar
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setAutoScroll((prev) => !prev)}

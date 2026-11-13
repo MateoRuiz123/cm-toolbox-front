@@ -27,6 +27,7 @@ import { GcloudLoginModal } from "./gcloud-login-modal";
 import { WorkloadCombobox } from "./workload-combobox";
 import { appendBoundedLog } from "./logs-buffer";
 import { guardarLogsSesion, idWorkload, leerLogsSesion } from "./logs-sesion";
+import { buildGcpLogsExplorerUrl, buildGkeWorkloadUrl } from "./gcp-links";
 
 const FormErrorIcon = () => (
   <svg
@@ -81,21 +82,31 @@ export const LogsPage = () => {
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [loadingWorkloads, setLoadingWorkloads] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [envProject, setEnvProject] = useState<string | undefined>(undefined);
   const [streamTarget, setStreamTarget] = useState<LogsViewerTarget | null>(
     null,
   );
   const wsRef = useRef<WebSocket | null>(null);
+  const wsAuthenticatedRef = useRef(false);
+
+  const detachAndCloseSocket = useCallback((ws: WebSocket | null) => {
+    if (!ws) return;
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onerror = null;
+    ws.onclose = null;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "stop" }));
+    }
+    ws.close();
+  }, []);
 
   const handleStop = useCallback(() => {
-    if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ action: "stop" }));
-      }
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    detachAndCloseSocket(wsRef.current);
+    wsRef.current = null;
+    wsAuthenticatedRef.current = false;
     setIsStreaming(false);
-  }, []);
+  }, [detachAndCloseSocket]);
 
   const loadCatalogForEnv = useCallback(async (selectedEnv: LogEnvironment) => {
     if (
@@ -107,13 +118,15 @@ export const LogsPage = () => {
     setLoadingCatalog(true);
     setFormError(null);
     setGcloudAuthRequired(false);
+    setEnvProject(undefined);
     setNamespaces([]);
     setSelectedNamespace("");
     setWorkloads([]);
     setSelectedWorkload("");
 
     try {
-      await authCluster(selectedEnv);
+      const authResult = await authCluster(selectedEnv);
+      setEnvProject(authResult.project);
       const ns = await fetchNamespaces(selectedEnv);
       setNamespaces(ns);
       const pendiente = restauracionRef.current;
@@ -194,57 +207,131 @@ export const LogsPage = () => {
     );
   }, [env, selectedNamespace, selectedWorkload]);
 
-  const handleFormSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    if (isStreaming) {
-      handleStop();
-      return;
-    }
-    handleStart();
-  };
+  const resolveTargetFromSelection = useCallback(
+    (workloadKey: string): LogsViewerTarget | null => {
+      if (!env || !workloadKey) return null;
+      const [cluster, ns, wlName] = workloadKey.split("|");
+      if (!cluster || !ns || !wlName) return null;
+      const matched = workloads.find(
+        (w) =>
+          w.cluster === cluster && w.namespace === ns && w.name === wlName,
+      );
+      return {
+        workload: wlName,
+        namespace: ns,
+        cluster,
+        env,
+        location: matched?.location,
+        project: matched?.project ?? envProject,
+      };
+    },
+    [env, workloads, envProject],
+  );
 
-  const handleStart = () => {
-    if (!env || !selectedWorkload) return;
-    const [cluster, ns, wlName] = selectedWorkload.split("|");
-    if (!cluster || !ns || !wlName) return;
+  const startStream = useCallback(
+    (target: LogsViewerTarget) => {
+      setLogs([]);
+      setIsStreaming(true);
+      setFormError(null);
+      setStreamTarget(target);
 
-    setLogs([]);
-    setIsStreaming(true);
-    setFormError(null);
-    setStreamTarget({ workload: wlName, namespace: ns, cluster, env });
-
-    const ws = createLogsWebSocket();
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      authenticateLogsWebSocket(ws);
-    };
-
-    ws.onmessage = (event) => {
-      const msg = parseLogStreamMessage(String(event.data));
-      if (!msg) return;
-      if (msg.type === "authenticated") {
-        ws.send(
+      const existingWs = wsRef.current;
+      if (
+        existingWs &&
+        existingWs.readyState === WebSocket.OPEN &&
+        wsAuthenticatedRef.current
+      ) {
+        existingWs.send(
           JSON.stringify({
             action: "start",
-            env,
-            cluster,
-            namespace: ns,
-            workload: wlName,
+            env: target.env,
+            cluster: target.cluster,
+            namespace: target.namespace,
+            workload: target.workload,
           }),
         );
         return;
       }
-      setLogs((prev) => appendBoundedLog(prev, msg));
-    };
 
-    ws.onerror = () => {
-      setFormError("Error en conexión WebSocket");
-      setIsStreaming(false);
-    };
+      detachAndCloseSocket(existingWs);
+      wsRef.current = null;
+      wsAuthenticatedRef.current = false;
 
-    ws.onclose = () => setIsStreaming(false);
+      const ws = createLogsWebSocket();
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        authenticateLogsWebSocket(ws);
+      };
+
+      ws.onmessage = (event) => {
+        const msg = parseLogStreamMessage(String(event.data));
+        if (!msg) return;
+        if (msg.type === "authenticated") {
+          wsAuthenticatedRef.current = true;
+          ws.send(
+            JSON.stringify({
+              action: "start",
+              env: target.env,
+              cluster: target.cluster,
+              namespace: target.namespace,
+              workload: target.workload,
+            }),
+          );
+          return;
+        }
+        setLogs((prev) => appendBoundedLog(prev, msg));
+      };
+
+      ws.onerror = () => {
+        wsAuthenticatedRef.current = false;
+        setFormError("Error en conexión WebSocket");
+        setIsStreaming(false);
+      };
+
+      ws.onclose = () => {
+        wsAuthenticatedRef.current = false;
+        setIsStreaming(false);
+      };
+    },
+    [detachAndCloseSocket],
+  );
+
+  const activeStreamKey = streamTarget
+    ? idWorkload(streamTarget.cluster, streamTarget.namespace, streamTarget.workload)
+    : "";
+  const isSelectionChangedWhileStreaming =
+    isStreaming &&
+    Boolean(selectedWorkload) &&
+    (selectedWorkload !== activeStreamKey || streamTarget?.env !== env);
+
+  const handleFormSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (isStreaming && !isSelectionChangedWhileStreaming) {
+      handleStop();
+      return;
+    }
+    const target = resolveTargetFromSelection(selectedWorkload);
+    if (target) {
+      startStream(target);
+    }
   };
+
+  const handleReload = useCallback(() => {
+    const selectionTarget = resolveTargetFromSelection(selectedWorkload);
+    const targetToReload =
+      selectionTarget && !isSelectionChangedWhileStreaming
+        ? selectionTarget
+        : streamTarget ?? selectionTarget;
+    if (!targetToReload) return;
+    startStream(targetToReload);
+  }, [
+    resolveTargetFromSelection,
+    selectedWorkload,
+    isSelectionChangedWhileStreaming,
+    streamTarget,
+    startStream,
+  ]);
 
   const handleLoginSuccess = useCallback(() => {
     if (env) void loadCatalogForEnv(env);
@@ -263,9 +350,11 @@ export const LogsPage = () => {
     setFormError(null);
     try {
       await logoutGcloudSession();
+      handleStop();
       restauracionRef.current = null;
       guardarLogsSesion(null);
       setEnv(null);
+      setEnvProject(undefined);
       setNamespaces([]);
       setSelectedNamespace("");
       setWorkloads([]);
@@ -283,6 +372,8 @@ export const LogsPage = () => {
   }, []);
 
   const showViewer = isStreaming || logs.length > 0 || streamTarget !== null;
+  const gcpPreviewTarget =
+    resolveTargetFromSelection(selectedWorkload) ?? streamTarget;
 
   return (
     <>
@@ -439,13 +530,13 @@ export const LogsPage = () => {
                 </div>
               )}
 
-              <div className="mt-5 flex gap-3">
+              <div className="mt-5 flex gap-2.5">
                 <button
                   type="submit"
                   disabled={
                     !isStreaming && (!selectedWorkload || loadingCatalog)
                   }
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loadingCatalog && (
                     <span
@@ -453,13 +544,72 @@ export const LogsPage = () => {
                       className="size-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current"
                     />
                   )}
-                  {isStreaming
-                    ? "Detener streaming"
-                    : loadingCatalog
-                      ? "Conectando…"
-                      : "Empezar a ver logs"}
+                  {isStreaming && isSelectionChangedWhileStreaming
+                    ? "Cambiar carga"
+                    : isStreaming
+                      ? "Detener streaming"
+                      : loadingCatalog
+                        ? "Conectando…"
+                        : "Empezar a ver logs"}
                 </button>
+                {isStreaming && !isSelectionChangedWhileStreaming && (
+                  <button
+                    type="button"
+                    onClick={handleReload}
+                    title="Recargar streaming de logs"
+                    aria-label="Recargar streaming de logs"
+                    className="flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="size-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 12a9 9 0 11-2.64-6.36" />
+                      <path d="M21 3v6h-6" />
+                    </svg>
+                    Recargar
+                  </button>
+                )}
+                {isStreaming && isSelectionChangedWhileStreaming && (
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    className="flex shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:border-[var(--state-error)]/50 hover:text-[var(--state-error)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  >
+                    Detener
+                  </button>
+                )}
               </div>
+
+              {gcpPreviewTarget && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-default)] pt-3">
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                    Google Cloud:
+                  </span>
+                  <a
+                    href={buildGkeWorkloadUrl(gcpPreviewTarget)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                  >
+                    Workload GKE
+                  </a>
+                  <a
+                    href={buildGcpLogsExplorerUrl(gcpPreviewTarget)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                  >
+                    Logs GCP
+                  </a>
+                </div>
+              )}
             </form>
 
             <div className="flex flex-col gap-2 px-1 lg:items-start">
@@ -486,6 +636,7 @@ export const LogsPage = () => {
                   logs={logs}
                   isStreaming={isStreaming}
                   onClear={() => setLogs([])}
+                  onReload={handleReload}
                   target={streamTarget ?? undefined}
                 />
               </div>

@@ -13,6 +13,7 @@ export type ServerLogMessageType =
 export interface WorkloadInfo {
   readonly cluster: string
   readonly location: string
+  readonly project?: string
   readonly namespace: string
   readonly name: string
 }
