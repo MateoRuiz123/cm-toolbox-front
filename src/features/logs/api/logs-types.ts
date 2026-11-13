@@ -34,4 +34,5 @@ export interface ProcessedLogLine {
   readonly text: string
   readonly severity: LogSeverity
   readonly time: string
+  readonly fullTime?: string
 }

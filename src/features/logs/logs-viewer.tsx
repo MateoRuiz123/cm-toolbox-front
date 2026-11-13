@@ -5,6 +5,12 @@ import type {
   ProcessedLogLine,
 } from "./api/logs-types";
 import { buildGcpLogsExplorerUrl, buildGkeWorkloadUrl } from "./gcp-links";
+import {
+  detectSeverity,
+  extractJsonSegment,
+  extractLogTimestamp,
+  formatLogsForExport,
+} from "./logs-parser";
 
 export interface LogsViewerTarget {
   readonly workload: string;
@@ -56,14 +62,22 @@ const ReloadIcon = () => (
   </svg>
 );
 
-const detectSeverity = (text: string): LogSeverity => {
-  const t = text.toLowerCase();
-  if (t.includes("error") || t.includes("exception") || t.includes("fatal"))
-    return "error";
-  if (t.includes("warn")) return "warn";
-  if (t.includes("debug")) return "debug";
-  return "info";
-};
+const DownloadIcon = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    className="size-3 shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
 
 const severityLabel: Record<LogSeverity, string> = {
   error: "ERR",
@@ -103,25 +117,64 @@ export const LogsViewer = ({
     "all",
   );
   const [textoFiltro, setTextoFiltro] = useState("");
+  const [podFilterState, setPodFilterState] = useState<{
+    targetKey: string;
+    pod: string;
+  } | null>(null);
+  const [expandedJsonIds, setExpandedJsonIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const targetKey = target
+    ? `${target.env}|${target.cluster}|${target.namespace}|${target.workload}`
+    : "";
+  const activePodFilter =
+    podFilterState && podFilterState.targetKey === targetKey
+      ? podFilterState.pod
+      : null;
+
+  const togglePodFilter = (pod: string) => {
+    setPodFilterState((prev) =>
+      prev && prev.targetKey === targetKey && prev.pod === pod
+        ? null
+        : { targetKey, pod },
+    );
+  };
+
+  const toggleJsonExpand = (id: string) => {
+    setExpandedJsonIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopyLine = (id: string, text: string) => {
+    void navigator.clipboard?.writeText(text).catch(() => undefined);
+    setCopiedId(id);
+    globalThis.setTimeout(() => {
+      setCopiedId((prev) => (prev === id ? null : prev));
+    }, 1500);
+  };
 
   const processedLogs = useMemo(() => {
     const lines: ProcessedLogLine[] = [];
     logs.forEach((msg) => {
       if (!msg.text) return;
       const chunks = msg.text.split("\n").filter((l) => l.trim());
-      const time = new Date(msg.timestamp).toLocaleTimeString("es", {
-        hour12: false,
-      });
-      chunks.forEach((line, lineIndex) => {
+      chunks.forEach((rawLine, lineIndex) => {
+        const { text, time, fullTime } = extractLogTimestamp(
+          rawLine,
+          msg.timestamp,
+        );
+        if (!text.trim()) return;
         let sev: LogSeverity = "info";
         if (msg.type === "error") sev = "error";
-        else if (msg.type === "log") sev = detectSeverity(line);
+        else if (msg.type === "log") sev = detectSeverity(text);
         lines.push({
           id: `${msg.id}-${lineIndex}`,
           pod: msg.pod ?? "",
-          text: line,
+          text,
           severity: sev,
           time,
+          fullTime,
         });
       });
     });
@@ -129,10 +182,13 @@ export const LogsViewer = ({
   }, [logs]);
 
   const filteredLogs = useMemo(() => {
+    const porPod = activePodFilter
+      ? processedLogs.filter((l) => l.pod === activePodFilter)
+      : processedLogs;
     const porSeveridad =
       severityFilter === "all"
-        ? processedLogs
-        : processedLogs.filter((l) => l.severity === severityFilter);
+        ? porPod
+        : porPod.filter((l) => l.severity === severityFilter);
     const consulta = textoFiltro.trim().toLowerCase();
     if (!consulta) return porSeveridad;
     return porSeveridad.filter(
@@ -140,7 +196,7 @@ export const LogsViewer = ({
         linea.text.toLowerCase().includes(consulta) ||
         linea.pod.toLowerCase().includes(consulta),
     );
-  }, [processedLogs, severityFilter, textoFiltro]);
+  }, [processedLogs, activePodFilter, severityFilter, textoFiltro]);
 
   const counts = useMemo(() => {
     return processedLogs.reduce(
@@ -151,6 +207,39 @@ export const LogsViewer = ({
       { error: 0, warn: 0, info: 0, debug: 0 },
     );
   }, [processedLogs]);
+
+  const scrollToBottom = () => {
+    setAutoScroll(true);
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  };
+
+  const handleContainerScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const distanceFromBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom > 48 && autoScroll) {
+      setAutoScroll(false);
+    } else if (distanceFromBottom <= 16 && !autoScroll) {
+      setAutoScroll(true);
+    }
+  };
+
+  const handleDownloadLogs = () => {
+    if (filteredLogs.length === 0) return;
+    const content = formatLogsForExport(filteredLogs);
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${target?.workload ?? "logs"}.log`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -280,6 +369,17 @@ export const LogsViewer = ({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {activePodFilter && (
+            <button
+              type="button"
+              onClick={() => setPodFilterState(null)}
+              title={`Quitar filtro del pod ${activePodFilter}`}
+              className="flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-2 py-1 font-mono text-[11px] text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/20 focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              Pod: {activePodFilter.slice(-16)}
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
           {target && onReload && (
             <button
               type="button"
@@ -291,6 +391,16 @@ export const LogsViewer = ({
               Recargar
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleDownloadLogs}
+            disabled={filteredLogs.length === 0}
+            title="Descargar logs visibles (.log)"
+            className="flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <DownloadIcon />
+            Descargar
+          </button>
           <button
             type="button"
             onClick={() => setAutoScroll((prev) => !prev)}
@@ -340,86 +450,151 @@ export const LogsViewer = ({
       </div>
 
       {/* Salida de logs */}
-      <div
-        ref={containerRef}
-        className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-xs leading-[1.75] text-[var(--text-body)] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
-      >
-        {processedLogs.length > 0 && filteredLogs.length === 0 ? (
-          <p
-            className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]"
-            role="status"
-          >
-            Ninguna línea coincide con la búsqueda.
-          </p>
-        ) : filteredLogs.length === 0 ? (
-          target ? (
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={containerRef}
+          onScroll={handleContainerScroll}
+          className="h-full overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-xs leading-[1.75] text-[var(--text-body)] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
+        >
+          {processedLogs.length > 0 && filteredLogs.length === 0 ? (
             <p
               className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]"
               role="status"
             >
-              {isStreaming
-                ? `▸ terminal limpia · esperando eventos de ${target.workload}…`
-                : "▸ terminal limpia · streaming detenido"}
+              Ninguna línea coincide con la búsqueda.
             </p>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-1.5 text-[var(--text-muted)]">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-8 opacity-30"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          ) : filteredLogs.length === 0 ? (
+            target ? (
+              <p
+                className="px-1.5 py-1 text-[11px] text-[var(--text-muted)]"
+                role="status"
               >
-                <path d="M4 17l6-6-6-6M12 19h8" />
-              </svg>
-              <p className="font-sans text-xs font-medium text-[var(--text-body)]">
-                Sin logs activos
+                {isStreaming
+                  ? `▸ terminal limpia · esperando eventos de ${target.workload}…`
+                  : "▸ terminal limpia · streaming detenido"}
               </p>
-              <p className="font-mono text-[11px]">
-                selecciona una carga de trabajo para iniciar
-              </p>
-            </div>
-          )
-        ) : (
-          <div className="flex flex-col">
-            {filteredLogs.map((log) => (
-              <div
-                key={log.id}
-                className="group flex items-start gap-2.5 rounded-[var(--radius-1)] border-l-2 border-transparent px-1.5 py-1 transition-colors duration-150 hover:border-[var(--border-focus)]/50 hover:bg-[var(--surface-card)]/90"
-              >
-                <span className="shrink-0 select-none pt-px text-[10px] text-[var(--text-muted)]">
-                  {log.time}
-                </span>
-                <span
-                  className={`w-9 shrink-0 select-none rounded-[3px] px-1 text-center text-[9px] font-bold uppercase leading-4 ${severityBadgeClass[log.severity]}`}
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-1.5 text-[var(--text-muted)]">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-8 opacity-30"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  {severityLabel[log.severity]}
-                </span>
-                {log.pod && (
-                  <span
-                    className="w-32 shrink-0 truncate pt-px text-[10px] text-[var(--color-primary)] opacity-70 group-hover:opacity-100"
-                    title={log.pod}
-                  >
-                    {log.pod.slice(-24)}
-                  </span>
-                )}
-                <span
-                  className={`min-w-0 flex-1 whitespace-pre-wrap break-words ${
-                    log.severity === "error"
-                      ? "text-[var(--state-error)]"
-                      : log.severity === "warn"
-                        ? "text-[var(--state-warning)]"
-                        : ""
-                  }`}
-                >
-                  {log.text}
-                </span>
+                  <path d="M4 17l6-6-6-6M12 19h8" />
+                </svg>
+                <p className="font-sans text-xs font-medium text-[var(--text-body)]">
+                  Sin logs activos
+                </p>
+                <p className="font-mono text-[11px]">
+                  selecciona una carga de trabajo para iniciar
+                </p>
               </div>
-            ))}
-          </div>
+            )
+          ) : (
+            <div className="flex flex-col">
+              {filteredLogs.map((log) => {
+                const jsonSegment = extractJsonSegment(log.text);
+                const isJsonExpanded = Boolean(expandedJsonIds[log.id]);
+                const isPodSelected = activePodFilter === log.pod;
+                return (
+                  <div
+                    key={log.id}
+                    className="group flex items-start gap-2.5 rounded-[var(--radius-1)] border-l-2 border-transparent px-1.5 py-1 transition-colors duration-150 hover:border-[var(--border-focus)]/50 hover:bg-[var(--surface-card)]/90"
+                  >
+                    <span
+                      title={log.fullTime}
+                      className="shrink-0 select-none pt-px text-[10px] text-[var(--text-muted)]"
+                    >
+                      {log.time}
+                    </span>
+                    <span
+                      className={`w-9 shrink-0 select-none rounded-[3px] px-1 text-center text-[9px] font-bold uppercase leading-4 ${severityBadgeClass[log.severity]}`}
+                    >
+                      {severityLabel[log.severity]}
+                    </span>
+                    {log.pod && (
+                      <button
+                        type="button"
+                        onClick={() => togglePodFilter(log.pod)}
+                        aria-pressed={isPodSelected}
+                        title={
+                          isPodSelected
+                            ? `Quitar filtro de ${log.pod}`
+                            : `Filtrar por pod ${log.pod}`
+                        }
+                        className={`w-32 shrink-0 cursor-pointer truncate pt-px text-left text-[10px] transition-opacity focus-visible:ring-1 focus-visible:ring-[var(--border-focus)] ${
+                          isPodSelected
+                            ? "font-semibold text-[var(--color-primary)] underline opacity-100"
+                            : "text-[var(--color-primary)] opacity-70 hover:underline group-hover:opacity-100"
+                        }`}
+                      >
+                        {log.pod.slice(-24)}
+                      </button>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className={`whitespace-pre-wrap break-words ${
+                          log.severity === "error"
+                            ? "text-[var(--state-error)]"
+                            : log.severity === "warn"
+                              ? "text-[var(--state-warning)]"
+                              : ""
+                        }`}
+                      >
+                        {log.text}
+                      </span>
+                      {jsonSegment && isJsonExpanded && (
+                        <pre className="mt-1.5 overflow-x-auto rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] p-2 text-[11px] leading-relaxed text-[var(--text-body)]">
+                          {jsonSegment.formatted}
+                        </pre>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      {jsonSegment && (
+                        <button
+                          type="button"
+                          onClick={() => toggleJsonExpand(log.id)}
+                          aria-expanded={isJsonExpanded}
+                          title={
+                            isJsonExpanded
+                              ? "Ocultar JSON formateado"
+                              : "Formatear JSON"
+                          }
+                          className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                        >
+                          {"{ } JSON"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLine(log.id, log.text)}
+                        title="Copiar línea"
+                        className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                      >
+                        {copiedId === log.id ? "Copiado" : "Copiar"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {!autoScroll && filteredLogs.length > 0 && (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className="absolute bottom-3 right-4 z-10 inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--surface-card)] px-3 py-1.5 font-sans text-[11px] font-semibold text-[var(--color-primary)] shadow-md transition hover:bg-[var(--color-primary-soft)] focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+          >
+            <span aria-hidden="true">↓</span>
+            Ir al final
+          </button>
         )}
       </div>
     </div>

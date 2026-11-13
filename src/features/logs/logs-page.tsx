@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   type FormEvent,
 } from "react";
 import { SmoothLinkScramble, SmoothTitleAccent } from "@/shared/ui/smoothui";
@@ -26,8 +27,32 @@ import { LogsViewer, type LogsViewerTarget } from "./logs-viewer";
 import { GcloudLoginModal } from "./gcloud-login-modal";
 import { WorkloadCombobox } from "./workload-combobox";
 import { appendBoundedLog } from "./logs-buffer";
-import { guardarLogsSesion, idWorkload, leerLogsSesion } from "./logs-sesion";
+import {
+  agruparAccesosPorWorkload,
+  alternarLogFavorito,
+  esLogFavorito,
+  guardarLogsSesion,
+  idWorkload,
+  leerLogsFavoritos,
+  leerLogsRecientes,
+  leerLogsSesion,
+  registrarLogReciente,
+  type LogsAccesoAgrupado,
+  type LogsAccesoRapido,
+} from "./logs-sesion";
 import { buildGcpLogsExplorerUrl, buildGkeWorkloadUrl } from "./gcp-links";
+
+type TailLinesOption = 100 | 200 | 500 | 1000;
+type SinceOption = "" | "5m" | "15m" | "1h" | "6h";
+
+const TAIL_LINES_OPTIONS: readonly TailLinesOption[] = [100, 200, 500, 1000];
+const SINCE_OPTIONS: ReadonlyArray<{ readonly value: SinceOption; readonly label: string }> = [
+  { value: "", label: "Todo" },
+  { value: "5m", label: "Últimos 5 min" },
+  { value: "15m", label: "Últimos 15 min" },
+  { value: "1h", label: "Última 1 hora" },
+  { value: "6h", label: "Últimas 6 horas" },
+];
 
 const FormErrorIcon = () => (
   <svg
@@ -58,7 +83,8 @@ const FormErrorIcon = () => (
 );
 
 export const LogsPage = () => {
-  const { canPerformAction } = useAccess();
+  const { canPerformAction, profile } = useAccess();
+  const userEmail = profile.email;
   const canViewProd = canPerformAction("logs", "view_prod");
   const [sesionGuardada] = useState(leerLogsSesion);
   const sesionAplicable =
@@ -80,14 +106,41 @@ export const LogsPage = () => {
   const [gcloudAuthRequired, setGcloudAuthRequired] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
-  const [loadingWorkloads, setLoadingWorkloads] = useState(false);
+  const [loadedWorkloadsKey, setLoadedWorkloadsKey] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const [envProject, setEnvProject] = useState<string | undefined>(undefined);
+  const [tailLines, setTailLines] = useState<TailLinesOption>(200);
+  const [since, setSince] = useState<SinceOption>("");
+  const [favoritosState, setFavoritosState] = useState<{
+    email: string;
+    items: LogsAccesoRapido[];
+  }>(() => ({ email: userEmail, items: leerLogsFavoritos(userEmail) }));
+  const [recientesState, setRecientesState] = useState<{
+    email: string;
+    items: LogsAccesoRapido[];
+  }>(() => ({ email: userEmail, items: leerLogsRecientes(userEmail) }));
+
+  const favoritos =
+    favoritosState.email === userEmail
+      ? favoritosState.items
+      : leerLogsFavoritos(userEmail);
+  const recientes =
+    recientesState.email === userEmail
+      ? recientesState.items
+      : leerLogsRecientes(userEmail);
   const [streamTarget, setStreamTarget] = useState<LogsViewerTarget | null>(
     null,
   );
   const wsRef = useRef<WebSocket | null>(null);
   const wsAuthenticatedRef = useRef(false);
+  const pendingAutoStartRef = useRef(false);
+  const startStreamRef = useRef<(target: LogsViewerTarget) => void>(() => undefined);
+  const catalogRequestIdRef = useRef(0);
+
+  const workloadsScopeKey =
+    env && selectedNamespace ? `${env}|${selectedNamespace}` : "";
+  const loadingWorkloads =
+    Boolean(workloadsScopeKey) && loadedWorkloadsKey !== workloadsScopeKey;
 
   const detachAndCloseSocket = useCallback((ws: WebSocket | null) => {
     if (!ws) return;
@@ -109,6 +162,7 @@ export const LogsPage = () => {
   }, [detachAndCloseSocket]);
 
   const loadCatalogForEnv = useCallback(async (selectedEnv: LogEnvironment) => {
+    const requestId = ++catalogRequestIdRef.current;
     if (
       restauracionRef.current &&
       restauracionRef.current.env !== selectedEnv
@@ -126,20 +180,25 @@ export const LogsPage = () => {
 
     try {
       const authResult = await authCluster(selectedEnv);
+      if (catalogRequestIdRef.current !== requestId) return;
       setEnvProject(authResult.project);
       const ns = await fetchNamespaces(selectedEnv);
+      if (catalogRequestIdRef.current !== requestId) return;
       setNamespaces(ns);
       const pendiente = restauracionRef.current;
       if (
         pendiente?.env === selectedEnv &&
         pendiente.namespace &&
-        ns.includes(pendiente.namespace)
+        (pendiente.namespace === "__all__" || ns.includes(pendiente.namespace))
       ) {
         setSelectedNamespace(pendiente.namespace);
       } else if (pendiente?.env === selectedEnv) {
         restauracionRef.current = null;
       }
     } catch (err) {
+      if (catalogRequestIdRef.current !== requestId) return;
+      pendingAutoStartRef.current = false;
+      restauracionRef.current = null;
       const message = err instanceof Error ? err.message : "Error autenticando";
       setFormError(message);
       const needsLogin = isGcloudAuthRequired(err);
@@ -148,7 +207,9 @@ export const LogsPage = () => {
         setShowLoginModal(true);
       }
     } finally {
-      setLoadingCatalog(false);
+      if (catalogRequestIdRef.current === requestId) {
+        setLoadingCatalog(false);
+      }
     }
   }, []);
 
@@ -159,42 +220,73 @@ export const LogsPage = () => {
 
   useEffect(() => {
     if (!env || !selectedNamespace) return;
-    setLoadingWorkloads(true);
-    const delay = globalThis.setTimeout(() => {
-      fetchWorkloads(env, selectedNamespace, search)
-        .then((list) => {
-          setWorkloads(list);
-          const pendiente = restauracionRef.current;
-          if (
-            pendiente?.namespace === selectedNamespace &&
-            pendiente.workload
-          ) {
-            const existe = list.some(
-              (workload) =>
-                idWorkload(
-                  workload.cluster,
-                  workload.namespace,
-                  workload.name,
-                ) === pendiente.workload,
-            );
-            if (existe) setSelectedWorkload(pendiente.workload);
+    let cancelled = false;
+    const scopeKey = `${env}|${selectedNamespace}`;
+
+    fetchWorkloads(env, selectedNamespace)
+      .then((list) => {
+        if (cancelled) return;
+        setWorkloads(list);
+        setLoadedWorkloadsKey(scopeKey);
+        const pendiente = restauracionRef.current;
+        if (
+          pendiente?.namespace === selectedNamespace &&
+          pendiente.workload
+        ) {
+          const matched = list.find(
+            (workload) =>
+              idWorkload(
+                workload.cluster,
+                workload.namespace,
+                workload.name,
+              ) === pendiente.workload,
+          );
+          if (matched) {
+            setSelectedWorkload(pendiente.workload);
+            if (pendingAutoStartRef.current) {
+              pendingAutoStartRef.current = false;
+              startStreamRef.current({
+                workload: matched.name,
+                namespace: matched.namespace,
+                cluster: matched.cluster,
+                env,
+                location: matched.location,
+                project: matched.project,
+              });
+            }
+          } else {
+            pendingAutoStartRef.current = false;
           }
-          restauracionRef.current = null;
-          setLoadingWorkloads(false);
-        })
-        .catch((err) => {
-          const message =
-            err instanceof Error ? err.message : "Error cargando workloads";
-          restauracionRef.current = null;
-          setFormError(message);
-          setLoadingWorkloads(false);
-        });
-    }, 300);
+        } else {
+          pendingAutoStartRef.current = false;
+        }
+        restauracionRef.current = null;
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const message =
+          err instanceof Error ? err.message : "Error cargando workloads";
+        pendingAutoStartRef.current = false;
+        restauracionRef.current = null;
+        setFormError(message);
+        setLoadedWorkloadsKey(scopeKey);
+      });
+
     return () => {
-      globalThis.clearTimeout(delay);
-      setLoadingWorkloads(false);
+      cancelled = true;
     };
-  }, [env, selectedNamespace, search]);
+  }, [env, selectedNamespace]);
+
+  const filteredWorkloads = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return workloads;
+    return workloads.filter(
+      (w) =>
+        w.name.toLowerCase().includes(query) ||
+        w.namespace.toLowerCase().includes(query) ||
+        w.cluster.toLowerCase().includes(query),
+    );
+  }, [workloads, search]);
 
   useEffect(() => () => handleStop(), [handleStop]);
 
@@ -235,21 +327,43 @@ export const LogsPage = () => {
       setFormError(null);
       setStreamTarget(target);
 
+      const envTarget = target.env === "prod" ? "prod" : "test";
+      setRecientesState({
+        email: userEmail,
+        items: registrarLogReciente(
+          {
+            env: envTarget,
+            namespace: `${target.cluster}|${target.namespace}`,
+            workload: idWorkload(
+              target.cluster,
+              target.namespace,
+              target.workload,
+            ),
+            cluster: target.cluster,
+            namespaceName: target.namespace,
+            workloadName: target.workload,
+          },
+          userEmail,
+        ),
+      });
+
+      const startPayload = JSON.stringify({
+        action: "start",
+        env: target.env,
+        cluster: target.cluster,
+        namespace: target.namespace,
+        workload: target.workload,
+        tailLines,
+        ...(since ? { since } : {}),
+      });
+
       const existingWs = wsRef.current;
       if (
         existingWs &&
         existingWs.readyState === WebSocket.OPEN &&
         wsAuthenticatedRef.current
       ) {
-        existingWs.send(
-          JSON.stringify({
-            action: "start",
-            env: target.env,
-            cluster: target.cluster,
-            namespace: target.namespace,
-            workload: target.workload,
-          }),
-        );
+        existingWs.send(startPayload);
         return;
       }
 
@@ -269,15 +383,7 @@ export const LogsPage = () => {
         if (!msg) return;
         if (msg.type === "authenticated") {
           wsAuthenticatedRef.current = true;
-          ws.send(
-            JSON.stringify({
-              action: "start",
-              env: target.env,
-              cluster: target.cluster,
-              namespace: target.namespace,
-              workload: target.workload,
-            }),
-          );
+          ws.send(startPayload);
           return;
         }
         setLogs((prev) => appendBoundedLog(prev, msg));
@@ -294,7 +400,70 @@ export const LogsPage = () => {
         setIsStreaming(false);
       };
     },
-    [detachAndCloseSocket],
+    [detachAndCloseSocket, tailLines, since, userEmail],
+  );
+
+  useEffect(() => {
+    startStreamRef.current = startStream;
+  }, [startStream]);
+
+  const handleToggleFavorite = useCallback(() => {
+    const target = resolveTargetFromSelection(selectedWorkload);
+    if (!target) return;
+    const envTarget: LogEnvironment = target.env === "prod" ? "prod" : "test";
+    setFavoritosState({
+      email: userEmail,
+      items: alternarLogFavorito(
+        {
+          env: envTarget,
+          namespace: `${target.cluster}|${target.namespace}`,
+          workload: idWorkload(
+            target.cluster,
+            target.namespace,
+            target.workload,
+          ),
+          cluster: target.cluster,
+          namespaceName: target.namespace,
+          workloadName: target.workload,
+        },
+        userEmail,
+      ),
+    });
+  }, [resolveTargetFromSelection, selectedWorkload, userEmail]);
+
+  const handleSelectQuickAccess = useCallback(
+    (item: LogsAccesoRapido) => {
+      if (item.env === "prod" && !canViewProd) return;
+      if (env === item.env && selectedNamespace === item.namespace) {
+        setSelectedWorkload(item.workload);
+        const matched = workloads.find(
+          (w) =>
+            idWorkload(w.cluster, w.namespace, w.name) === item.workload,
+        );
+        startStream({
+          workload: item.workloadName,
+          namespace: item.namespaceName,
+          cluster: item.cluster,
+          env: item.env,
+          location: matched?.location,
+          project: matched?.project ?? envProject,
+        });
+        return;
+      }
+      handleStop();
+      restauracionRef.current = {
+        env: item.env,
+        namespace: item.namespace,
+        workload: item.workload,
+      };
+      pendingAutoStartRef.current = true;
+      if (env === item.env) {
+        setSelectedNamespace(item.namespace);
+      } else {
+        setEnv(item.env);
+      }
+    },
+    [canViewProd, env, selectedNamespace, workloads, envProject, startStream, handleStop],
   );
 
   const activeStreamKey = streamTarget
@@ -374,6 +543,97 @@ export const LogsPage = () => {
   const showViewer = isStreaming || logs.length > 0 || streamTarget !== null;
   const gcpPreviewTarget =
     resolveTargetFromSelection(selectedWorkload) ?? streamTarget;
+  const isSelectedFavorite =
+    Boolean(env && selectedWorkload) &&
+    esLogFavorito(favoritos, env as LogEnvironment, selectedWorkload);
+  const favoritosVisibles = useMemo(
+    () => favoritos.filter((item) => item.env !== "prod" || canViewProd),
+    [favoritos, canViewProd],
+  );
+  const recientesVisibles = useMemo(
+    () => recientes.filter((item) => item.env !== "prod" || canViewProd),
+    [recientes, canViewProd],
+  );
+  const favoritosAgrupados = useMemo(
+    () => agruparAccesosPorWorkload(favoritosVisibles),
+    [favoritosVisibles],
+  );
+  const recientesAgrupados = useMemo(
+    () => agruparAccesosPorWorkload(recientesVisibles),
+    [recientesVisibles],
+  );
+
+  const renderQuickAccessGroup = (
+    group: LogsAccesoAgrupado,
+    kind: "fav" | "rec",
+  ) => {
+    const isFav = kind === "fav";
+    const wrapperClass = isFav
+      ? "inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)]/60 px-2 py-1 text-[11px] font-medium text-[var(--text-body)]"
+      : "inline-flex items-center gap-1 rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2 py-1 text-[11px] font-medium text-[var(--text-body)]";
+
+    if (group.prod && group.test) {
+      const prodItem = group.prod;
+      const testItem = group.test;
+      return (
+        <div
+          key={`${kind}-${group.workloadName}`}
+          className={wrapperClass}
+        >
+          {isFav && (
+            <span aria-hidden="true" className="text-[var(--state-warning)]">
+              ★
+            </span>
+          )}
+          <span>{group.workloadName}</span>
+          <div className="ml-0.5 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => handleSelectQuickAccess(prodItem)}
+              title={`PROD · ${prodItem.cluster} / ${prodItem.namespaceName}`}
+              className="cursor-pointer rounded px-1 py-0.5 text-[10px] font-bold uppercase text-[var(--state-error)] transition hover:bg-[var(--state-error)]/15 focus-visible:ring-1 focus-visible:ring-[var(--border-focus)]"
+            >
+              PROD
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectQuickAccess(testItem)}
+              title={`TEST · ${testItem.cluster} / ${testItem.namespaceName}`}
+              className="cursor-pointer rounded px-1 py-0.5 text-[10px] font-bold uppercase text-[var(--state-warning)] transition hover:bg-[var(--state-warning)]/15 focus-visible:ring-1 focus-visible:ring-[var(--border-focus)]"
+            >
+              TEST
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const single = group.prod ?? group.test;
+    if (!single) return null;
+    return (
+      <button
+        key={`${kind}-${single.env}-${group.workloadName}`}
+        type="button"
+        onClick={() => handleSelectQuickAccess(single)}
+        title={`${single.env.toUpperCase()} · ${single.cluster} / ${single.namespaceName}`}
+        className={`${wrapperClass} cursor-pointer transition ${
+          isFav
+            ? "hover:border-[var(--state-warning)]"
+            : "hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+        }`}
+      >
+        {isFav && (
+          <span aria-hidden="true" className="text-[var(--state-warning)]">
+            ★
+          </span>
+        )}
+        <span>{group.workloadName}</span>
+        <span className="text-[10px] uppercase text-[var(--text-muted)]">
+          {single.env}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -487,10 +747,10 @@ export const LogsPage = () => {
                 <WorkloadCombobox
                   id="logs-workload"
                   label="Carga de trabajo"
-                  hint="Resultados en tiempo real"
+                  hint="Filtrado instantáneo"
                   placeholder="Ej. api-gateway"
                   disabled={!selectedNamespace}
-                  workloads={workloads}
+                  workloads={filteredWorkloads}
                   loading={loadingWorkloads}
                   value={selectedWorkload}
                   onSelect={setSelectedWorkload}
@@ -498,6 +758,46 @@ export const LogsPage = () => {
                   error={Boolean(formError)}
                   showClusterNamespace={selectedNamespace === "__all__"}
                 />
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <label className="block">
+                    <span className="text-xs font-bold text-[var(--text-body)]">
+                      Líneas iniciales
+                    </span>
+                    <select
+                      id="logs-tail-lines"
+                      value={tailLines}
+                      onChange={(e) =>
+                        setTailLines(Number(e.target.value) as TailLinesOption)
+                      }
+                      className="mt-1.5 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 text-xs text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      {TAIL_LINES_OPTIONS.map((count) => (
+                        <option key={count} value={count}>
+                          {count} líneas
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-bold text-[var(--text-body)]">
+                      Ventana de tiempo
+                    </span>
+                    <select
+                      id="logs-since"
+                      value={since}
+                      onChange={(e) => setSince(e.target.value as SinceOption)}
+                      className="mt-1.5 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-2 text-xs text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      {SINCE_OPTIONS.map((option) => (
+                        <option key={option.value || "all"} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
 
               {formError && (
@@ -608,9 +908,66 @@ export const LogsPage = () => {
                   >
                     Logs GCP
                   </a>
+                  {selectedWorkload && (
+                    <button
+                      type="button"
+                      onClick={handleToggleFavorite}
+                      aria-pressed={isSelectedFavorite}
+                      title={
+                        isSelectedFavorite
+                          ? "Quitar de favoritos"
+                          : "Guardar en favoritos"
+                      }
+                      className={`ml-auto inline-flex cursor-pointer items-center gap-1 rounded-[var(--radius-1)] border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        isSelectedFavorite
+                          ? "border-[var(--state-warning)]/50 bg-[var(--alert-warning-bg)] text-[var(--state-warning)]"
+                          : "border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)] hover:border-[var(--color-primary)]/40 hover:text-[var(--text-body)]"
+                      }`}
+                    >
+                      <span aria-hidden="true">
+                        {isSelectedFavorite ? "★" : "☆"}
+                      </span>
+                      Favorito
+                    </button>
+                  )}
                 </div>
               )}
             </form>
+
+            {(favoritosAgrupados.length > 0 ||
+              recientesAgrupados.length > 0) && (
+              <div className="surface space-y-2.5 rounded-[var(--radius-2)] border border-[var(--border-default)] p-4">
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Accesos rápidos
+                </span>
+
+                {favoritosAgrupados.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="block text-[11px] font-semibold text-[var(--text-muted)]">
+                      Favoritos
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {favoritosAgrupados.map((group) =>
+                        renderQuickAccessGroup(group, "fav"),
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {recientesAgrupados.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="block text-[11px] font-semibold text-[var(--text-muted)]">
+                      Recientes
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {recientesAgrupados.map((group) =>
+                        renderQuickAccessGroup(group, "rec"),
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 px-1 lg:items-start">
               <p className="text-center text-xs text-[var(--text-muted)] lg:text-left">

@@ -100,4 +100,105 @@ describe("LogsViewer", () => {
     await user.click(screen.getByRole("button", { name: /recargar/i }));
     expect(onReload).toHaveBeenCalledTimes(1);
   });
+
+  it('clasifica {"isError":false,"status":200} como INF y no como ERR', () => {
+    const jsonLog: LogStreamMessage[] = [
+      {
+        id: "10",
+        timestamp: 1_700_000_000_000,
+        type: "log",
+        text: 'equipoCM {"isError":false,"status":200,"code":"S001"}',
+        pod: "api-a",
+      },
+    ];
+
+    render(
+      <LogsViewer
+        logs={jsonLog}
+        isStreaming={false}
+        onClear={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /INF/i })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /ERR/i })).toHaveTextContent("0");
+  });
+
+  it("permite expandir JSON formateado en una línea con el botón { } JSON", async () => {
+    const user = userEvent.setup();
+    const jsonLog: LogStreamMessage[] = [
+      {
+        id: "11",
+        timestamp: 1_700_000_000_000,
+        type: "log",
+        text: 'respuesta {"isError":false,"status":200,"ok":true}',
+        pod: "api-a",
+      },
+    ];
+
+    render(
+      <LogsViewer
+        logs={jsonLog}
+        isStreaming={false}
+        onClear={() => undefined}
+      />,
+    );
+
+    const jsonButton = screen.getByRole("button", { name: /\{ \} json/i });
+    expect(jsonButton).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(jsonButton);
+
+    expect(jsonButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/"status": 200/)).toBeInTheDocument();
+  });
+
+  it("filtra por pod al hacer clic en su badge y permite limpiar el filtro", async () => {
+    const user = userEvent.setup();
+    render(
+      <LogsViewer logs={logs} isStreaming={false} onClear={() => undefined} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "api-a" }));
+
+    expect(screen.getByText("guia 20018012531 procesada")).toBeInTheDocument();
+    expect(screen.queryByText("fallo de conexion")).not.toBeInTheDocument();
+
+    const clearPodChip = screen.getByRole("button", {
+      name: /pod: api-a/i,
+    });
+    await user.click(clearPodChip);
+
+    expect(screen.getByText("fallo de conexion")).toBeInTheDocument();
+  });
+
+  it("muestra la hora real del registro cuando kubectl antepone timestamp RFC3339", () => {
+    const rawIso = "2026-11-13T15:05:09.123456789Z";
+    const expectedClock = new Date("2026-11-13T15:05:09.123Z").toLocaleTimeString(
+      "es",
+      { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false },
+    );
+    const kubeLogs: LogStreamMessage[] = [
+      {
+        id: "20",
+        timestamp: new Date("2026-11-13T16:24:30.000Z").getTime(),
+        type: "log",
+        text: `${rawIso} Guia generada 998877`,
+        pod: "api-a",
+      },
+    ];
+
+    render(
+      <LogsViewer
+        logs={kubeLogs}
+        isStreaming={false}
+        onClear={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("Guia generada 998877")).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(rawIso))).not.toBeInTheDocument();
+    const timeEl = screen.getByTitle(/UTC: 2026-11-13T15:05:09\.123456789Z/);
+    expect(timeEl.textContent).toContain(expectedClock);
+  });
 });
