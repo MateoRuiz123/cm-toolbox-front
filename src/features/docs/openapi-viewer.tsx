@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   buildOpenApiDocument,
   curlWithToken,
@@ -37,15 +37,75 @@ const CopyButton = ({
   );
 };
 
+const METHOD_STYLES: Readonly<Record<string, string>> = {
+  GET: "bg-[color-mix(in_srgb,var(--state-success)_16%,transparent)] text-[var(--state-success)]",
+  POST: "bg-[color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-[var(--color-primary)]",
+  PUT: "bg-[color-mix(in_srgb,var(--state-warning)_16%,transparent)] text-[var(--state-warning)]",
+  PATCH:
+    "bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[var(--color-accent)]",
+  DELETE:
+    "bg-[color-mix(in_srgb,var(--state-error)_16%,transparent)] text-[var(--state-error)]",
+};
+
+const MethodBadge = ({
+  method,
+  small = false,
+}: {
+  readonly method: string;
+  readonly small?: boolean;
+}) => {
+  const key = method.toUpperCase();
+  const tone =
+    METHOD_STYLES[key] ??
+    "bg-[var(--surface-sunken)] text-[var(--text-muted)]";
+  return (
+    <span
+      className={`inline-block shrink-0 rounded-[var(--radius-1)] text-center font-mono font-bold uppercase tracking-wide ${tone} ${
+        small ? "min-w-[3.25rem] px-1.5 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"
+      }`}
+    >
+      {key}
+    </span>
+  );
+};
+
+const statusTone = (status: string): string => {
+  if (status.startsWith("2")) {
+    return "bg-[color-mix(in_srgb,var(--state-success)_16%,transparent)] text-[var(--state-success)]";
+  }
+  if (status.startsWith("5")) {
+    return "bg-[color-mix(in_srgb,var(--state-error)_16%,transparent)] text-[var(--state-error)]";
+  }
+  return "bg-[color-mix(in_srgb,var(--state-warning)_18%,transparent)] text-[var(--state-warning)]";
+};
+
+const StatusChip = ({ status }: { readonly status: string }) => (
+  <span
+    className={`inline-block rounded-[var(--radius-pill)] px-2.5 py-0.5 font-mono text-xs font-bold ${statusTone(status)}`}
+  >
+    {status}
+  </span>
+);
+
 const CodeBlock = ({
   text,
   label,
+  lang = "json",
 }: {
   readonly text: string;
   readonly label: string;
+  readonly lang?: string;
 }) => (
-  <div className="overflow-hidden rounded-[var(--radius-2)] border border-[var(--code-border)]">
-    <div className="flex items-center justify-end border-b border-[var(--code-border)] bg-[var(--surface-bar)] px-3 py-2">
+  <div className="overflow-hidden rounded-[var(--radius-3)] border border-[var(--code-border)] shadow-[var(--shadow-panel)]">
+    <div className="flex items-center justify-between border-b border-[var(--code-border)] bg-[var(--surface-bar)] px-3 py-2">
+      <span className="flex items-center gap-1.5" aria-hidden="true">
+        <span className="size-2.5 rounded-full bg-[var(--state-error)] opacity-70" />
+        <span className="size-2.5 rounded-full bg-[var(--state-warning)] opacity-70" />
+        <span className="size-2.5 rounded-full bg-[var(--state-success)] opacity-70" />
+        <span className="ml-2 font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+          {lang}
+        </span>
+      </span>
       <CopyButton text={text} label={label} />
     </div>
     <pre className="overflow-x-auto bg-[var(--code-bg)] p-4 font-mono text-xs leading-relaxed text-[var(--code-fg)]">
@@ -54,9 +114,14 @@ const CodeBlock = ({
   </div>
 );
 
-const YesNo = ({ value }: { readonly value: boolean }) => (
-  <span>{value ? "Sí" : "No"}</span>
-);
+const YesNo = ({ value }: { readonly value: boolean }) =>
+  value ? (
+    <span className="rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-primary)_14%,transparent)] px-2 py-0.5 text-[11px] font-bold text-[var(--color-primary)]">
+      Sí
+    </span>
+  ) : (
+    <span className="text-[var(--text-muted)]">No</span>
+  );
 
 const HeaderTable = ({ rows }: { readonly rows: readonly HeaderRow[] }) => {
   if (rows.length === 0) return null;
@@ -158,16 +223,19 @@ const OperationSection = ({
 }) => (
   <section
     id={operation.id}
-    className="scroll-mt-24 space-y-4 border-t border-[var(--border-default)] pt-8"
+    className="scroll-mt-24 space-y-5 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-[var(--shadow-panel)]"
   >
     <header>
-      <p className="font-mono text-xs font-bold uppercase text-[var(--color-primary)]">
-        {operation.method}
-      </p>
-      <h3 className="mt-1 font-mono text-lg font-bold text-[var(--text-body)]">
-        {operation.path}
-      </h3>
-      <p className="mt-2 text-sm font-semibold text-[var(--text-body)]">
+      <div className="flex flex-wrap items-center gap-3">
+        <MethodBadge method={operation.method} />
+        <h3 className="min-w-0 break-all font-mono text-lg font-bold text-[var(--text-body)]">
+          {operation.path}
+        </h3>
+        <span className="ml-auto">
+          <CopyButton text={operation.path} label="Copiar ruta" />
+        </span>
+      </div>
+      <p className="mt-3 text-base font-semibold text-[var(--text-body)]">
         {operation.summary}
       </p>
       {operation.description ? (
@@ -188,8 +256,11 @@ const OperationSection = ({
     <FieldTables sections={operation.bodySections} />
     {operation.successExample ? (
       <div className="space-y-2">
-        <h4 className="text-sm font-bold text-[var(--text-body)]">
-          Respuesta exitosa ({operation.successStatus})
+        <h4 className="flex items-center gap-2 text-sm font-bold text-[var(--text-body)]">
+          Respuesta exitosa
+          {operation.successStatus ? (
+            <StatusChip status={operation.successStatus} />
+          ) : null}
         </h4>
         <CodeBlock text={operation.successExample} label="Copiar JSON" />
       </div>
@@ -202,9 +273,9 @@ const OperationSection = ({
         </h4>
         {operation.errors.map((error) => (
           <div key={error.status} className="space-y-2">
-            <p className="text-sm text-[var(--text-body)]">
-              Status {error.status}
-              {error.description ? ` — ${error.description}` : ""}
+            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-body)]">
+              <StatusChip status={error.status} />
+              {error.description}
             </p>
             {error.json ? (
               <CodeBlock text={error.json} label="Copiar JSON" />
@@ -218,6 +289,7 @@ const OperationSection = ({
         Ejemplo cURL
       </h4>
       <CodeBlock
+        lang="bash"
         text={
           operation.usesBearer
             ? curlWithToken(operation.curl, token)
@@ -233,19 +305,48 @@ const OperationSection = ({
  * Documento de integración generado desde OpenAPI: índice, autenticación, tablas y cURL.
  */
 export const OpenApiViewer = ({ document }: OpenApiViewerProps) => {
-  const doc = buildOpenApiDocument(document);
+  const doc = useMemo(() => buildOpenApiDocument(document), [document]);
   const [token, setToken] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const ids = [
+      ...(doc.auth ? ["autenticacion"] : []),
+      ...doc.operations.map((operation) => operation.id),
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.find((entry) => entry.isIntersecting);
+        if (visible) setActiveId(visible.target.id);
+      },
+      { rootMargin: "-80px 0px -65% 0px" },
+    );
+    for (const id of ids) {
+      const node = globalThis.document.getElementById(id);
+      if (node) observer.observe(node);
+    }
+    return () => observer.disconnect();
+  }, [doc]);
+
+  const navLink = (active: boolean) =>
+    `flex shrink-0 items-center gap-2 rounded-[var(--radius-2)] px-3 py-2 text-xs transition lg:w-full ${
+      active
+        ? "bg-[var(--color-primary-soft)] font-semibold text-[var(--color-primary)]"
+        : "text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-body)]"
+    }`;
 
   return (
-    <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-8">
+    <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-10">
       <nav
         aria-label="Contenido de la especificación"
-        className="mb-6 flex gap-2 overflow-x-auto lg:sticky lg:top-20 lg:mb-0 lg:block lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+        className="mb-6 flex gap-1 overflow-x-auto rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-2 shadow-[var(--shadow-panel)] lg:sticky lg:top-20 lg:mb-0 lg:block lg:max-h-[calc(100vh-6rem)] lg:space-y-1 lg:overflow-y-auto"
       >
         {doc.auth ? (
           <a
             href="#autenticacion"
-            className="shrink-0 rounded-[var(--radius-pill)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] hover:bg-[var(--surface-sunken)] lg:block"
+            aria-current={activeId === "autenticacion" ? "location" : undefined}
+            className={navLink(activeId === "autenticacion")}
           >
             Autenticación
           </a>
@@ -254,40 +355,48 @@ export const OpenApiViewer = ({ document }: OpenApiViewerProps) => {
           <a
             key={operation.id}
             href={`#${operation.id}`}
-            className="shrink-0 rounded-[var(--radius-pill)] px-3 py-1.5 font-mono text-xs text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-body)] lg:block"
+            aria-current={activeId === operation.id ? "location" : undefined}
+            className={navLink(activeId === operation.id)}
           >
-            {operation.method} {operation.path}
+            <MethodBadge method={operation.method} small />
+            <span className="min-w-0 truncate font-mono">{operation.path}</span>
           </a>
         ))}
       </nav>
 
       <article className="min-w-0 space-y-8">
-        <header className="space-y-3 border-b border-[var(--border-default)] pb-6">
-          <h2 className="text-2xl font-bold text-[var(--text-body)]">
-            {doc.title}
-          </h2>
-          {doc.version ? (
-            <p className="font-mono text-xs text-[var(--text-muted)]">
-              v{doc.version}
-            </p>
-          ) : null}
+        <header className="space-y-3 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-gradient-to-br from-[var(--color-primary-soft)] to-[var(--surface-card)] p-6 shadow-[var(--shadow-panel)]">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-3xl font-bold tracking-tight text-[var(--text-body)]">
+              {doc.title}
+            </h2>
+            {doc.version ? (
+              <span className="rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-2.5 py-0.5 font-mono text-xs font-bold text-[var(--color-primary-contrast)]">
+                v{doc.version}
+              </span>
+            ) : null}
+          </div>
           {doc.description ? (
             <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-muted)]">
               {doc.description}
             </p>
           ) : null}
           {doc.serverUrl ? (
-            <p className="text-sm text-[var(--text-body)]">
-              <span className="font-bold">URL base. </span>
-              <span className="font-mono text-[var(--color-primary)]">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-body)]">
+              <span className="font-bold">URL base</span>
+              <span className="rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2 py-1 font-mono text-xs text-[var(--color-primary)]">
                 {doc.serverUrl}
               </span>
-            </p>
+              <CopyButton text={doc.serverUrl} label="Copiar URL" />
+            </div>
           ) : null}
         </header>
 
         {doc.auth ? (
-          <section id="autenticacion" className="scroll-mt-24 space-y-4">
+          <section
+            id="autenticacion"
+            className="scroll-mt-24 space-y-4 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-[var(--shadow-panel)]"
+          >
             <h3 className="text-lg font-bold text-[var(--text-body)]">
               Autenticación
             </h3>
@@ -295,7 +404,7 @@ export const OpenApiViewer = ({ document }: OpenApiViewerProps) => {
               {doc.auth.description}
             </p>
             {doc.auth.curl ? (
-              <CodeBlock text={doc.auth.curl} label="Copiar cURL" />
+              <CodeBlock lang="bash" text={doc.auth.curl} label="Copiar cURL" />
             ) : null}
             {doc.auth.bearerHint ? (
               <div className="space-y-2">
