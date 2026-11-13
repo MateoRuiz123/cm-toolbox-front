@@ -11,6 +11,8 @@ import type {
   DocsCreateClientPayload,
   DocsErrorBody,
   DocsPublishResponse,
+  DocsSpecVersion,
+  DocsVersionsResponse,
 } from "./types";
 import { getDocsAuthToken } from "./token-provider";
 
@@ -267,6 +269,61 @@ export const updateAdminApiAudiences = async (
   apiId: string,
   audiences: readonly string[],
 ): Promise<DocsApiDetail> => updateAdminApi(apiId, { audiences });
+
+export const fetchApiVersions = async (
+  apiId: string,
+  signal?: AbortSignal,
+): Promise<DocsSpecVersion[]> => {
+  const res = await fetch(
+    `${API_BASE}/apis/${encodeURIComponent(apiId)}/versions`,
+    {
+      headers: authHeaders({ includeManageBypass: true }),
+      signal: withTimeout(CATALOG_TIMEOUT_MS, signal),
+    },
+  );
+  if (!res.ok) {
+    await parseError(
+      res,
+      "No fue posible cargar el historial de versiones.",
+    );
+  }
+  const body = (await res.json()) as DocsVersionsResponse;
+  return Array.isArray(body.data) ? [...body.data] : [];
+};
+
+export const restoreApiVersion = async (
+  apiId: string,
+  version: string,
+): Promise<DocsPublishResponse["data"]> => {
+  const res = await fetch(
+    `${API_BASE}/apis/${encodeURIComponent(apiId)}/versions/${encodeURIComponent(version)}/restore`,
+    {
+      method: "POST",
+      headers: authHeaders({
+        includeManageBypass: true,
+        includePublishBypass: true,
+      }),
+    },
+  );
+  if (!res.ok) {
+    await parseError(res, "No fue posible restaurar esa versión.");
+  }
+  const body = (await res.json()) as DocsPublishResponse;
+  return body.data;
+};
+
+export const deleteAdminApi = async (apiId: string): Promise<void> => {
+  const res = await fetch(
+    `${API_BASE}/admin/apis/${encodeURIComponent(apiId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders({ includeManageBypass: true }),
+    },
+  );
+  if (!res.ok) {
+    await parseError(res, "No fue posible eliminar la documentación.");
+  }
+};
 
 export const fetchAdminClients = async (
   signal?: AbortSignal,

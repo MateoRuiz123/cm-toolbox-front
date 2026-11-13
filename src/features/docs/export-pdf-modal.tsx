@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { downloadOpenApiMarkdown } from "./export-openapi-docs";
 import { openApiToPrintHtml } from "./openapi-to-markdown";
 
 type ExportPdfModalProps = {
@@ -133,31 +134,42 @@ export const ExportPdfModal = ({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-hidden bg-[var(--surface-app)] p-3 sm:p-4">
-          <iframe
-            ref={iframeRef}
-            title="Vista previa de la documentación para PDF"
-            src={previewUrl}
-            className="h-[min(62vh,40rem)] w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-white"
-          />
+        <div className="min-h-0 flex-1 overflow-hidden bg-[var(--surface-sunken)] p-4 sm:p-6">
+          <div className="mx-auto h-[min(64vh,42rem)] max-w-[780px] overflow-hidden rounded-[var(--radius-2)] border border-[var(--border-default)] bg-white shadow-[var(--shadow-24)]">
+            <iframe
+              ref={iframeRef}
+              title="Vista previa de la documentación para PDF"
+              src={previewUrl}
+              className="h-full w-full border-0 bg-white"
+            />
+          </div>
         </div>
 
-        <footer className="flex flex-wrap items-center justify-end gap-2.5 border-t border-[var(--border-default)] bg-[var(--surface-bar)] p-3.5 px-5">
+        <footer className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--border-default)] bg-[var(--surface-bar)] p-3.5 px-5">
           <button
             type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)]"
+            onClick={() => downloadOpenApiMarkdown(openApiDocument)}
+            className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)]"
           >
-            Cerrar
+            Descargar Markdown (.md)
           </button>
-          <button
-            ref={printButtonRef}
-            type="button"
-            onClick={handlePrint}
-            className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)]"
-          >
-            Imprimir / Guardar PDF
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)]"
+            >
+              Cerrar
+            </button>
+            <button
+              ref={printButtonRef}
+              type="button"
+              onClick={handlePrint}
+              className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-sm transition hover:bg-[var(--color-action-hover)]"
+            >
+              Imprimir / Guardar PDF
+            </button>
+          </div>
         </footer>
       </section>
     </div>

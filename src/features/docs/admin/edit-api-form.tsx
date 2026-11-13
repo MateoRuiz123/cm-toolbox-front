@@ -17,6 +17,7 @@ export const EditApiForm = ({ apiId, onUpdated }: EditApiFormProps) => {
   const [description, setDescription] = useState("");
   const [audiences, setAudiences] = useState<string[]>([]);
   const [clients, setClients] = useState<DocsClient[]>([]);
+  const [clientFilter, setClientFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -148,7 +149,7 @@ export const EditApiForm = ({ apiId, onUpdated }: EditApiFormProps) => {
 
           <fieldset>
             <legend className="text-xs font-bold text-[var(--text-body)]">
-              Audiencias
+              Audiencias ({audiences.length} seleccionadas)
             </legend>
             <div className="mt-2 space-y-2">
               <label className="flex items-center gap-2 text-sm text-[var(--text-body)]">
@@ -161,11 +162,50 @@ export const EditApiForm = ({ apiId, onUpdated }: EditApiFormProps) => {
                 <span>Internos (internal)</span>
               </label>
 
-              {clients.map((client) => {
-                const aud = `client:${client.id}`;
-                return (
+              {clients.length > 4 ? (
+                <input
+                  type="search"
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  placeholder="Filtrar clientes por nombre o NIT..."
+                  aria-label="Filtrar clientes en audiencias"
+                  className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-app)] px-2.5 py-1.5 text-xs text-[var(--text-body)]"
+                />
+              ) : null}
+
+              <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                {clients
+                  .filter((client) => {
+                    const q = clientFilter.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      client.name.toLowerCase().includes(q) ||
+                      client.id.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((client) => {
+                    const aud = `client:${client.id}`;
+                    return (
+                      <label
+                        key={client.id}
+                        className="flex items-center gap-2 text-sm text-[var(--text-body)]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={audiences.includes(aud)}
+                          onChange={() => toggleAudience(aud)}
+                          className="h-4 w-4 rounded-[var(--radius-1)] border-[var(--border-default)]"
+                        />
+                        <span>
+                          {client.name} ({aud})
+                        </span>
+                      </label>
+                    );
+                  })}
+
+                {extraClientAudiences.map((aud) => (
                   <label
-                    key={client.id}
+                    key={aud}
                     className="flex items-center gap-2 text-sm text-[var(--text-body)]"
                   >
                     <input
@@ -174,27 +214,10 @@ export const EditApiForm = ({ apiId, onUpdated }: EditApiFormProps) => {
                       onChange={() => toggleAudience(aud)}
                       className="h-4 w-4 rounded-[var(--radius-1)] border-[var(--border-default)]"
                     />
-                    <span>
-                      {client.name} ({aud})
-                    </span>
+                    <span>{aud}</span>
                   </label>
-                );
-              })}
-
-              {extraClientAudiences.map((aud) => (
-                <label
-                  key={aud}
-                  className="flex items-center gap-2 text-sm text-[var(--text-body)]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={audiences.includes(aud)}
-                    onChange={() => toggleAudience(aud)}
-                    className="h-4 w-4 rounded-[var(--radius-1)] border-[var(--border-default)]"
-                  />
-                  <span>{aud}</span>
-                </label>
-              ))}
+                ))}
+              </div>
             </div>
           </fieldset>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 import { DocsApiError, fetchDocsCatalog } from "./api/docs-api";
@@ -13,6 +13,8 @@ type DocsPageProps = {
   readonly onUnauthorized?: () => void;
 };
 
+type AudienceFilter = "all" | "internal" | "clients";
+
 export const DocsPage = ({
   basePath = "/docs",
   canManage = false,
@@ -21,6 +23,8 @@ export const DocsPage = ({
   const [apis, setApis] = useState<DocsApiSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,6 +51,24 @@ export const DocsPage = ({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const filteredApis = useMemo(() => {
+    if (!apis) return [];
+    const normalized = query.trim().toLowerCase();
+    return apis.filter((api) => {
+      if (audienceFilter === "internal") {
+        if (!api.audiences?.includes("internal")) return false;
+      } else if (audienceFilter === "clients") {
+        if (!api.audiences?.some((a) => a.startsWith("client:"))) return false;
+      }
+      if (!normalized) return true;
+      return (
+        api.name.toLowerCase().includes(normalized) ||
+        api.id.toLowerCase().includes(normalized) ||
+        (api.description?.toLowerCase().includes(normalized) ?? false)
+      );
+    });
+  }, [apis, audienceFilter, query]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -129,15 +151,62 @@ export const DocsPage = ({
       ) : null}
 
       {!loading && !error && apis && apis.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {apis.map((api) => (
-            <ApiCard
-              key={api.id}
-              api={api}
-              basePath={basePath}
-              canManage={canManage}
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar API por nombre, descripción o ID..."
+              aria-label="Buscar documentación"
+              className="w-full rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] sm:max-w-sm"
             />
-          ))}
+            {canManage ? (
+              <div
+                className="flex flex-wrap items-center gap-1.5"
+                role="group"
+                aria-label="Filtrar por audiencia"
+              >
+                {(
+                  [
+                    ["all", "Todas"],
+                    ["internal", "Internas"],
+                    ["clients", "Clientes"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setAudienceFilter(value)}
+                    className={`cursor-pointer rounded-[var(--radius-pill)] px-3 py-1.5 text-xs font-semibold transition ${
+                      audienceFilter === value
+                        ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                        : "border border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-body)] hover:border-[var(--color-primary)]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {filteredApis.length === 0 ? (
+            <div className="rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-6 py-8 text-center text-sm text-[var(--text-muted)]">
+              No se encontraron APIs que coincidan con el filtro.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {filteredApis.map((api) => (
+                <ApiCard
+                  key={api.id}
+                  api={api}
+                  basePath={basePath}
+                  canManage={canManage}
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>

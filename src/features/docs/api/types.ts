@@ -4,6 +4,17 @@ export type DocsApiSummary = {
   readonly description?: string;
   readonly version: string;
   readonly updatedAt: string;
+  readonly audiences?: readonly string[];
+};
+
+export type DocsSpecVersion = {
+  readonly version: string;
+  readonly updatedAt: string;
+  readonly updatedBy?: string | null;
+};
+
+export type DocsVersionsResponse = {
+  readonly data: readonly DocsSpecVersion[];
 };
 
 export type DocsCatalogResponse = {

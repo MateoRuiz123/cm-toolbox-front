@@ -36,6 +36,7 @@ export const NewApiForm = () => {
   const [editorText, setEditorText] = useState("");
   const [audiences, setAudiences] = useState<string[]>(["internal"]);
   const [clients, setClients] = useState<DocsClient[]>([]);
+  const [clientFilter, setClientFilter] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -183,7 +184,7 @@ export const NewApiForm = () => {
 
       <fieldset className="space-y-2 border-t border-[var(--border-default)] pt-4">
         <legend className="text-sm font-semibold text-[var(--text-body)]">
-          Audiencias iniciales
+          Audiencias iniciales ({audiences.length} seleccionadas)
         </legend>
         <p className="text-xs text-[var(--text-muted)]">
           Selecciona quién puede consultar esta documentación en el catálogo.
@@ -200,25 +201,47 @@ export const NewApiForm = () => {
             <span>Solo internos (internal)</span>
           </label>
 
-          {clients.map((client) => {
-            const aud = `client:${client.id}`;
-            return (
-              <label
-                key={client.id}
-                className="flex items-center gap-2 text-sm text-[var(--text-body)]"
-              >
-                <input
-                  type="checkbox"
-                  checked={audiences.includes(aud)}
-                  onChange={() => toggleAudience(aud)}
-                  className="h-4 w-4 rounded-[var(--radius-1)] border-[var(--border-default)]"
-                />
-                <span>
-                  {client.name} ({aud})
-                </span>
-              </label>
-            );
-          })}
+          {clients.length > 4 ? (
+            <input
+              type="search"
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              placeholder="Filtrar clientes por nombre o NIT..."
+              aria-label="Filtrar clientes en audiencias"
+              className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1.5 text-xs text-[var(--text-body)]"
+            />
+          ) : null}
+
+          <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+            {clients
+              .filter((client) => {
+                const q = clientFilter.trim().toLowerCase();
+                if (!q) return true;
+                return (
+                  client.name.toLowerCase().includes(q) ||
+                  client.id.toLowerCase().includes(q)
+                );
+              })
+              .map((client) => {
+                const aud = `client:${client.id}`;
+                return (
+                  <label
+                    key={client.id}
+                    className="flex items-center gap-2 text-sm text-[var(--text-body)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={audiences.includes(aud)}
+                      onChange={() => toggleAudience(aud)}
+                      className="h-4 w-4 rounded-[var(--radius-1)] border-[var(--border-default)]"
+                    />
+                    <span>
+                      {client.name} ({aud})
+                    </span>
+                  </label>
+                );
+              })}
+          </div>
         </div>
       </fieldset>
 

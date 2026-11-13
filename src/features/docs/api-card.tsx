@@ -7,6 +7,32 @@ type ApiCardProps = {
   readonly canManage?: boolean;
 };
 
+const AudienceBadges = ({
+  audiences,
+}: {
+  readonly audiences?: readonly string[];
+}) => {
+  if (!audiences || audiences.length === 0) return null;
+  const hasInternal = audiences.includes("internal");
+  const clientCount = audiences.filter((a) => a.startsWith("client:")).length;
+  if (!hasInternal && clientCount === 0) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {hasInternal ? (
+        <span className="rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--color-primary)_14%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+          Internos
+        </span>
+      ) : null}
+      {clientCount > 0 ? (
+        <span className="rounded-[var(--radius-pill)] bg-[color-mix(in_srgb,var(--state-success)_14%,transparent)] px-2 py-0.5 text-[11px] font-semibold text-[var(--state-success)]">
+          {clientCount === 1 ? "1 cliente" : `${clientCount} clientes`}
+        </span>
+      ) : null}
+    </div>
+  );
+};
+
 export const ApiCard = ({
   api,
   basePath = "/docs",
@@ -31,6 +57,7 @@ export const ApiCard = ({
           {api.description}
         </p>
       ) : null}
+      {canManage ? <AudienceBadges audiences={api.audiences} /> : null}
       <p className="mt-3 text-xs text-[var(--text-muted)]">
         Actualizado {new Date(api.updatedAt).toLocaleString("es-CO")}
       </p>
@@ -41,7 +68,7 @@ export const ApiCard = ({
           to={`${basePath}/${api.id}`}
           className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)]"
         >
-          Editar
+          Ver / Gestionar
         </Link>
       </div>
     ) : null}

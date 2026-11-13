@@ -42,10 +42,13 @@ export type OperationView = {
   readonly path: string;
   readonly summary: string;
   readonly description: string;
+  readonly pathParams: readonly HeaderRow[];
+  readonly queryParams: readonly HeaderRow[];
   readonly headers: readonly HeaderRow[];
   readonly bodyExample: string | null;
   readonly bodySections: readonly FieldSection[];
   readonly successStatus: string | null;
+  readonly successDescription: string;
   readonly successExample: string | null;
   readonly successSections: readonly FieldSection[];
   readonly errors: readonly ErrorView[];
@@ -182,7 +185,73 @@ const sectionsFromSchema = (
   return [{ title, rows }, ...nested];
 };
 
-const exampleOf = (media: JsonRecord): unknown => {
+const defaultScalarForSchema = (schema: JsonRecord): unknown => {
+  if ("example" in schema) return schema.example;
+  if ("default" in schema) return schema.default;
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return schema.enum[0];
+  }
+  const type = asString(schema.type);
+  if (type === "integer" || type === "number") return 0;
+  if (type === "boolean") return true;
+  const format = asString(schema.format);
+  if (format === "date-time") return "2026-01-01T00:00:00Z";
+  if (format === "date") return "2026-01-01";
+  if (format === "email") return "correo@ejemplo.com";
+  if (format === "uuid") return "00000000-0000-0000-0000-000000000000";
+  return "string";
+};
+
+const synthesizeSchemaExample = (
+  root: JsonRecord,
+  schema: JsonRecord,
+  seen: ReadonlySet<string>,
+): unknown => {
+  const ref = asString(schema.$ref);
+  if (ref && seen.has(ref)) return undefined;
+  const nextSeen = ref ? new Set([...seen, ref]) : seen;
+  const resolved = resolveRef(root, schema);
+
+  if ("example" in resolved) return resolved.example;
+  if ("default" in resolved) return resolved.default;
+  if (Array.isArray(resolved.enum) && resolved.enum.length > 0) {
+    return resolved.enum[0];
+  }
+
+  if (resolved.type === "array") {
+    const items = asRecord(resolved.items);
+    if (!items) return [];
+    const itemValue = synthesizeSchemaExample(root, items, nextSeen);
+    return itemValue === undefined ? [] : [itemValue];
+  }
+
+  const properties = asRecord(resolved.properties);
+  if (properties) {
+    const output: Record<string, unknown> = {};
+    for (const [key, rawProp] of Object.entries(properties)) {
+      const prop = asRecord(rawProp) ?? {};
+      const val = synthesizeSchemaExample(root, prop, nextSeen);
+      if (val !== undefined) {
+        output[key] = val;
+      }
+    }
+    return Object.keys(output).length > 0 ? output : undefined;
+  }
+
+  return defaultScalarForSchema(resolved);
+};
+
+const hasStructuredSchema = (root: JsonRecord, schema: JsonRecord): boolean => {
+  const resolved = resolveRef(root, schema);
+  if (asRecord(resolved.properties)) return true;
+  if (resolved.type === "array") {
+    const items = asRecord(resolved.items);
+    return items ? hasStructuredSchema(root, items) : false;
+  }
+  return false;
+};
+
+const exampleOf = (root: JsonRecord, media: JsonRecord): unknown => {
   if ("example" in media) return media.example;
   const examples = asRecord(media.examples);
   const first = examples ? Object.values(examples)[0] : null;
@@ -190,6 +259,10 @@ const exampleOf = (media: JsonRecord): unknown => {
   if (wrapped && "value" in wrapped) return wrapped.value;
   const schema = asRecord(media.schema);
   if (schema && "example" in schema) return schema.example;
+  if (schema && hasStructuredSchema(root, schema)) {
+    const generated = synthesizeSchemaExample(root, schema, new Set());
+    if (generated !== undefined) return generated;
+  }
   return null;
 };
 
@@ -264,13 +337,29 @@ const buildCurl = (input: {
   readonly serverUrl: string;
   readonly method: string;
   readonly path: string;
+  readonly queryParams: readonly {
+    readonly name: string;
+    readonly required: boolean;
+    readonly sample?: string;
+  }[];
   readonly mime: string | null;
   readonly example: unknown;
   readonly bearer: boolean;
   readonly basic: boolean;
 }): string => {
+  const queryEntries = input.queryParams
+    .filter((q) => q.required || q.sample !== undefined)
+    .map(
+      (q) =>
+        `${encodeURIComponent(q.name)}=${encodeURIComponent(q.sample ?? `<${q.name}>`)}`,
+    );
+  const queryString = queryEntries.length > 0 ? `?${queryEntries.join("&")}` : "";
+  const resolvedPath = input.path.replaceAll(
+    /\{([^}]+)\}/g,
+    (_m, paramName: string) => `<${paramName}>`,
+  );
   const lines = [
-    `curl --location --request ${input.method.toUpperCase()} '${input.serverUrl}${input.path}'`,
+    `curl --location --request ${input.method.toUpperCase()} '${input.serverUrl}${resolvedPath}${queryString}'`,
   ];
   if (input.basic) {
     lines.push("--header 'Authorization: Basic <credenciales_base64>'");
@@ -316,7 +405,7 @@ const responseView = (
       return {
         status,
         description: asString(response.description) ?? "",
-        json: jsonText(exampleOf(content?.media ?? {})),
+        json: jsonText(content ? exampleOf(root, content.media) : null),
         sections: schema
           ? sectionsFromSchema(
               root,
@@ -327,6 +416,27 @@ const responseView = (
           : [],
       };
     });
+
+const toHeaderRow = (parameter: JsonRecord, forceRequired = false): HeaderRow => ({
+  name: asString(parameter.name) ?? "param",
+  type: schemaType(asRecord(parameter.schema) ?? { type: "string" }),
+  required: forceRequired || parameter.required === true,
+  description: asString(parameter.description) ?? "",
+});
+
+const paramSample = (parameter: JsonRecord): string | undefined => {
+  if ("example" in parameter && parameter.example !== undefined) {
+    return String(parameter.example);
+  }
+  const schema = asRecord(parameter.schema);
+  if (schema && "example" in schema && schema.example !== undefined) {
+    return String(schema.example);
+  }
+  if (schema && "default" in schema && schema.default !== undefined) {
+    return String(schema.default);
+  }
+  return undefined;
+};
 
 const operationView = (
   root: JsonRecord,
@@ -339,14 +449,16 @@ const operationView = (
   const parameters = parameterList(root, pathItem, operation);
   const body = firstContent(asRecord(operation.requestBody));
   const bearer = usesBearer(root, operation);
+  const pathParams: HeaderRow[] = parameters
+    .filter((parameter) => parameter.in === "path")
+    .map((parameter) => toHeaderRow(parameter, true));
+  const queryRaw = parameters.filter((parameter) => parameter.in === "query");
+  const queryParams: HeaderRow[] = queryRaw.map((parameter) =>
+    toHeaderRow(parameter),
+  );
   const headers: HeaderRow[] = parameters
     .filter((parameter) => parameter.in === "header")
-    .map((parameter) => ({
-      name: asString(parameter.name) ?? "header",
-      type: schemaType(asRecord(parameter.schema) ?? { type: "string" }),
-      required: parameter.required === true,
-      description: asString(parameter.description) ?? "",
-    }));
+    .map((parameter) => toHeaderRow(parameter));
   if (
     bearer &&
     !headers.some((header) => header.name.toLowerCase() === "authorization")
@@ -369,7 +481,7 @@ const operationView = (
       description: body.mime,
     });
   }
-  const example = body ? exampleOf(body.media) : null;
+  const example = body ? exampleOf(root, body.media) : null;
   const bodySchema = asRecord(body?.media.schema);
   const responses = asRecord(operation.responses) ?? {};
   const successes = responseView(root, responses, true);
@@ -380,12 +492,15 @@ const operationView = (
     path,
     summary: asString(operation.summary) ?? `${method.toUpperCase()} ${path}`,
     description: asString(operation.description) ?? "",
+    pathParams,
+    queryParams,
     headers,
     bodyExample: jsonText(example),
     bodySections: bodySchema
       ? sectionsFromSchema(root, bodySchema, "Nivel raíz", new Set())
       : [],
     successStatus: success?.status ?? null,
+    successDescription: success?.description ?? "",
     successExample: success?.json ?? null,
     successSections: success?.sections ?? [],
     errors: responseView(root, responses, false).map((error) => ({
@@ -397,6 +512,11 @@ const operationView = (
       serverUrl,
       method,
       path,
+      queryParams: queryRaw.map((parameter) => ({
+        name: asString(parameter.name) ?? "param",
+        required: parameter.required === true,
+        sample: paramSample(parameter),
+      })),
       mime: body?.mime ?? null,
       example,
       bearer,

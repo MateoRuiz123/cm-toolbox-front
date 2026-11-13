@@ -72,6 +72,9 @@ export const ClientePerfilPage = ({
       setName(updated.name);
       setEmail(updated.email);
       setSuccess("Perfil actualizado.");
+      globalThis.dispatchEvent(
+        new CustomEvent("cliente-profile-updated", { detail: updated }),
+      );
     } catch (err) {
       if (err instanceof DocsApiError && err.status === 401) {
         onUnauthorized?.();

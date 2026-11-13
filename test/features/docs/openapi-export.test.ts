@@ -54,6 +54,7 @@ describe("openApiToPrintHtml", () => {
     expect(html).toContain("break-inside: avoid");
     expect(html).toContain("content: none");
     expect(html).toMatch(/<title><\/title>/);
+    expect(html).toContain("Índice de Endpoints");
     expect(html).not.toContain("<script");
   });
 });

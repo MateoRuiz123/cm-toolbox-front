@@ -123,18 +123,24 @@ const YesNo = ({ value }: { readonly value: boolean }) =>
     <span className="text-[var(--text-muted)]">No</span>
   );
 
-const HeaderTable = ({ rows }: { readonly rows: readonly HeaderRow[] }) => {
+const ParamTable = ({
+  title,
+  columnLabel,
+  rows,
+}: {
+  readonly title: string;
+  readonly columnLabel: string;
+  readonly rows: readonly HeaderRow[];
+}) => {
   if (rows.length === 0) return null;
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-bold text-[var(--text-body)]">
-        Headers requeridos
-      </h4>
+      <h4 className="text-sm font-bold text-[var(--text-body)]">{title}</h4>
       <div className="overflow-x-auto rounded-[var(--radius-2)] border border-[var(--border-default)]">
         <table className="w-full min-w-[640px] border-collapse text-left text-xs">
           <thead className="bg-[var(--surface-sunken)] text-[11px] font-bold text-[var(--text-muted)]">
             <tr>
-              <th className="px-3 py-2">Header</th>
+              <th className="px-3 py-2">{columnLabel}</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2">Requerido</th>
               <th className="px-3 py-2">Descripción</th>
@@ -142,7 +148,7 @@ const HeaderTable = ({ rows }: { readonly rows: readonly HeaderRow[] }) => {
           </thead>
           <tbody className="divide-y divide-[var(--border-default)] bg-[var(--surface-card)]">
             {rows.map((row) => (
-              <tr key={row.name}>
+              <tr key={`${columnLabel}-${row.name}`}>
                 <td className="px-3 py-2 font-mono text-[var(--text-body)]">
                   {row.name}
                 </td>
@@ -244,7 +250,21 @@ const OperationSection = ({
         </p>
       ) : null}
     </header>
-    <HeaderTable rows={operation.headers} />
+    <ParamTable
+      title="Parámetros de ruta"
+      columnLabel="Parámetro"
+      rows={operation.pathParams}
+    />
+    <ParamTable
+      title="Parámetros de consulta"
+      columnLabel="Parámetro"
+      rows={operation.queryParams}
+    />
+    <ParamTable
+      title="Headers requeridos"
+      columnLabel="Header"
+      rows={operation.headers}
+    />
     {operation.bodyExample ? (
       <div className="space-y-2">
         <h4 className="text-sm font-bold text-[var(--text-body)]">
@@ -254,15 +274,24 @@ const OperationSection = ({
       </div>
     ) : null}
     <FieldTables sections={operation.bodySections} />
-    {operation.successExample ? (
+    {operation.successStatus ||
+    operation.successExample ||
+    operation.successSections.length > 0 ? (
       <div className="space-y-2">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-[var(--text-body)]">
-          Respuesta exitosa
+        <h4 className="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--text-body)]">
+          <span>Respuesta exitosa</span>
           {operation.successStatus ? (
             <StatusChip status={operation.successStatus} />
           ) : null}
+          {operation.successDescription ? (
+            <span className="text-xs font-normal text-[var(--text-muted)]">
+              — {operation.successDescription}
+            </span>
+          ) : null}
         </h4>
-        <CodeBlock text={operation.successExample} label="Copiar JSON" />
+        {operation.successExample ? (
+          <CodeBlock text={operation.successExample} label="Copiar JSON" />
+        ) : null}
       </div>
     ) : null}
     <FieldTables sections={operation.successSections} />
@@ -307,7 +336,19 @@ const OperationSection = ({
 export const OpenApiViewer = ({ document }: OpenApiViewerProps) => {
   const doc = useMemo(() => buildOpenApiDocument(document), [document]);
   const [token, setToken] = useState("");
+  const [endpointQuery, setEndpointQuery] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  const filteredOperations = useMemo(() => {
+    const q = endpointQuery.trim().toLowerCase();
+    if (!q) return doc.operations;
+    return doc.operations.filter(
+      (op) =>
+        op.path.toLowerCase().includes(q) ||
+        op.method.toLowerCase().includes(q) ||
+        op.summary.toLowerCase().includes(q),
+    );
+  }, [doc.operations, endpointQuery]);
 
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
@@ -340,28 +381,58 @@ export const OpenApiViewer = ({ document }: OpenApiViewerProps) => {
     <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-10">
       <nav
         aria-label="Contenido de la especificación"
-        className="mb-6 flex gap-1 overflow-x-auto rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-2 shadow-[var(--shadow-panel)] lg:sticky lg:top-20 lg:mb-0 lg:block lg:max-h-[calc(100vh-6rem)] lg:space-y-1 lg:overflow-y-auto"
+        className="mb-6 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-2 shadow-[var(--shadow-panel)] lg:sticky lg:top-20 lg:mb-0 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
       >
-        {doc.auth ? (
-          <a
-            href="#autenticacion"
-            aria-current={activeId === "autenticacion" ? "location" : undefined}
-            className={navLink(activeId === "autenticacion")}
-          >
-            Autenticación
-          </a>
+        {doc.operations.length > 1 ? (
+          <div className="mb-2 border-b border-[var(--border-default)] pb-2">
+            <input
+              type="search"
+              value={endpointQuery}
+              onChange={(event) => setEndpointQuery(event.target.value)}
+              placeholder="Filtrar endpoints..."
+              aria-label="Filtrar endpoints"
+              className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1.5 text-xs text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            />
+          </div>
         ) : null}
-        {doc.operations.map((operation) => (
-          <a
-            key={operation.id}
-            href={`#${operation.id}`}
-            aria-current={activeId === operation.id ? "location" : undefined}
-            className={navLink(activeId === operation.id)}
-          >
-            <MethodBadge method={operation.method} small />
-            <span className="min-w-0 truncate font-mono">{operation.path}</span>
-          </a>
-        ))}
+        <div className="flex gap-1 overflow-x-auto lg:block lg:space-y-1">
+          {doc.auth ? (
+            <a
+              href="#autenticacion"
+              aria-current={activeId === "autenticacion" ? "location" : undefined}
+              className={navLink(activeId === "autenticacion")}
+            >
+              Autenticación
+            </a>
+          ) : null}
+          {filteredOperations.map((operation) => (
+            <a
+              key={operation.id}
+              href={`#${operation.id}`}
+              title={`${operation.method} ${operation.path} — ${operation.summary}`}
+              aria-current={activeId === operation.id ? "location" : undefined}
+              className={navLink(activeId === operation.id)}
+            >
+              <MethodBadge method={operation.method} small />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono">
+                  {operation.path}
+                </span>
+                {operation.summary &&
+                operation.summary !== `${operation.method} ${operation.path}` ? (
+                  <span className="hidden truncate text-[11px] font-normal text-[var(--text-muted)] lg:block">
+                    {operation.summary}
+                  </span>
+                ) : null}
+              </span>
+            </a>
+          ))}
+          {filteredOperations.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
+              Sin coincidencias
+            </p>
+          ) : null}
+        </div>
       </nav>
 
       <article className="min-w-0 space-y-8">
