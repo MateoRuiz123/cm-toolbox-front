@@ -38,6 +38,8 @@ export const ContactPage = () => {
   });
   const [errors, setErrors] = useState<FormContactErrors>({});
   const [showErrorSummary, setShowErrorSummary] = useState(false);
+  const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
+  const [copiedTicket, setCopiedTicket] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -88,16 +90,17 @@ export const ContactPage = () => {
     setShowErrorSummary(false);
     const asuntoLabel =
       ASUNTO_LABELS[formData.asunto] ?? formData.asunto.trim();
+    const plainBody = [
+      `Nombre: ${formData.nombre.trim()}`,
+      `Correo: ${formData.email.trim()}`,
+      `Motivo: ${asuntoLabel}`,
+      "",
+      formData.mensaje.trim(),
+    ].join("\n");
+    setSubmittedTicket(`Asunto: [Toolbox] ${asuntoLabel}\nPara: ${CONTACTO_TI}\n\n${plainBody}`);
+    setCopiedTicket(false);
     const subject = encodeURIComponent(`[Toolbox] ${asuntoLabel}`);
-    const body = encodeURIComponent(
-      [
-        `Nombre: ${formData.nombre.trim()}`,
-        `Correo: ${formData.email.trim()}`,
-        `Motivo: ${asuntoLabel}`,
-        "",
-        formData.mensaje.trim(),
-      ].join("\n"),
-    );
+    const body = encodeURIComponent(plainBody);
     globalThis.location.href = `mailto:${CONTACTO_TI}?subject=${subject}&body=${body}`;
   };
 
@@ -509,6 +512,38 @@ export const ContactPage = () => {
                 />
               </svg>
             </button>
+
+            {submittedTicket && (
+              <div
+                role="status"
+                className="rounded-[var(--radius-1)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] p-3.5 text-xs text-[var(--text-body)]"
+              >
+                <p className="font-semibold text-[var(--state-success)]">
+                  Borrador preparado para {CONTACTO_TI}
+                </p>
+                <p className="mt-1 text-[var(--text-muted)]">
+                  Si tu cliente de correo local no se abrió automáticamente,
+                  copia el mensaje completo y envíalo manualmente:
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(submittedTicket);
+                      setCopiedTicket(true);
+                      globalThis.setTimeout(() => setCopiedTicket(false), 2000);
+                    } catch {
+                      // Ignorar fallo de portapapeles
+                    }
+                  }}
+                  className="mt-2.5 cursor-pointer rounded-[var(--radius-pill)] border border-[var(--state-success)]/40 bg-[var(--surface-card)] px-3.5 py-1.5 font-bold text-[var(--state-success)] hover:bg-[var(--surface-sunken)]"
+                >
+                  {copiedTicket
+                    ? "¡Mensaje copiado!"
+                    : "Copiar mensaje para soporte"}
+                </button>
+              </div>
+            )}
           </form>
         </section>
       </div>

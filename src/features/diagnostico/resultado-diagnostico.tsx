@@ -241,6 +241,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
   const canRemigrate = canPerformAction('diagnostico', 'remigrate')
   const searchInputId = useId()
   const [searchQuery, setSearchQuery] = useState('')
+  const [filtroVeredicto, setFiltroVeredicto] = useState<'ALL' | 'OK' | 'BLOQUEADA' | 'PARCIAL'>('ALL')
   const [viewMode, setViewMode] = useState<ModoVista>(obtenerPreferenciaVista)
   const [abiertas, setAbiertas] = useState(() => guiasAbiertasPorDefecto(data))
   const [selectedCodigos, setSelectedCodigos] = useState<Set<string>>(new Set())
@@ -254,25 +255,33 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
     guardarPreferenciaVista(mode)
   }
 
-  // Filtrado reactivo en tiempo real por remisión o despacho
+  // Filtrado reactivo en tiempo real por remisión, despacho y veredicto
   const itemsFiltrados = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    if (!query) return data.items
+    const matchesVeredicto = (veredicto: GuiaDiagnostico['veredicto']) => {
+      if (filtroVeredicto === 'ALL') return true
+      if (filtroVeredicto === 'OK') return veredicto === 'OK'
+      if (filtroVeredicto === 'BLOQUEADA') return veredicto === 'BLOQUEADA'
+      return veredicto !== 'OK' && veredicto !== 'BLOQUEADA'
+    }
 
     return data.items
       .map((item) => {
         const despachoCoincide =
-          item.codigo_despacho !== undefined && String(item.codigo_despacho).toLowerCase().includes(query)
-        if (despachoCoincide) return item
+          Boolean(query) &&
+          item.codigo_despacho !== undefined &&
+          String(item.codigo_despacho).toLowerCase().includes(query)
 
-        const guiasCoincidentes = item.guias.filter((guia) =>
-          guia.codigo_remision.toLowerCase().includes(query),
-        )
+        const guiasCoincidentes = item.guias.filter((guia) => {
+          if (!matchesVeredicto(guia.veredicto)) return false
+          if (!query || despachoCoincide) return true
+          return guia.codigo_remision.toLowerCase().includes(query)
+        })
         if (guiasCoincidentes.length === 0) return null
         return { ...item, guias: guiasCoincidentes }
       })
       .filter((item): item is ItemDiagnostico => item !== null)
-  }, [data.items, searchQuery])
+  }, [data.items, searchQuery, filtroVeredicto])
 
   const todasLasGuiasVisibles = useMemo(
     () => itemsFiltrados.flatMap((it) => it.guias),
@@ -338,6 +347,48 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
     } catch {
       // Ignorar fallo de portapapeles
     }
+  }
+
+  const handleExportarCsv = () => {
+    const escapeCsv = (val: unknown) => `"${String(val ?? '').replaceAll('"', '""')}"`
+    const header = [
+      'Remision',
+      'Origen',
+      'Despacho',
+      'Cuenta',
+      'Veredicto',
+      'Checks_Cumplen',
+      'Checks_Fallidos',
+      'Resumen',
+    ]
+    const rows = itemsFiltrados.flatMap((item) =>
+      item.guias.map((g) => {
+        const cumplen = g.checks.filter((c) => c.resultado === 'cumple').length
+        const fallidos = g.checks.filter((c) => c.resultado === 'no_cumple').length
+        return [
+          g.codigo_remision,
+          item.origen,
+          item.codigo_despacho ?? '',
+          item.cuenta ?? '',
+          g.veredicto,
+          cumplen,
+          fallidos,
+          g.resumen ?? '',
+        ]
+          .map(escapeCsv)
+          .join(',')
+      }),
+    )
+    const csvContent = `\uFEFF${[header.join(','), ...rows].join('\n')}`
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `diagnostico-migracion-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   }
 
   // Reintento individual
@@ -427,11 +478,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
         <VeredictoBadge veredicto={data.veredicto} />
       </div>
 
-      {/* Tarjetas de Estadísticas con Contadores Animados Rare UI */}
+      {/* Tarjetas de Estadísticas Interactivas (filtran por veredicto) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div
+        <button
+          type="button"
+          onClick={() => setFiltroVeredicto('ALL')}
+          aria-pressed={filtroVeredicto === 'ALL'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--border-default)] p-3.5"
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border p-3.5 text-left transition ${
+            filtroVeredicto === 'ALL'
+              ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/40'
+              : 'border-[var(--border-default)] hover:border-[var(--color-primary)]'
+          }`}
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Total Evaluadas
@@ -440,11 +498,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             <AnimatedCounter value={stats.total} />
             <span className="text-xs font-normal text-[var(--text-muted)]">guías</span>
           </div>
-        </div>
+        </button>
 
-        <div
+        <button
+          type="button"
+          onClick={() => setFiltroVeredicto((prev) => (prev === 'OK' ? 'ALL' : 'OK'))}
+          aria-pressed={filtroVeredicto === 'OK'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)]/40 p-3.5"
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-success-bg)]/40 p-3.5 text-left transition ${
+            filtroVeredicto === 'OK'
+              ? 'border-[var(--state-success)] ring-2 ring-[var(--state-success)]/40'
+              : 'border-[var(--state-success)]/30 hover:border-[var(--state-success)]'
+          }`}
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-success)]">
             Conformes (OK)
@@ -453,11 +518,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             <AnimatedCounter value={stats.ok} />
             <span className="text-xs font-normal opacity-80">listas</span>
           </div>
-        </div>
+        </button>
 
-        <div
+        <button
+          type="button"
+          onClick={() => setFiltroVeredicto((prev) => (prev === 'BLOQUEADA' ? 'ALL' : 'BLOQUEADA'))}
+          aria-pressed={filtroVeredicto === 'BLOQUEADA'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)]/40 p-3.5"
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-error-bg)]/40 p-3.5 text-left transition ${
+            filtroVeredicto === 'BLOQUEADA'
+              ? 'border-[var(--state-error)] ring-2 ring-[var(--state-error)]/40'
+              : 'border-[var(--state-error)]/30 hover:border-[var(--state-error)]'
+          }`}
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-error)]">
             Bloqueadas
@@ -466,11 +538,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             <AnimatedCounter value={stats.bloqueadas} />
             <span className="text-xs font-normal opacity-80">fallos</span>
           </div>
-        </div>
+        </button>
 
-        <div
+        <button
+          type="button"
+          onClick={() => setFiltroVeredicto((prev) => (prev === 'PARCIAL' ? 'ALL' : 'PARCIAL'))}
+          aria-pressed={filtroVeredicto === 'PARCIAL'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className="surface flex flex-col justify-between rounded-[var(--radius-2)] border border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)]/40 p-3.5"
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-warning-bg)]/40 p-3.5 text-left transition ${
+            filtroVeredicto === 'PARCIAL'
+              ? 'border-[var(--state-warning)] ring-2 ring-[var(--state-warning)]/40'
+              : 'border-[var(--state-warning)]/30 hover:border-[var(--state-warning)]'
+          }`}
         >
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
             Parciales / Obs.
@@ -479,7 +558,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             <AnimatedCounter value={stats.parciales} />
             <span className="text-xs font-normal opacity-80">atención</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Barra de Búsqueda estilo SearchField y Alternador de Vista */}
@@ -611,6 +690,17 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             </button>
           )}
 
+          {totalFiltradas > 0 && (
+            <button
+              type="button"
+              onClick={handleExportarCsv}
+              title="Descargar las guías visibles en formato CSV"
+              className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-body)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <span>Exportar CSV</span>
+            </button>
+          )}
+
           {/* Botón de reintento masivo en naranja Coordinadora */}
           <button
             type="button"
@@ -677,14 +767,19 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
         >
           <p className="text-sm font-bold text-[var(--text-body)]">No se encontraron coincidencias</p>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            No hay remisiones ni despachos que coincidan con “{searchQuery}”.
+            {searchQuery
+              ? `No hay remisiones ni despachos que coincidan con “${searchQuery}”.`
+              : 'No hay guías que coincidan con el filtro de veredicto seleccionado.'}
           </p>
           <button
             type="button"
-            onClick={() => setSearchQuery('')}
+            onClick={() => {
+              setSearchQuery('')
+              setFiltroVeredicto('ALL')
+            }}
             className="mt-3 cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary)] hover:bg-[var(--surface-sunken)] transition-colors"
           >
-            Limpiar búsqueda
+            Limpiar filtros
           </button>
         </div>
       )}

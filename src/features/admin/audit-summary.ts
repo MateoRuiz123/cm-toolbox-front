@@ -14,6 +14,7 @@ const EVENT_LABELS: Readonly<Record<string, string>> = {
   ROLE_UPSERTED: "Alta o actualización de rol",
   ROLE_DELETED: "Eliminación de rol",
   USER_ACCESS_UPDATED: "Actualización de acceso de usuario",
+  USER_DELETED: "Eliminación de usuario",
 };
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
@@ -126,6 +127,10 @@ export const describeAuditEvent = (log: AuditLogItem): string => {
           : `${permCount} permisos puntuales`,
       );
       return `Actualizó el acceso de ${log.targetId}: ${parts.join(", ")}.`;
+    }
+    case "USER_DELETED": {
+      const role = roleLabel(before?.roleId);
+      return `Eliminó al usuario ${log.targetId} (rol previo: ${role}).`;
     }
     default:
       return `Registró el evento ${log.eventType} sobre ${describeAuditTarget(log.targetType, log.targetId)}.`;

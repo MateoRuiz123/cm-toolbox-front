@@ -13,8 +13,10 @@ import {
 } from "./access-api";
 import {
   buildFallbackAccessProfile,
+  buildRestrictedFallbackAccessProfile,
   type EffectiveUserAccess,
 } from "./access-types";
+import { esAuthBypassActivo } from "./auth-bypass";
 import {
   AccessContext,
   createContextValueFromProfile,
@@ -33,7 +35,11 @@ export const AccessProvider = ({
 }) => {
   const { estadoAuth, email } = useAuth();
   const [profile, setProfile] = useState<EffectiveUserAccess>(() =>
-    buildFallbackAccessProfile(email || "dev.local@coordinadora.com"),
+    esAuthBypassActivo()
+      ? buildFallbackAccessProfile(email || "dev.local@coordinadora.com")
+      : buildRestrictedFallbackAccessProfile(
+          email || "operador@coordinadora.com",
+        ),
   );
   const [loadingAccess, setLoadingAccess] = useState(false);
   const [isUserBlocked, setIsUserBlocked] = useState(false);
@@ -61,7 +67,11 @@ export const AccessProvider = ({
           return;
         }
         setProfile(
-          buildFallbackAccessProfile(email || "dev.local@coordinadora.com"),
+          esAuthBypassActivo()
+            ? buildFallbackAccessProfile(email || "dev.local@coordinadora.com")
+            : buildRestrictedFallbackAccessProfile(
+                email || "operador@coordinadora.com",
+              ),
         );
         setIsUserBlocked(false);
         setBlockedMessage(null);

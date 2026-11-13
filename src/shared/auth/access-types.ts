@@ -93,3 +93,19 @@ export const buildFallbackAccessProfile = (
   canManageUsers: true,
   apps: DEFAULT_APPS_CATALOG,
 });
+
+export const buildRestrictedFallbackAccessProfile = (
+  email = "operador@coordinadora.com",
+): EffectiveUserAccess => ({
+  email,
+  displayName: null,
+  roleId: "user",
+  isSuperAdmin: false,
+  canManageApps: false,
+  canManageUsers: false,
+  apps: DEFAULT_APPS_CATALOG.map((app) => ({
+    ...app,
+    canAccess: app.status === "active",
+    allowedActions: app.status === "active" ? ["view"] : [],
+  })),
+});

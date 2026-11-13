@@ -248,17 +248,40 @@ export const upsertAdminUser = async (
   return parseJsonOrThrow<AdminUserItem>(response);
 };
 
-export const fetchAdminAuditLogs = async (
-  limit = 50,
-  offset = 0,
-): Promise<{ readonly total: number; readonly items: readonly AuditLogItem[] }> => {
+export const deleteAdminUser = async (
+  email: string,
+): Promise<{ readonly email: string; readonly deleted: boolean }> => {
   const response = await fetch(
-    `${ADMIN_BASE_PATH}/audit?limit=${limit}&offset=${offset}`,
+    `${ADMIN_BASE_PATH}/users/${encodeURIComponent(email.trim().toLowerCase())}`,
     {
-      method: "GET",
+      method: "DELETE",
       headers: buildAccessHeaders(false),
     },
   );
+  return parseJsonOrThrow<{ readonly email: string; readonly deleted: boolean }>(
+    response,
+  );
+};
+
+export const fetchAdminAuditLogs = async (
+  limit = 50,
+  offset = 0,
+  filter?: { readonly eventType?: string; readonly actorEmail?: string },
+): Promise<{ readonly total: number; readonly items: readonly AuditLogItem[] }> => {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (filter?.eventType?.trim()) {
+    query.set("eventType", filter.eventType.trim());
+  }
+  if (filter?.actorEmail?.trim()) {
+    query.set("actorEmail", filter.actorEmail.trim());
+  }
+  const response = await fetch(`${ADMIN_BASE_PATH}/audit?${query.toString()}`, {
+    method: "GET",
+    headers: buildAccessHeaders(false),
+  });
   return parseJsonOrThrow<{
     readonly total: number;
     readonly items: readonly AuditLogItem[];

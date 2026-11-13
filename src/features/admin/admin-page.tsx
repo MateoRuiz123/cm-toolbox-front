@@ -6,6 +6,7 @@ import type { AppStatus } from "../../shared/auth/access-types";
 import { esAuthBypassActivo } from "../../shared/auth/auth-bypass";
 import {
   deleteAdminRole,
+  deleteAdminUser,
   fetchAdminApps,
   fetchAdminAuditLogs,
   fetchAdminRoles,
@@ -92,6 +93,7 @@ export const AdminPage = () => {
   );
   const [users, setUsers] = useState<readonly AdminUserItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<readonly AuditLogItem[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -116,6 +118,7 @@ export const AdminPage = () => {
       if (canManageApps) {
         const auditData = await fetchAdminAuditLogs(50, 0);
         setAuditLogs(auditData.items);
+        setAuditTotal(auditData.total);
       }
     } catch (error) {
       setErrorMsg(
@@ -138,6 +141,28 @@ export const AdminPage = () => {
   ) => {
     await upsertAdminUser(email, payload);
     await Promise.all([loadAdminData(), refreshAccess()]);
+  };
+
+  const handleDeleteUser = async (email: string) => {
+    await deleteAdminUser(email);
+    await Promise.all([loadAdminData(), refreshAccess()]);
+  };
+
+  const handleAuditFilterChange = async (filter: {
+    readonly eventType?: string;
+    readonly actorEmail?: string;
+    readonly limit?: number;
+  }) => {
+    try {
+      const auditData = await fetchAdminAuditLogs(filter.limit ?? 50, 0, {
+        eventType: filter.eventType,
+        actorEmail: filter.actorEmail,
+      });
+      setAuditLogs(auditData.items);
+      setAuditTotal(auditData.total);
+    } catch {
+      // Mantiene los logs actuales si falla la recarga filtrada
+    }
   };
 
   const handleSaveRole = async (
@@ -397,6 +422,7 @@ export const AdminPage = () => {
               apps={apps}
               roles={roles}
               onSaveUser={handleSaveUser}
+              onDeleteUser={handleDeleteUser}
             />
           )}
 
@@ -422,7 +448,11 @@ export const AdminPage = () => {
           )}
 
           {activeTab === "audit" && canManageApps && (
-            <AuditLogsTab logs={auditLogs} />
+            <AuditLogsTab
+              logs={auditLogs}
+              total={auditTotal}
+              onFilterChange={(filter) => void handleAuditFilterChange(filter)}
+            />
           )}
         </>
       )}

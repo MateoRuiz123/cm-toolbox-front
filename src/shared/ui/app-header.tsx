@@ -30,18 +30,24 @@ export const AppHeader = () => {
   const obtenerNombreCorto = (appId: string, nombre: string) => {
     if (appId === "diagnostico") return "Diagnóstico";
     if (appId === "logs") return "Logs GKE";
+    if (appId === "docs") return "Documentación";
     return nombre;
   };
 
   const obtenerTituloRuta = () => {
     if (path.startsWith("/diagnostico")) return "Diagnóstico de migración";
     if (path.startsWith("/logs")) return "Visor de Logs GKE";
+    if (path.startsWith("/docs")) return "Documentación de APIs";
     if (path.startsWith("/admin")) return "Administración de Accesos";
     if (path.startsWith("/configuracion")) return "Apariencia";
     if (path.startsWith("/privacidad")) return "Política de Privacidad";
     if (path.startsWith("/terminos")) return "Términos y Condiciones";
     if (path.startsWith("/contacto")) return "Contacto y Soporte";
     if (path.startsWith("/gracias")) return "Confirmación";
+    const dynamicApp = apps.find(
+      (app) => app.route !== "/" && path.startsWith(app.route),
+    );
+    if (dynamicApp) return dynamicApp.name;
     return "Página";
   };
 

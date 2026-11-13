@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { SmoothLinkScramble, SmoothTitleAccent } from "@/shared/ui/smoothui";
 import { useAccess } from "../../shared/auth/access-context";
 import type { AppIconType, AppStatus } from "../../shared/auth/access-types";
@@ -231,10 +232,29 @@ const AppCard = ({
 export const HubPage = () => {
   const { apps, loadingAccess } = useAccess();
   const { sistema } = useTheme();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
   const esVisitors = sistema === "visitors";
   const esGlass = sistema === "glass";
   /** Solo SIGO usa marco de tarjeta en el hero; Visitors/Glass van abiertos. */
   const heroConMarco = sistema === "sigo";
+
+  const visibleApps = apps.filter((app) => app.status !== "hidden");
+  const availableCount = visibleApps.filter(
+    (app) => app.canAccess && app.status === "active",
+  ).length;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredApps = visibleApps.filter((app) => {
+    if (onlyAvailable && !(app.canAccess && app.status === "active")) {
+      return false;
+    }
+    if (!normalizedQuery) return true;
+    return (
+      app.name.toLowerCase().includes(normalizedQuery) ||
+      app.description.toLowerCase().includes(normalizedQuery) ||
+      app.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery))
+    );
+  });
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -319,33 +339,98 @@ export const HubPage = () => {
         </div>
       )}
 
+      {!loadingAccess && visibleApps.length > 0 && (
+        <div className="mb-6 flex flex-col gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 sm:max-w-md">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar herramienta por nombre, descripción o etiqueta…"
+              aria-label="Buscar herramienta"
+              className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setOnlyAvailable(false)}
+              aria-pressed={!onlyAvailable}
+              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-bold transition ${
+                !onlyAvailable
+                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-2xs"
+                  : "border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
+              }`}
+            >
+              Todas ({visibleApps.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setOnlyAvailable(true)}
+              aria-pressed={onlyAvailable}
+              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-bold transition ${
+                onlyAvailable
+                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-2xs"
+                  : "border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
+              }`}
+            >
+              Disponibles ({availableCount})
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         id="herramientas"
         className="grid scroll-mt-24 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
       >
         {loadingAccess ? (
           <div
-            className="col-span-full flex min-h-[20vh] items-center justify-center text-sm text-[var(--text-muted)]"
+            className="col-span-full space-y-4"
             aria-busy="true"
             aria-live="polite"
           >
-            Cargando herramientas…
+            <p className="text-center text-sm text-[var(--text-muted)]">
+              Cargando herramientas…
+            </p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((idx) => (
+                <div
+                  key={idx}
+                  className="h-64 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6"
+                />
+              ))}
+            </div>
+          </div>
+        ) : filteredApps.length === 0 ? (
+          <div className="col-span-full rounded-[var(--radius-3)] border border-dashed border-[var(--border-default)] bg-[var(--surface-card)] p-10 text-center">
+            <p className="text-sm font-bold text-[var(--text-body)]">
+              No se encontraron herramientas con esos criterios.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setOnlyAvailable(false);
+              }}
+              className="mt-3 cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-1.5 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--border-default)]"
+            >
+              Limpiar filtros
+            </button>
           </div>
         ) : (
-          apps
-            .filter((app) => app.status !== "hidden")
-            .map((app) => (
-              <AppCard
-                key={app.id}
-                titulo={app.name}
-                descripcion={app.description}
-                ruta={app.route}
-                status={app.status}
-                canAccess={app.canAccess}
-                tags={app.tags}
-                icono={app.icon}
-              />
-            ))
+          filteredApps.map((app) => (
+            <AppCard
+              key={app.id}
+              titulo={app.name}
+              descripcion={app.description}
+              ruta={app.route}
+              status={app.status}
+              canAccess={app.canAccess}
+              tags={app.tags}
+              icono={app.icon}
+            />
+          ))
         )}
       </div>
     </div>

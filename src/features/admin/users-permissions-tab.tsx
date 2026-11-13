@@ -19,6 +19,7 @@ interface UsersPermissionsTabProps {
     email: string,
     payload: UpsertAdminUserPayload,
   ) => Promise<void>;
+  readonly onDeleteUser?: (email: string) => Promise<void>;
 }
 
 export const UsersPermissionsTab = ({
@@ -29,12 +30,17 @@ export const UsersPermissionsTab = ({
   apps,
   roles,
   onSaveUser,
+  onDeleteUser,
 }: UsersPermissionsTabProps) => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [appFilter, setAppFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUserItem | null>(null);
+  const [confirmDeleteEmail, setConfirmDeleteEmail] = useState<string | null>(
+    null,
+  );
+  const [deletingEmail, setDeletingEmail] = useState<string | null>(null);
 
   const actorRoleObj = roles.find((r) => r.id === actorRoleId);
   const actorLevel = actorIsSuperAdmin
@@ -266,16 +272,60 @@ export const UsersPermissionsTab = ({
 
                     <td className="px-4 py-3.5 text-right align-middle whitespace-nowrap">
                       {editable ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingUser(user);
-                            setModalOpen(true);
-                          }}
-                          className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-body)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer"
-                        >
-                          Configurar accesos
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUser(user);
+                              setModalOpen(true);
+                            }}
+                            className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-body)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer"
+                          >
+                            Configurar accesos
+                          </button>
+                          {onDeleteUser &&
+                            user.email.toLowerCase() !==
+                              actorEmail.toLowerCase() &&
+                            (confirmDeleteEmail === user.email ? (
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={deletingEmail === user.email}
+                                  onClick={async () => {
+                                    setDeletingEmail(user.email);
+                                    try {
+                                      await onDeleteUser(user.email);
+                                    } finally {
+                                      setDeletingEmail(null);
+                                      setConfirmDeleteEmail(null);
+                                    }
+                                  }}
+                                  className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--state-error)] px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                                >
+                                  {deletingEmail === user.email
+                                    ? "Eliminando…"
+                                    : "Confirmar"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteEmail(null)}
+                                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)]"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmDeleteEmail(user.email)
+                                }
+                                className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--state-error)] transition hover:bg-[var(--state-error)]/15"
+                              >
+                                Eliminar
+                              </button>
+                            ))}
+                        </div>
                       ) : (
                         <span className="text-xs font-medium text-[var(--text-muted)]">
                           Protegido por jerarquía
