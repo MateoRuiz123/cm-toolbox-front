@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { LogsViewer } from "../../../src/features/logs/logs-viewer";
@@ -200,5 +200,112 @@ describe("LogsViewer", () => {
     expect(screen.queryByText(new RegExp(rawIso))).not.toBeInTheDocument();
     const timeEl = screen.getByTitle(/UTC: 2026-11-13T15:05:09\.123456789Z/);
     expect(timeEl.textContent).toContain(expectedClock);
+  });
+
+  it("mantiene activo Auto-scroll cuando llegan ráfagas que aumentan scrollHeight sin desplazamiento hacia arriba", () => {
+    const { container, rerender } = render(
+      <LogsViewer logs={logs} isStreaming={true} onClear={() => undefined} />,
+    );
+
+    const scrollContainer = container.querySelector(
+      ".overflow-y-auto",
+    ) as HTMLDivElement;
+    let scrollHeight = 500;
+    Object.defineProperty(scrollContainer, "scrollHeight", {
+      get: () => scrollHeight,
+      configurable: true,
+    });
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 300,
+      configurable: true,
+    });
+
+    rerender(
+      <LogsViewer
+        logs={[
+          ...logs,
+          {
+            id: "3",
+            timestamp: 1_700_000_001_000,
+            type: "log",
+            text: "rafaga inicial",
+            pod: "api-a",
+          },
+        ]}
+        isStreaming={true}
+        onClear={() => undefined}
+      />,
+    );
+
+    expect(scrollContainer.scrollTop).toBe(200);
+
+    // Simula un crecimiento súbito de scrollHeight mayor a 48px antes de sincronizar
+    scrollHeight = 900;
+    fireEvent.scroll(scrollContainer);
+
+    const autoScrollButton = screen.getByRole("button", {
+      name: /auto-scroll/i,
+    });
+    expect(autoScrollButton).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.queryByRole("button", { name: /ir al final/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("desactiva Auto-scroll al hacer scroll hacia arriba y lo reactiva al volver al final", () => {
+    const { container, rerender } = render(
+      <LogsViewer logs={logs} isStreaming={true} onClear={() => undefined} />,
+    );
+
+    const scrollContainer = container.querySelector(
+      ".overflow-y-auto",
+    ) as HTMLDivElement;
+    Object.defineProperty(scrollContainer, "scrollHeight", {
+      value: 1000,
+      configurable: true,
+    });
+    Object.defineProperty(scrollContainer, "clientHeight", {
+      value: 300,
+      configurable: true,
+    });
+
+    rerender(
+      <LogsViewer
+        logs={[
+          ...logs,
+          {
+            id: "4",
+            timestamp: 1_700_000_002_000,
+            type: "log",
+            text: "linea en vivo",
+            pod: "api-a",
+          },
+        ]}
+        isStreaming={true}
+        onClear={() => undefined}
+      />,
+    );
+
+    const autoScrollButton = screen.getByRole("button", {
+      name: /auto-scroll/i,
+    });
+    expect(autoScrollButton).toHaveAttribute("aria-pressed", "true");
+    expect(scrollContainer.scrollTop).toBe(700);
+
+    scrollContainer.scrollTop = 200;
+    fireEvent.scroll(scrollContainer);
+
+    expect(autoScrollButton).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByRole("button", { name: /ir al final/i }),
+    ).toBeInTheDocument();
+
+    scrollContainer.scrollTop = 690;
+    fireEvent.scroll(scrollContainer);
+
+    expect(autoScrollButton).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.queryByRole("button", { name: /ir al final/i }),
+    ).not.toBeInTheDocument();
   });
 });

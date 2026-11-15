@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useLayoutEffect, useRef, useState, useMemo } from "react";
 import type {
   LogStreamMessage,
   LogSeverity,
@@ -112,6 +112,7 @@ export const LogsViewer = ({
   target,
 }: LogsViewerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTopRef = useRef(0);
   const [autoScroll, setAutoScroll] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<"all" | LogSeverity>(
     "all",
@@ -208,19 +209,27 @@ export const LogsViewer = ({
     );
   }, [processedLogs]);
 
+  const syncScrollToBottom = (el: HTMLDivElement) => {
+    el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    lastScrollTopRef.current = el.scrollTop;
+  };
+
   const scrollToBottom = () => {
     setAutoScroll(true);
     if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      syncScrollToBottom(containerRef.current);
     }
   };
 
   const handleContainerScroll = () => {
     const el = containerRef.current;
     if (!el) return;
+    const currentScrollTop = el.scrollTop;
+    const scrolledUp = currentScrollTop < lastScrollTopRef.current;
+    lastScrollTopRef.current = currentScrollTop;
     const distanceFromBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceFromBottom > 48 && autoScroll) {
+      el.scrollHeight - currentScrollTop - el.clientHeight;
+    if (distanceFromBottom > 48 && autoScroll && scrolledUp) {
       setAutoScroll(false);
     } else if (distanceFromBottom <= 16 && !autoScroll) {
       setAutoScroll(true);
@@ -241,9 +250,9 @@ export const LogsViewer = ({
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoScroll && containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      syncScrollToBottom(containerRef.current);
     }
   }, [filteredLogs, autoScroll]);
 
@@ -454,7 +463,7 @@ export const LogsViewer = ({
         <div
           ref={containerRef}
           onScroll={handleContainerScroll}
-          className="h-full overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-xs leading-[1.75] text-[var(--text-body)] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
+          className="h-full overflow-y-auto bg-[var(--surface-sunken)] px-3.5 py-2.5 font-mono text-xs leading-[1.75] text-[var(--text-body)] [overflow-anchor:none] [scrollbar-width:thin] dark:bg-[var(--surface-header)]"
         >
           {processedLogs.length > 0 && filteredLogs.length === 0 ? (
             <p
