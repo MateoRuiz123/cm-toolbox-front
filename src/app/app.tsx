@@ -15,6 +15,7 @@ import { AppFooter } from "../shared/ui/app-footer";
 import { AppHeader } from "../shared/ui/app-header";
 import { CookieBanner } from "../shared/ui/cookie-banner";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
+import { RouteSkeletonFallback } from "../shared/ui/route-skeleton-fallback";
 
 /** Títulos de documento en la puerta /cliente (fuera del AppShell). */
 const ClientePageTitle = () => {
@@ -129,15 +130,7 @@ const ClienteDocsRoutes = lazy(() =>
 );
 
 /** Indicador de carga para páginas de feature resueltas con import dinámico. */
-const RouteFallback = () => (
-  <div
-    className="flex min-h-[40vh] items-center justify-center bg-[var(--surface-app)] text-sm text-[var(--text-muted)]"
-    aria-busy="true"
-    aria-live="polite"
-  >
-    Cargando…
-  </div>
-);
+const RouteFallback = () => <RouteSkeletonFallback />;
 
 const STATIC_TOOL_IDS = new Set(["diagnostico", "logs", "docs"]);
 

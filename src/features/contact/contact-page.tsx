@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import {
+  sendAutomaticIncidentReport,
+  type IncidentReportResponse,
+} from "../hub/api/apps-health";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 
 interface FormContactState {
@@ -30,12 +34,56 @@ const ERROR_FIELD_ORDER = ["nombre", "email", "asunto", "mensaje"] as const;
 
 /** Formulario de contacto que abre el cliente de correo (sin backend de envío). */
 export const ContactPage = () => {
-  const [formData, setFormData] = useState<FormContactState>({
+  const [searchParams] = useSearchParams();
+  const appParam = searchParams.get("app")?.trim() ?? "";
+  const estadoParam = searchParams.get("estado")?.trim() ?? "";
+
+  const [formData, setFormData] = useState<FormContactState>(() => ({
     nombre: "",
     email: "",
     asunto: "diagnostico",
-    mensaje: "",
-  });
+    mensaje:
+      appParam || estadoParam
+        ? `Herramienta reportada: ${appParam || "general"}\nEstado detectado: ${estadoParam || "no especificado"}\nDescripción de lo ocurrido:\n`
+        : "",
+  }));
+  const [autoSending, setAutoSending] = useState(false);
+  const [autoReportTicket, setAutoReportTicket] =
+    useState<IncidentReportResponse | null>(null);
+  const [autoReportError, setAutoReportError] = useState<string | null>(null);
+
+  const handleAutomaticIncidentReport = async () => {
+    const trimmedMessage = formData.mensaje.trim();
+    if (!trimmedMessage) {
+      setAutoReportError(
+        "Escribe un mensaje describiendo la incidencia antes de enviarlo automáticamente.",
+      );
+      return;
+    }
+
+    setAutoSending(true);
+    setAutoReportError(null);
+    try {
+      const trimmedName = formData.nombre.trim();
+      const trimmedEmail = formData.email.trim();
+      const response = await sendAutomaticIncidentReport({
+        appId: appParam || formData.asunto,
+        appName: appParam || `Soporte (${formData.asunto})`,
+        subject: `Reporte desde contacto: ${formData.asunto}${trimmedName ? ` (${trimmedName})` : ""}`,
+        message: `${trimmedName ? `Solicitante: ${trimmedName}${trimmedEmail ? ` <${trimmedEmail}>` : ""}\n` : ""}${trimmedMessage}`,
+        detectedState: estadoParam || "manual_report",
+      });
+      setAutoReportTicket(response);
+    } catch (error) {
+      setAutoReportError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible enviar el reporte automático.",
+      );
+    } finally {
+      setAutoSending(false);
+    }
+  };
   const [errors, setErrors] = useState<FormContactErrors>({});
   const [showErrorSummary, setShowErrorSummary] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
@@ -315,8 +363,9 @@ export const ContactPage = () => {
             Envíanos un Mensaje
           </h2>
           <p className="text-xs text-[var(--text-muted)] mb-6">
-            Diligencia el formulario para abrir tu cliente de correo con el
-            mensaje precargado hacia soporte TI. No se envía desde el servidor.
+            Puedes enviar un reporte automático directo al sistema de monitoreo o
+            abrir tu cliente de correo con el mensaje precargado hacia soporte
+            TI.
           </p>
 
           {showErrorSummary && errorEntries.length > 0 && (
@@ -491,6 +540,38 @@ export const ContactPage = () => {
                 </p>
               )}
             </div>
+
+            {autoReportError && (
+              <div
+                role="alert"
+                className="rounded-[var(--radius-2)] border border-[var(--state-error)]/40 bg-[var(--alert-error-bg)] px-3.5 py-2.5 text-xs font-medium text-[var(--alert-error-fg)]"
+              >
+                {autoReportError}
+              </div>
+            )}
+
+            {autoReportTicket && (
+              <div
+                role="status"
+                className="rounded-[var(--radius-2)] border border-[var(--state-success)]/40 bg-[var(--alert-success-bg)] px-3.5 py-2.5 text-xs font-semibold text-[var(--alert-success-fg)]"
+              >
+                Reporte automático enviado correctamente (Ticket{" "}
+                {autoReportTicket.ticketId}).
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={autoSending}
+              onClick={() => void handleAutomaticIncidentReport()}
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)] px-5 py-3 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-on)] disabled:cursor-wait disabled:opacity-65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              <span>
+                {autoSending
+                  ? "Enviando reporte automático..."
+                  : "Enviar reporte automático"}
+              </span>
+            </button>
 
             <button
               type="submit"

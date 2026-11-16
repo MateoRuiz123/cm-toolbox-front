@@ -45,6 +45,11 @@ export default defineConfig(({ mode }) => {
       timeout: 120_000,
       proxyTimeout: 120_000,
     },
+    "/diagnostico-api/health": {
+      target: diagnosticoUpstream,
+      changeOrigin: true,
+      rewrite: () => "/health",
+    },
     "/logs-api": {
       target: logsApiUpstream,
       changeOrigin: true,

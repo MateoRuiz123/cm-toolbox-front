@@ -1,4 +1,5 @@
 import { ThemeToggle } from "./theme-toggle";
+import { CommandPalette } from "./command-palette";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../auth/use-auth";
 import { useAccess } from "../auth/access-context";
@@ -122,6 +123,7 @@ export const AppHeader = () => {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <CommandPalette />
         {!esHome && (
           <Link
             to="/"

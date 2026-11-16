@@ -1,438 +1,671 @@
-import { useState } from "react";
-import { SmoothLinkScramble, SmoothTitleAccent } from "@/shared/ui/smoothui";
-import { useAccess } from "../../shared/auth/access-context";
-import type { AppIconType, AppStatus } from "../../shared/auth/access-types";
-import { useTheme } from "../../app/theme-context";
-import { FolderComponent } from "./folder-component";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type DragEvent,
+} from "react";
+import { Link, useNavigate } from "react-router";
+import type { EffectiveAppAccess } from "../../shared/auth/access-types";
+import { AuthContext } from "../../shared/auth/auth-context-base";
+import { useAccess } from "../../shared/auth/use-access";
+import { SmoothTitleAccent } from "../../shared/ui/smoothui";
+import {
+  fetchAppsUsageRanking,
+  recordAppOpenEvent,
+  saveGlobalAppsOrder,
+  sendAutomaticIncidentReport,
+  type BentoSize,
+  type IncidentReportResponse,
+} from "./api/apps-health";
+import { BentoAppCard, type UnavailableReason } from "./bento-app-card";
+import {
+  clearCachedBentoSizes,
+  readSortModePreference,
+  resolveBentoSizes,
+  saveCachedBentoSizes,
+  saveSortModePreference,
+  sortAppsForHub,
+  type HubSortMode,
+} from "./hub-layout-storage";
+import { useAppsHealth } from "./use-apps-health";
 
-interface AppCardProps {
-  readonly titulo: string;
-  readonly descripcion: string;
-  readonly ruta?: string;
-  readonly status: AppStatus;
-  readonly canAccess: boolean;
-  readonly tags: readonly string[];
-  readonly icono: AppIconType;
+interface UnavailableDialogState {
+  readonly app: EffectiveAppAccess;
+  readonly reason: UnavailableReason;
 }
 
-const renderIcono = (tipo: AppCardProps["icono"]) => {
-  if (tipo === "diagnostico") {
-    return (
-      <svg
-        className="size-6"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-        />
-      </svg>
-    );
-  }
-
-  if (tipo === "pubsub") {
-    return (
-      <svg
-        className="size-6"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-        />
-      </svg>
-    );
-  }
-
-  if (tipo === "docs") {
-    return (
-      <svg
-        className="size-6"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      className="size-6"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    </svg>
-  );
-};
-
-const HubArrowIcon = (
-  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M14 5l7 7m0 0l-7 7m7-7H3"
-    />
-  </svg>
+const HubSkeletonGrid = () => (
+  <div
+    role="status"
+    aria-live="polite"
+    aria-busy="true"
+    className="space-y-6"
+  >
+    <div className="flex items-center gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-muted)]">
+      <span className="size-3 animate-ping rounded-full bg-[var(--color-primary)]" />
+      <span>Cargando herramientas del portal...</span>
+    </div>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12">
+      <div className="h-56 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-6 lg:col-span-7" />
+      <div className="h-56 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-3 lg:col-span-5" />
+      <div className="h-48 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-3 lg:col-span-4" />
+      <div className="h-48 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-6 lg:col-span-8" />
+    </div>
+  </div>
 );
 
-const AppCard = ({
-  titulo,
-  descripcion,
-  ruta,
-  status,
-  canAccess,
-  tags,
-  icono,
-}: AppCardProps) => {
-  const disponible = canAccess && Boolean(ruta) && status !== "disabled";
-  const isMaintenance = status === "maintenance";
-  const isRestricted = status === "active" && !canAccess;
-  const { sistema } = useTheme();
-  const esVisitors = sistema === "visitors";
-
-  const obtenerBadgeLabel = () => {
-    if (status === "disabled") return "Próximamente";
-    if (isMaintenance && canAccess) return "Mantenimiento (administrador)";
-    if (isMaintenance) return "En mantenimiento";
-    if (isRestricted) return "Acceso restringido";
-    return "Disponible";
-  };
-
-  const obtenerBadgeClass = () => {
-    if (status === "disabled") {
-      return "border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)]";
-    }
-    if (isMaintenance) {
-      return "border border-[var(--state-warning)]/30 bg-[var(--alert-warning-bg)] text-[var(--state-warning)]";
-    }
-    if (isRestricted) {
-      return "border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] text-[var(--state-error)]";
-    }
-    return "border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] text-[var(--state-success)]";
-  };
-
-  const obtenerCtaDeshabilitadoLabel = () => {
-    if (status === "disabled") return "En construcción";
-    if (isMaintenance) return "En mantenimiento";
-    return "Permiso requerido";
-  };
-
-  return (
-    <div
-      style={esVisitors ? undefined : { boxShadow: "var(--shadow-1)" }}
-      className={`surface group relative flex flex-col justify-between rounded-[var(--radius-3)] border p-6 transition-all duration-200 ${
-        disponible
-          ? esVisitors
-            ? "border-[var(--border-default)]"
-            : "border-[var(--border-default)] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-4)]"
-          : "border-[var(--border-default)] opacity-75 border-dashed bg-[var(--surface-sunken)]/50"
-      }`}
-    >
-      <div>
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div
-            className={`grid place-items-center ${
-              esVisitors
-                ? "size-10 rounded-full"
-                : "size-12 rounded-[var(--radius-2)]"
-            } ${
-              disponible
-                ? "bg-[var(--color-action)] text-[var(--color-action-contrast)] shadow-xs"
-                : "bg-[var(--border-default)] text-[var(--text-muted)]"
-            }`}
-          >
-            {renderIcono(icono)}
-          </div>
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${obtenerBadgeClass()}`}
-          >
-            {obtenerBadgeLabel()}
-          </span>
-        </div>
-
-        <h3 className="text-lg font-bold text-[var(--text-body)] tracking-tight mb-2 group-hover:text-[var(--color-primary)] transition-colors">
-          {titulo}
-        </h3>
-        <p className="text-sm leading-relaxed text-[var(--text-muted)] mb-5">
-          {descripcion}
-        </p>
-
-        <div className="flex flex-wrap gap-1.5 mb-6">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="pt-4 border-t border-[var(--border-default)]">
-        {disponible && ruta ? (
-          /^https?:\/\//i.test(ruta) ? (
-            <a
-              href={ruta}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-            >
-              <span>Abrir herramienta</span>
-              {HubArrowIcon}
-            </a>
-          ) : (
-            <SmoothLinkScramble
-              to={ruta}
-              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-              accessibleLabel="Abrir herramienta"
-              before="Abrir "
-              scrambleText="herramienta"
-              trailing={HubArrowIcon}
-            />
-          )
-        ) : (
-          <button
-            type="button"
-            disabled
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-sm font-semibold text-[var(--text-disabled)] cursor-not-allowed"
-          >
-            <span>{obtenerCtaDeshabilitadoLabel()}</span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export const HubPage = () => {
-  const { apps, loadingAccess } = useAccess();
-  const { sistema } = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const esVisitors = sistema === "visitors";
-  const esGlass = sistema === "glass";
-  /** Solo SIGO usa marco de tarjeta en el hero; Visitors/Glass van abiertos. */
-  const heroConMarco = sistema === "sigo";
+  const navigate = useNavigate();
+  const auth = useContext(AuthContext);
+  const { apps, loadingAccess, isSuperAdmin, refreshAccess } = useAccess();
 
-  const visibleApps = apps.filter((app) => app.status !== "hidden");
-  const availableCount = visibleApps.filter(
-    (app) => app.canAccess && app.status === "active",
-  ).length;
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredApps = visibleApps.filter((app) => {
-    if (onlyAvailable && !(app.canAccess && app.status === "active")) {
-      return false;
+  const visibleApps = useMemo(
+    () => apps.filter((app) => app.status !== "hidden"),
+    [apps],
+  );
+
+  const { healthByAppId, isCheckingHealth, refreshHealth } = useAppsHealth(
+    visibleApps,
+    !loadingAccess,
+  );
+
+  const [sortMode, setSortMode] = useState<HubSortMode>(() =>
+    readSortModePreference(),
+  );
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
+  const [remoteLayoutMeta, setRemoteLayoutMeta] = useState<Record<
+    string,
+    BentoSize
+  > | null>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftOrder, setDraftOrder] = useState<string[]>([]);
+  const [draftSizes, setDraftSizes] = useState<Record<string, BentoSize>>({});
+  const [draggingAppId, setDraggingAppId] = useState<string | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [editorFeedback, setEditorFeedback] = useState<{
+    readonly type: "success" | "error";
+    readonly text: string;
+  } | null>(null);
+
+  const [dialogState, setDialogState] = useState<UnavailableDialogState | null>(
+    null,
+  );
+  const [reportingAppId, setReportingAppId] = useState<string | null>(null);
+  const [reportedTickets, setReportedTickets] = useState<
+    Record<string, IncidentReportResponse>
+  >({});
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchAppsUsageRanking().then((data) => {
+      if (!active) return;
+      setUsageCounts({ ...data.counts });
+      if (data.layoutMeta) {
+        setRemoteLayoutMeta({ ...data.layoutMeta });
+        saveCachedBentoSizes(data.layoutMeta);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dialogState) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDialogState(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dialogState]);
+
+  const portalSortedApps = useMemo(
+    () => sortAppsForHub(visibleApps, "portal", usageCounts),
+    [visibleApps, usageCounts],
+  );
+
+  const displaySortedApps = useMemo(() => {
+    if (isEditing && draftOrder.length > 0) {
+      const byId = new Map(visibleApps.map((app) => [app.id, app]));
+      const ordered = draftOrder
+        .map((id) => byId.get(id))
+        .filter((item): item is EffectiveAppAccess => Boolean(item));
+      const missing = visibleApps.filter((app) => !draftOrder.includes(app.id));
+      return [...ordered, ...missing];
     }
-    if (!normalizedQuery) return true;
-    return (
-      app.name.toLowerCase().includes(normalizedQuery) ||
-      app.description.toLowerCase().includes(normalizedQuery) ||
-      app.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery))
+    return sortAppsForHub(visibleApps, sortMode, usageCounts);
+  }, [isEditing, draftOrder, visibleApps, sortMode, usageCounts]);
+
+  const resolvedSizes = useMemo(() => {
+    if (isEditing) {
+      return resolveBentoSizes(displaySortedApps, draftSizes);
+    }
+    return resolveBentoSizes(displaySortedApps, remoteLayoutMeta ?? undefined);
+  }, [isEditing, displaySortedApps, draftSizes, remoteLayoutMeta]);
+
+  const unhealthyApps = useMemo(
+    () =>
+      portalSortedApps.filter((app) => {
+        if (app.status === "disabled") return false;
+        if (app.status === "maintenance") return true;
+        const healthState = healthByAppId[app.id]?.state;
+        return healthState === "offline" || healthState === "degraded";
+      }),
+    [portalSortedApps, healthByAppId],
+  );
+
+  const handleSortModeChange = (nextMode: HubSortMode) => {
+    setSortMode(nextMode);
+    saveSortModePreference(nextMode);
+  };
+
+  const handleOpenApp = useCallback((app: EffectiveAppAccess) => {
+    setUsageCounts((prev) => ({
+      ...prev,
+      [app.id]: (prev[app.id] ?? 0) + 1,
+    }));
+    void recordAppOpenEvent(app.id);
+  }, []);
+
+  const handleStartEditing = () => {
+    setEditorFeedback(null);
+    setDraftOrder(portalSortedApps.map((app) => app.id));
+    setDraftSizes(
+      resolveBentoSizes(portalSortedApps, remoteLayoutMeta ?? undefined),
     );
-  });
+    setIsEditing(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+    setDraggingAppId(null);
+    setEditorFeedback(null);
+  };
+
+  const handleResetLayout = () => {
+    clearCachedBentoSizes();
+    const freshOrder = sortAppsForHub(visibleApps, "portal", usageCounts);
+    setDraftOrder(freshOrder.map((app) => app.id));
+    setDraftSizes(resolveBentoSizes(freshOrder, {}));
+    setEditorFeedback({
+      type: "success",
+      text: "Diseño asimétrico restablecido en el borrador. Guarda para aplicarlo a todos.",
+    });
+  };
+
+  const handleMoveCard = (appId: string, delta: -1 | 1) => {
+    setDraftOrder((prev) => {
+      const idx = prev.indexOf(appId);
+      if (idx === -1) return prev;
+      const targetIdx = idx + delta;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(idx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next;
+    });
+  };
+
+  const handleChangeCardSize = (appId: string, nextSize: BentoSize) => {
+    setDraftSizes((prev) => ({
+      ...prev,
+      [appId]: nextSize,
+    }));
+  };
+
+  const handleDragStartCard = (appId: string, e: DragEvent<HTMLElement>) => {
+    setDraggingAppId(appId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", appId);
+  };
+
+  const handleDropOnCard = (
+    targetAppId: string,
+    e: DragEvent<HTMLElement>,
+  ) => {
+    const sourceAppId =
+      draggingAppId || e.dataTransfer.getData("text/plain") || "";
+    setDraggingAppId(null);
+    if (!sourceAppId || sourceAppId === targetAppId) return;
+
+    setDraftOrder((prev) => {
+      const fromIdx = prev.indexOf(sourceAppId);
+      const toIdx = prev.indexOf(targetAppId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  };
+
+  const handleDragEndCard = () => {
+    setDraggingAppId(null);
+  };
+
+  const handleSaveGlobalOrder = async () => {
+    setSavingOrder(true);
+    setEditorFeedback(null);
+    try {
+      const orderedIds =
+        draftOrder.length > 0
+          ? draftOrder
+          : portalSortedApps.map((app) => app.id);
+      const items = orderedIds.map((appId, index) => ({
+        appId,
+        displayOrder: (index + 1) * 10,
+      }));
+      await saveGlobalAppsOrder(items, draftSizes);
+      saveCachedBentoSizes(draftSizes);
+      setRemoteLayoutMeta({ ...draftSizes });
+      await refreshAccess?.();
+      setIsEditing(false);
+      setEditorFeedback({
+        type: "success",
+        text: "Orden global y disposición Bento guardados para todos los usuarios.",
+      });
+    } catch (error) {
+      setEditorFeedback({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "No fue posible guardar la disposición del portal.",
+      });
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const handleQuickReport = async (
+    app: EffectiveAppAccess,
+    detectedState: string,
+  ) => {
+    setReportingAppId(app.id);
+    setReportError(null);
+    try {
+      const stateText =
+        detectedState === "maintenance"
+          ? "en mantenimiento"
+          : detectedState === "degraded"
+            ? "con latencia o degradación"
+            : "fuera de línea";
+      const result = await sendAutomaticIncidentReport({
+        appId: app.id,
+        appName: app.name,
+        subject: `Fallo reportado en ${app.name} (${detectedState})`,
+        message: `El usuario reportó automáticamente desde el Portal de Aplicaciones que ${app.name} figura ${stateText}. Ruta configurada: ${app.route}.`,
+        detectedState,
+      });
+      setReportedTickets((prev) => ({ ...prev, [app.id]: result }));
+    } catch (error) {
+      setReportError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo enviar el reporte automático.",
+      );
+    } finally {
+      setReportingAppId(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    if (!dialogState) return;
+    const { app } = dialogState;
+    handleOpenApp(app);
+    setDialogState(null);
+    if (/^https?:\/\//i.test(app.route)) {
+      window.open(app.route, "_blank", "noopener,noreferrer");
+      return;
+    }
+    navigate(app.route);
+  };
+
+  const primaryIncident = unhealthyApps[0];
+  const primaryIncidentState = primaryIncident
+    ? primaryIncident.status === "maintenance"
+      ? "maintenance"
+      : (healthByAppId[primaryIncident.id]?.state ?? "offline")
+    : null;
+  const primaryIncidentTicket = primaryIncident
+    ? reportedTickets[primaryIncident.id]
+    : undefined;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      <div
-        className={
-          heroConMarco
-            ? "mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 sm:p-10 shadow-xs"
-            : esGlass
-              ? "mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8"
-              : "mb-10"
-        }
-      >
-        <div
-          className={
-            esVisitors
-              ? "mx-auto max-w-2xl text-center"
-              : "max-w-xl text-center md:text-left"
-          }
-        >
-          <div
-            className={`inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] px-3 py-1 mb-3 ${
-              esVisitors
-                ? "bg-[var(--surface-card)] text-sm font-medium text-[var(--text-body)]"
-                : "bg-[var(--surface-sunken)] text-xs font-medium text-[var(--text-muted)]"
-            }`}
-          >
-            <span className="size-2 rounded-full bg-[var(--state-success)]" />
-            <span>Ecosistema de Herramientas CM</span>
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <header className="mb-8 flex flex-col gap-5 border-b border-[var(--border-default)] pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
+            <span className="size-2 rounded-full bg-[var(--color-accent)]" />
+            <span>Coordinadora Mercantil &bull; Portal Interno</span>
           </div>
+
           <SmoothTitleAccent
             as="h1"
-            className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-body)] mb-3"
+            className="text-3xl font-extrabold tracking-tight text-[var(--text-body)] sm:text-4xl"
             accessibleTitle="Portal de Aplicaciones de Apoyo"
-            before="Portal de Aplicaciones de "
-            accent="Apoyo"
-            amplitude={4}
+            before="Portal de "
+            accent="Aplicaciones de Apoyo"
+            amplitude={3}
           />
-          <p className="text-sm sm:text-base leading-relaxed text-[var(--text-muted)] mb-6">
-            Accede desde un solo lugar a herramientas operativas, utilitarios de
-            diagnóstico, monitoreo y soporte técnico para los equipos de
-            Coordinadora.
+
+          <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)] sm:text-base">
+            Accede a las herramientas operativas de diagnóstico, monitoreo GKE y
+            documentación técnica según los permisos asignados a tu cuenta.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
           <div
-            className={`flex flex-wrap items-center justify-center gap-3 ${
-              esVisitors ? "" : "md:justify-start"
-            }`}
+            role="group"
+            aria-label="Orden de herramientas"
+            className="inline-flex rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] p-1 shadow-2xs"
           >
-            <a
-              href="#herramientas"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-action)] px-5 py-2.5 text-sm font-semibold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            <button
+              type="button"
+              aria-pressed={sortMode === "portal"}
+              disabled={isEditing}
+              onClick={() => handleSortModeChange("portal")}
+              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                sortMode === "portal"
+                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
+              }`}
             >
-              <span>Ver herramientas</span>
-              {HubArrowIcon}
-            </a>
-            <SmoothLinkScramble
-              to="/contacto"
-              className={
-                esVisitors
-                  ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-transparent px-5 py-2.5 text-sm font-medium text-[var(--text-muted)] transition hover:text-[var(--text-body)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-                  : "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-5 py-2.5 text-sm font-semibold text-[var(--text-body)] transition hover:bg-[var(--border-default)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-              }
-              accessibleLabel="Contacto y Soporte"
-              before="Contacto y "
-              scrambleText="Soporte"
+              Orden del portal
+            </button>
+            <button
+              type="button"
+              aria-pressed={sortMode === "most_used"}
+              disabled={isEditing}
+              onClick={() => handleSortModeChange("most_used")}
+              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                sortMode === "most_used"
+                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
+              }`}
+            >
+              Más usadas
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={refreshHealth}
+            disabled={isCheckingHealth}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-2 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-wait disabled:opacity-70"
+          >
+            <span
+              className={`size-2 rounded-full ${
+                isCheckingHealth
+                  ? "animate-ping bg-[var(--state-warning)]"
+                  : "bg-[var(--state-success)]"
+              }`}
             />
-          </div>
+            <span>{isCheckingHealth ? "Verificando..." : "Verificar salud"}</span>
+          </button>
+
+          {Boolean(isSuperAdmin) && !isEditing && (
+            <button
+              type="button"
+              onClick={handleStartEditing}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)] px-4 py-2 text-xs font-bold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-on)]"
+            >
+              <span>Personalizar portal</span>
+            </button>
+          )}
         </div>
+      </header>
 
-        {!esVisitors && (
-          <div className="hidden md:flex shrink-0 items-center justify-center py-4">
-            <FolderComponent size="sm" color="blue" />
-          </div>
-        )}
-      </div>
-
-      {esVisitors && (
-        <div
-          className="mb-16 flex items-center justify-center rounded-[var(--radius-3)] px-6 py-12"
-          style={{ background: "var(--visitors-hero-gradient)" }}
+      {isEditing && (
+        <section
+          aria-label="Barra de personalización de orden global"
+          className="mb-6 flex flex-col justify-between gap-4 rounded-[var(--radius-3)] border border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)]/55 p-4 sm:flex-row sm:items-center"
         >
-          <FolderComponent size="sm" color="blue" />
-        </div>
-      )}
-
-      {!loadingAccess && visibleApps.length > 0 && (
-        <div className="mb-6 flex flex-col gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-md">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar herramienta por nombre, descripción o etiqueta…"
-              aria-label="Buscar herramienta"
-              className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3.5 py-2 text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-            />
+          <div>
+            <h2 className="text-sm font-bold text-[var(--text-body)]">
+              Modo editor del portal (SuperAdmin)
+            </h2>
+            <p className="text-xs text-[var(--text-muted)]">
+              Arrastra las tarjetas, muévelas con las flechas o cambia su ancho
+              Bento. El orden guardado será el predeterminado para todos.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setOnlyAvailable(false)}
-              aria-pressed={!onlyAvailable}
-              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-bold transition ${
-                !onlyAvailable
-                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-2xs"
-                  : "border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
-              }`}
+              onClick={handleResetLayout}
+              className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-2 text-xs font-semibold text-[var(--text-muted)] transition hover:text-[var(--text-body)]"
             >
-              Todas ({visibleApps.length})
+              Restablecer diseño
             </button>
             <button
               type="button"
-              onClick={() => setOnlyAvailable(true)}
-              aria-pressed={onlyAvailable}
-              className={`cursor-pointer rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-bold transition ${
-                onlyAvailable
-                  ? "bg-[var(--color-primary)] text-[var(--color-primary-on)] shadow-2xs"
-                  : "border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-muted)] hover:text-[var(--text-body)]"
-              }`}
+              onClick={handleCancelEditing}
+              disabled={savingOrder}
+              className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)]"
             >
-              Disponibles ({availableCount})
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={savingOrder}
+              onClick={() => void handleSaveGlobalOrder()}
+              className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2 text-xs font-bold text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)] disabled:cursor-wait disabled:opacity-70"
+            >
+              {savingOrder ? "Guardando..." : "Guardar para todos"}
             </button>
           </div>
+        </section>
+      )}
+
+      {editorFeedback && (
+        <div
+          role="status"
+          className={`mb-6 rounded-[var(--radius-2)] border px-4 py-3 text-xs font-medium ${
+            editorFeedback.type === "error"
+              ? "border-[var(--state-error)]/40 bg-[var(--alert-error-bg)] text-[var(--alert-error-fg)]"
+              : "border-[var(--state-success)]/40 bg-[var(--alert-success-bg)] text-[var(--alert-success-fg)]"
+          }`}
+        >
+          {editorFeedback.text}
         </div>
       )}
 
-      <div
-        id="herramientas"
-        className="grid scroll-mt-24 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-      >
-        {loadingAccess ? (
-          <div
-            className="col-span-full space-y-4"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <p className="text-center text-sm text-[var(--text-muted)]">
-              Cargando herramientas…
+      {reportError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-[var(--radius-2)] border border-[var(--state-error)]/40 bg-[var(--alert-error-bg)] px-4 py-3 text-xs font-medium text-[var(--alert-error-fg)]"
+        >
+          {reportError}
+        </div>
+      )}
+
+      {!loadingAccess && primaryIncident && primaryIncidentState && (
+        <section
+          role="region"
+          aria-label="Aviso de disponibilidad de herramientas"
+          className="mb-6 flex flex-col justify-between gap-3 rounded-[var(--radius-3)] border border-[var(--state-warning)]/45 bg-[var(--alert-warning-bg)] px-5 py-4 text-[var(--alert-warning-fg)] sm:flex-row sm:items-center"
+        >
+          <div className="space-y-1">
+            <p className="text-xs font-bold uppercase tracking-wider">
+              Incidencia detectada ({unhealthyApps.length}{" "}
+              {unhealthyApps.length === 1
+                ? "servicio con alerta"
+                : "servicios con alerta"}
+              )
             </p>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[0, 1, 2].map((idx) => (
-                <div
-                  key={idx}
-                  className="h-64 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6"
-                />
-              ))}
+            <p className="text-sm font-medium">
+              {unhealthyApps.map((item) => item.name).join(", ")}{" "}
+              {unhealthyApps.length === 1
+                ? "presenta estado de contingencia o mantenimiento."
+                : "presentan estado de contingencia o mantenimiento."}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {primaryIncidentTicket ? (
+              <span className="rounded-[var(--radius-pill)] border border-[var(--state-success)]/40 bg-[var(--alert-success-bg)] px-3.5 py-1.5 text-xs font-bold text-[var(--alert-success-fg)]">
+                Reporte enviado ({primaryIncidentTicket.ticketId})
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={reportingAppId === primaryIncident.id}
+                onClick={() =>
+                  void handleQuickReport(primaryIncident, primaryIncidentState)
+                }
+                className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--state-warning)] px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+              >
+                {reportingAppId === primaryIncident.id
+                  ? "Enviando reporte..."
+                  : `Reportar ${primaryIncident.name}`}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {loadingAccess ? (
+        <HubSkeletonGrid />
+      ) : (
+        <section
+          aria-label="Herramientas del portal"
+          className="grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12"
+        >
+          {displaySortedApps.map((app, index) => (
+            <BentoAppCard
+              key={app.id}
+              app={app}
+              bentoSize={resolvedSizes[app.id] ?? "wide"}
+              health={healthByAppId[app.id]}
+              usageCount={usageCounts[app.id] ?? 0}
+              userEmail={auth?.email}
+              isEditing={isEditing}
+              canMovePrev={index > 0}
+              canMoveNext={index < displaySortedApps.length - 1}
+              isDragging={draggingAppId === app.id}
+              reportingAppId={reportingAppId}
+              reportedTicketId={reportedTickets[app.id]?.ticketId}
+              showUsageBadge={sortMode === "most_used"}
+              onOpenApp={handleOpenApp}
+              onClickUnavailable={(targetApp, reason) =>
+                setDialogState({ app: targetApp, reason })
+              }
+              onQuickReport={(targetApp, detected) =>
+                void handleQuickReport(targetApp, detected)
+              }
+              onMoveCard={handleMoveCard}
+              onChangeSize={handleChangeCardSize}
+              onDragStartCard={handleDragStartCard}
+              onDropOnCard={handleDropOnCard}
+              onDragEndCard={handleDragEndCard}
+            />
+          ))}
+        </section>
+      )}
+
+      {dialogState && (
+        <div
+          className="animate-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs"
+          onClick={() => setDialogState(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hub-unavailable-dialog-title"
+            style={{ boxShadow: "var(--elevation-modal)" }}
+            className="animate-modal-dialog w-full max-w-md rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-warning)]/40 bg-[var(--alert-warning-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--alert-warning-fg)]">
+                  {dialogState.reason === "maintenance"
+                    ? "En mantenimiento"
+                    : "Servicio fuera de línea"}
+                </span>
+                <h2
+                  id="hub-unavailable-dialog-title"
+                  className="mt-2 text-lg font-bold text-[var(--text-body)]"
+                >
+                  {dialogState.app.name} podría no responder
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Cerrar advertencia"
+                onClick={() => setDialogState(null)}
+                className="cursor-pointer rounded-full p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--text-body)]"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+              {dialogState.reason === "maintenance"
+                ? "Esta aplicación figura actualmente en mantenimiento administrativo. Si intentas ingresar, es posible que veas una pantalla de bloqueo o respuestas incompletas."
+                : "La verificación /health de esta herramienta no respondió como operativa. Puede estar reiniciándose o presentando una falla temporal."}
+            </p>
+
+            {reportedTickets[dialogState.app.id] && (
+              <div className="mt-4 rounded-[var(--radius-2)] border border-[var(--state-success)]/40 bg-[var(--alert-success-bg)] px-3.5 py-2.5 text-xs font-semibold text-[var(--alert-success-fg)]">
+                Reporte automático registrado (
+                {reportedTickets[dialogState.app.id].ticketId}).
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={handleProceedAnyway}
+                className="w-full cursor-pointer rounded-[var(--radius-pill)] bg-[var(--color-action)] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-action-contrast)] shadow-xs transition hover:bg-[var(--color-action-hover)]"
+              >
+                Abrir de todos modos
+              </button>
+
+              {!reportedTickets[dialogState.app.id] && (
+                <button
+                  type="button"
+                  disabled={reportingAppId === dialogState.app.id}
+                  onClick={() =>
+                    void handleQuickReport(dialogState.app, dialogState.reason)
+                  }
+                  className="w-full cursor-pointer rounded-[var(--radius-pill)] border border-[var(--state-error)]/40 bg-[var(--alert-error-bg)] px-4 py-2.5 text-xs font-bold text-[var(--alert-error-fg)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {reportingAppId === dialogState.app.id
+                    ? "Enviando reporte automático..."
+                    : "Reportar fallo automáticamente"}
+                </button>
+              )}
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Link
+                  to={`/contacto?app=${encodeURIComponent(dialogState.app.id)}&asunto=${encodeURIComponent(dialogState.reason === "maintenance" ? "mantenimiento" : "diagnostico")}&estado=${encodeURIComponent(dialogState.reason)}`}
+                  onClick={() => setDialogState(null)}
+                  className="text-xs font-semibold text-[var(--text-link)] hover:underline"
+                >
+                  Abrir formulario detallado
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setDialogState(null)}
+                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] px-4 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)]"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
-        ) : filteredApps.length === 0 ? (
-          <div className="col-span-full rounded-[var(--radius-3)] border border-dashed border-[var(--border-default)] bg-[var(--surface-card)] p-10 text-center">
-            <p className="text-sm font-bold text-[var(--text-body)]">
-              No se encontraron herramientas con esos criterios.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setOnlyAvailable(false);
-              }}
-              className="mt-3 cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-1.5 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--border-default)]"
-            >
-              Limpiar filtros
-            </button>
-          </div>
-        ) : (
-          filteredApps.map((app) => (
-            <AppCard
-              key={app.id}
-              titulo={app.name}
-              descripcion={app.description}
-              ruta={app.route}
-              status={app.status}
-              canAccess={app.canAccess}
-              tags={app.tags}
-              icono={app.icon}
-            />
-          ))
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,22 +4,14 @@ import { useAccess } from './access-context'
 import { LoginScreen } from '../../features/auth/login-screen'
 import { SinAccesoScreen } from '../../features/auth/sin-acceso-screen'
 import { ErrorAuthScreen } from '../../features/auth/error-auth-screen'
+import { AppBootScreen } from '../ui/app-boot-screen'
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
   const { estadoAuth, email, errorAuth, cerrarSesion, iniciarSesion, reintentar } = useAuth()
   const { isUserBlocked, refreshAccess } = useAccess()
 
   if (estadoAuth === 'inicializando') {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-[var(--surface-app)]">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="size-10 animate-spin rounded-full border-3 border-[var(--color-primary-soft)] border-t-[var(--color-primary)]" />
-          <p className="text-sm font-medium text-[var(--text-muted)] animate-pulse">
-            Verificando credenciales corporativas...
-          </p>
-        </div>
-      </div>
-    )
+    return <AppBootScreen />
   }
 
   if (estadoAuth === 'error' && errorAuth) {

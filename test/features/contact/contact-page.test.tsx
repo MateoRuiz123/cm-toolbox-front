@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { ContactPage } from "../../../src/features/contact/contact-page";
 
-const renderContactFlow = () =>
+const renderContactFlow = (path = "/contacto") =>
   render(
-    <MemoryRouter initialEntries={["/contacto"]}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/contacto" element={<ContactPage />} />
       </Routes>
@@ -76,5 +76,41 @@ describe("ContactPage", () => {
     expect(assignedHref).toMatch(/^mailto:soporte\.ti@coordinadora\.com\?/);
     expect(assignedHref).toContain(encodeURIComponent("[Toolbox]"));
     expect(assignedHref).toContain(encodeURIComponent("Ana Coordinadora"));
+  });
+
+  it("precarga query params y envía reporte automático al presionar el botón directo", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            ticketId: "INC-CONTACT-42",
+            createdAt: new Date().toISOString(),
+            status: "sent",
+            notifiedWebhook: true,
+          },
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderContactFlow("/contacto?app=diagnostico&estado=offline");
+
+    const messageBox = screen.getByLabelText(/mensaje o detalle del caso/i);
+    expect((messageBox as HTMLTextAreaElement).value).toContain(
+      "Herramienta reportada: diagnostico",
+    );
+    expect((messageBox as HTMLTextAreaElement).value).toContain(
+      "Estado detectado: offline",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /enviar reporte automático/i }),
+    );
+
+    expect(
+      await screen.findByText(/INC-CONTACT-42/),
+    ).toBeInTheDocument();
   });
 });

@@ -11,6 +11,9 @@ const EVENT_LABELS: Readonly<Record<string, string>> = {
   APP_STATUS_CHANGED: "Cambio de estado",
   APP_ID_RENAMED: "Renombre de identificador",
   APP_UPSERTED: "Alta o actualización de herramienta",
+  APPS_ORDER_UPDATED: "Actualización de orden global del portal",
+  APP_OPENED: "Apertura de herramienta",
+  APP_INCIDENT_REPORTED: "Reporte automático de incidencia",
   ROLE_UPSERTED: "Alta o actualización de rol",
   ROLE_DELETED: "Eliminación de rol",
   USER_ACCESS_UPDATED: "Actualización de acceso de usuario",
@@ -132,6 +135,12 @@ export const describeAuditEvent = (log: AuditLogItem): string => {
       const role = roleLabel(before?.roleId);
       return `Eliminó al usuario ${log.targetId} (rol previo: ${role}).`;
     }
+    case "APPS_ORDER_UPDATED":
+      return `Actualizó el orden global predeterminado y la disposición Bento del portal (${log.targetId}).`;
+    case "APP_OPENED":
+      return `Registró la apertura de la herramienta ${log.targetId}.`;
+    case "APP_INCIDENT_REPORTED":
+      return `Registró un reporte automático de incidencia para la herramienta ${log.targetId}.`;
     default:
       return `Registró el evento ${log.eventType} sobre ${describeAuditTarget(log.targetType, log.targetId)}.`;
   }
