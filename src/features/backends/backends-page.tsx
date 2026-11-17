@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAccess } from "@/shared/auth/use-access";
+import { safeStorage } from "@/shared/lib/safe-storage";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 import type { LogEnvironment } from "../logs/api/logs-types";
 import { GcloudLoginModal } from "../logs/gcloud-login-modal";
@@ -26,8 +27,55 @@ import {
 } from "./backend-comparison-card";
 import { QuickLogsDrawer } from "./quick-logs-drawer";
 
+const GUIDE_STORAGE_KEY = "cm-toolbox:backends-guide-hidden";
+
+type BackendStatusFilter = "all" | "alert" | "healthy" | "drift";
+type AutoRefreshSeconds = 0 | 30 | 60;
+
 const telemetryKey = (backendId: string, env: LogEnvironment): string =>
   `${backendId}|${env}`;
+
+const isScaledZeroSnapshot = (snap?: BackendEnvSnapshot): boolean =>
+  Boolean(
+    snap?.data &&
+      snap.data.desiredReplicas === 0 &&
+      snap.data.readyReplicas === 0,
+  );
+
+const classifyBackend = (
+  backend: UserBackendItem,
+  snapshots: Readonly<Record<string, BackendEnvSnapshot>>,
+  canViewProd: boolean,
+) => {
+  const testSnap = backend.testTarget
+    ? snapshots[telemetryKey(backend.id, "test")]
+    : undefined;
+  const prodSnap =
+    backend.prodTarget && canViewProd
+      ? snapshots[telemetryKey(backend.id, "prod")]
+      : undefined;
+
+  const activeSnaps = [testSnap, prodSnap].filter((s): s is BackendEnvSnapshot =>
+    Boolean(s),
+  );
+
+  const hasAlert = activeSnaps.some(
+    (s) =>
+      Boolean(s.requiresAuth) ||
+      Boolean(s.error) ||
+      s.data?.status === "degraded" ||
+      (s.data?.status === "offline" && !isScaledZeroSnapshot(s)),
+  );
+
+  const hasHealthy =
+    !hasAlert && activeSnaps.some((s) => s.data?.status === "healthy");
+
+  const testTag = testSnap?.data?.imageTag ?? null;
+  const prodTag = prodSnap?.data?.imageTag ?? null;
+  const hasVersionDrift = Boolean(testTag && prodTag && testTag !== prodTag);
+
+  return { hasAlert, hasHealthy, hasVersionDrift };
+};
 
 export const BackendsPage = () => {
   const navigate = useNavigate();
@@ -41,7 +89,12 @@ export const BackendsPage = () => {
     Record<string, BackendEnvSnapshot>
   >({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<BackendStatusFilter>("all");
+  const [autoRefreshSec, setAutoRefreshSec] = useState<AutoRefreshSeconds>(0);
   const [layoutMode, setLayoutMode] = useState<"wide" | "compact">("wide");
+  const [showGuide, setShowGuide] = useState(
+    () => safeStorage.getItem(GUIDE_STORAGE_KEY) !== "1",
+  );
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,6 +189,27 @@ export const BackendsPage = () => {
     };
   }, [userEmail, refreshAllMetrics]);
 
+  useEffect(() => {
+    if (autoRefreshSec === 0 || backends.length === 0) return;
+    const intervalId = window.setInterval(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+      void refreshAllMetrics(backends, false);
+    }, autoRefreshSec * 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [autoRefreshSec, backends, refreshAllMetrics]);
+
+  const handleToggleGuide = (visible: boolean) => {
+    safeStorage.setItem(GUIDE_STORAGE_KEY, visible ? "0" : "1");
+    setShowGuide(visible);
+  };
+
   const handleSaveBackend = async (item: UserBackendItem) => {
     const saved = await upsertUserBackend(item, userEmail);
     setBackends((prev) => {
@@ -186,36 +260,51 @@ export const BackendsPage = () => {
     navigate("/logs");
   };
 
+  const backendStatusMap = useMemo(() => {
+    const map = new Map<
+      string,
+      ReturnType<typeof classifyBackend>
+    >();
+    for (const backend of backends) {
+      map.set(backend.id, classifyBackend(backend, snapshots, canViewProd));
+    }
+    return map;
+  }, [backends, snapshots, canViewProd]);
+
   const filteredBackends = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return backends;
-    return backends.filter(
-      (b) =>
+    return backends.filter((b) => {
+      const cls = backendStatusMap.get(b.id);
+      if (statusFilter === "alert" && !cls?.hasAlert) return false;
+      if (statusFilter === "healthy" && !cls?.hasHealthy) return false;
+      if (statusFilter === "drift" && !cls?.hasVersionDrift) return false;
+      if (!q) return true;
+      return (
         b.name.toLowerCase().includes(q) ||
         b.description.toLowerCase().includes(q) ||
         b.tags.some((t) => t.toLowerCase().includes(q)) ||
         b.testTarget?.workload.toLowerCase().includes(q) ||
-        b.prodTarget?.workload.toLowerCase().includes(q),
-    );
-  }, [backends, searchQuery]);
+        b.prodTarget?.workload.toLowerCase().includes(q)
+      );
+    });
+  }, [backends, backendStatusMap, statusFilter, searchQuery]);
 
   const kpiSummary = useMemo(() => {
-    let healthyEnvs = 0;
-    let alertEnvs = 0;
-    for (const b of backends) {
-      for (const env of ["test", "prod"] as const) {
-        const snap = snapshots[telemetryKey(b.id, env)];
-        if (!snap?.data) continue;
-        if (snap.data.status === "healthy") healthyEnvs += 1;
-        else alertEnvs += 1;
-      }
+    let healthyBackends = 0;
+    let alertBackends = 0;
+    let driftBackends = 0;
+    for (const cls of backendStatusMap.values()) {
+      if (cls.hasAlert) alertBackends += 1;
+      if (cls.hasHealthy) healthyBackends += 1;
+      if (cls.hasVersionDrift) driftBackends += 1;
     }
     return {
       totalBackends: backends.length,
-      healthyEnvs,
-      alertEnvs,
+      healthyBackends,
+      alertBackends,
+      driftBackends,
     };
-  }, [backends, snapshots]);
+  }, [backends.length, backendStatusMap]);
 
   const needsAnyAuth = useMemo(
     () => Object.values(snapshots).some((s) => s.requiresAuth),
@@ -240,12 +329,20 @@ export const BackendsPage = () => {
           />
 
           <p className="mt-1 text-xs text-[var(--text-muted)] sm:text-sm">
-            Compara Test y Producción lado a lado: pods Ready, reinicios, CPU/RAM,
-            RPM/errores HTTP y acceso directo a GKE / Logs.
+            Compara Test y Producción lado a lado: estado de réplicas, paridad de
+            versión, recursos, actividad y acceso directo a logs.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={showGuide}
+            onClick={() => handleToggleGuide(!showGuide)}
+            className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          >
+            Guía rápida
+          </button>
           <button
             type="button"
             onClick={() => void handleImportFavorites()}
@@ -273,23 +370,128 @@ export const BackendsPage = () => {
         </div>
       </header>
 
+      {showGuide && (
+        <section
+          aria-label="¿Cómo leer este tablero?"
+          className="mb-4 rounded-[var(--radius-2)] border border-[var(--color-primary)]/25 bg-[var(--surface-card)] px-4 py-3.5"
+        >
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">
+              ¿Cómo leer este tablero?
+            </h2>
+            <button
+              type="button"
+              onClick={() => handleToggleGuide(false)}
+              className="cursor-pointer text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-body)] hover:underline"
+            >
+              Entendido, ocultar guía
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 divide-y divide-[var(--border-default)]/60 text-xs md:grid-cols-3 md:divide-x md:divide-y-0">
+            <div className="pt-2 md:pt-0 md:pr-3">
+              <p className="font-bold text-[var(--text-body)]">
+                1. Semáforo por ambiente
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                La barra lateral indica al instante si un ambiente está Operativo
+                (verde), Degradado (ámbar), Sin pods (rojo) o Escalado 0/0 (apagado).
+              </p>
+            </div>
+            <div className="pt-2 md:px-3 md:pt-0">
+              <p className="font-bold text-[var(--text-body)]">
+                2. Versión Test vs Prod
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                En la cabecera verás la etiqueta de imagen desplegada y un aviso
+                automático si Test y Producción tienen distinta versión.
+              </p>
+            </div>
+            <div className="pt-2 md:pl-3 md:pt-0">
+              <p className="font-bold text-[var(--text-body)]">
+                3. Logs en vivo y pods a 1 clic
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                Despliega <strong>Ver pods</strong> si hay fallos o reinicios, o
+                abre <strong>Vista rápida de logs</strong> sin abandonar la página.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section
         aria-label="Resumen y filtros de backends"
         className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-2.5"
       >
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1 font-semibold text-[var(--text-body)]">
-            Servicios:
-            <strong className="font-mono">{kpiSummary.totalBackends}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-success)]/35 bg-[var(--alert-success-bg)] px-2.5 py-1 font-semibold text-[var(--alert-success-fg)]">
-            Operativos:
-            <strong className="font-mono">{kpiSummary.healthyEnvs}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-warning)]/35 bg-[var(--alert-warning-bg)] px-2.5 py-1 font-semibold text-[var(--alert-warning-fg)]">
-            Con alerta:
-            <strong className="font-mono">{kpiSummary.alertEnvs}</strong>
-          </span>
+        <div
+          role="group"
+          aria-label="Filtrar por estado"
+          className="flex flex-wrap items-center gap-1.5 text-xs"
+        >
+          <button
+            type="button"
+            aria-pressed={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+            className={`cursor-pointer rounded-full border px-3 py-1 font-semibold transition ${
+              statusFilter === "all"
+                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-on)]"
+                : "border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-body)] hover:border-[var(--color-primary)]/50"
+            }`}
+          >
+            Todos (<span className="font-mono">{kpiSummary.totalBackends}</span>)
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={statusFilter === "alert"}
+            onClick={() =>
+              setStatusFilter((prev) => (prev === "alert" ? "all" : "alert"))
+            }
+            className={`cursor-pointer rounded-full border px-3 py-1 font-semibold transition ${
+              statusFilter === "alert"
+                ? "border-[var(--state-warning)] bg-[var(--state-warning)] text-white"
+                : "border-[var(--state-warning)]/35 bg-[var(--alert-warning-bg)] text-[var(--alert-warning-fg)] hover:opacity-90"
+            }`}
+          >
+            Con alerta (
+            <span className="font-mono">{kpiSummary.alertBackends}</span>)
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={statusFilter === "healthy"}
+            onClick={() =>
+              setStatusFilter((prev) =>
+                prev === "healthy" ? "all" : "healthy",
+              )
+            }
+            className={`cursor-pointer rounded-full border px-3 py-1 font-semibold transition ${
+              statusFilter === "healthy"
+                ? "border-[var(--state-success)] bg-[var(--state-success)] text-white"
+                : "border-[var(--state-success)]/35 bg-[var(--alert-success-bg)] text-[var(--alert-success-fg)] hover:opacity-90"
+            }`}
+          >
+            Operativos (
+            <span className="font-mono">{kpiSummary.healthyBackends}</span>)
+          </button>
+
+          {kpiSummary.driftBackends > 0 && (
+            <button
+              type="button"
+              aria-pressed={statusFilter === "drift"}
+              onClick={() =>
+                setStatusFilter((prev) => (prev === "drift" ? "all" : "drift"))
+              }
+              className={`cursor-pointer rounded-full border px-3 py-1 font-semibold transition ${
+                statusFilter === "drift"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                  : "border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:opacity-90"
+              }`}
+            >
+              Diferente versión (
+              <span className="font-mono">{kpiSummary.driftBackends}</span>)
+            </button>
+          )}
         </div>
 
         <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
@@ -303,6 +505,35 @@ export const BackendsPage = () => {
               className="w-full max-w-xs rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3.5 py-1.5 text-xs text-[var(--text-body)] focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)]"
             />
           )}
+
+          <div
+            role="group"
+            aria-label="Auto-actualización"
+            className="inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-0.5"
+          >
+            <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Auto
+            </span>
+            {([
+              { label: "Manual", value: 0 },
+              { label: "30s", value: 30 },
+              { label: "60s", value: 60 },
+            ] as const).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={autoRefreshSec === option.value}
+                onClick={() => setAutoRefreshSec(option.value)}
+                className={`cursor-pointer rounded-[var(--radius-pill)] px-2 py-1 text-[11px] font-semibold transition ${
+                  autoRefreshSec === option.value
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-on)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
 
           <div
             role="group"
@@ -373,14 +604,14 @@ export const BackendsPage = () => {
           <h2 className="text-lg font-bold text-[var(--text-body)]">
             {backends.length === 0
               ? "Aún no tienes backends registrados"
-              : "No hay coincidencias con tu filtro"}
+              : "No hay coincidencias con tus filtros"}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-muted)]">
             {backends.length === 0
               ? "Añade manualmente tus microservicios de Test y Producción o impórtalos en 1 clic desde tus favoritos de Logs."
-              : "Prueba con otro término de búsqueda."}
+              : "Prueba con otro término o limpia el filtro de estado."}
           </p>
-          {backends.length === 0 && (
+          {backends.length === 0 ? (
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button
                 type="button"
@@ -398,6 +629,19 @@ export const BackendsPage = () => {
                 className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2.5 text-xs font-semibold text-[var(--text-body)]"
               >
                 Importar favoritos de Logs
+              </button>
+            </div>
+          ) : (
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+                className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-2 text-xs font-semibold text-[var(--text-body)]"
+              >
+                Ver todos los backends
               </button>
             </div>
           )}

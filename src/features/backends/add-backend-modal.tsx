@@ -57,6 +57,31 @@ const buildLocalCatalogSeed = (email?: string): PairedSuggestion[] => {
   }));
 };
 
+const clusterPriority = (cluster: string, env: "test" | "prod"): number => {
+  if (env === "prod") {
+    if (cluster === "cm-cluster-prod-ap-apis-02") return 3;
+    if (cluster === "cluster-coordinadora-prod") return 2;
+    if (cluster === "cm-cluster") return 1;
+    return 0;
+  }
+  if (cluster === "cm-cluster-test-apis-01") return 3;
+  if (cluster === "cluster-coordinadora-test-02") return 2;
+  if (cluster === "cm-cluster-test") return 1;
+  return 0;
+};
+
+const pickPreferredWorkload = (
+  current: WorkloadInfo | undefined,
+  incoming: WorkloadInfo,
+  env: "test" | "prod",
+): WorkloadInfo => {
+  if (!current) return incoming;
+  return clusterPriority(incoming.cluster, env) >
+    clusterPriority(current.cluster, env)
+    ? incoming
+    : current;
+};
+
 const mergePairedCatalogs = (
   base: readonly PairedSuggestion[],
   testItems: readonly WorkloadInfo[],
@@ -68,12 +93,12 @@ const mergePairedCatalogs = (
   }
   for (const item of testItems) {
     const entry = byName.get(item.name) ?? {};
-    if (!entry.test) entry.test = item;
+    entry.test = pickPreferredWorkload(entry.test, item, "test");
     byName.set(item.name, entry);
   }
   for (const item of prodItems) {
     const entry = byName.get(item.name) ?? {};
-    if (!entry.prod) entry.prod = item;
+    entry.prod = pickPreferredWorkload(entry.prod, item, "prod");
     byName.set(item.name, entry);
   }
   return Array.from(byName.entries())
@@ -650,6 +675,9 @@ export const AddBackendModal = ({
                   placeholder="/logs-api/health"
                   className="mt-0.5 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-body)]"
                 />
+                <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+                  Opcional — GKE ya reporta el estado de pods sin URL pública.
+                </span>
               </label>
             </fieldset>
 
@@ -707,6 +735,9 @@ export const AddBackendModal = ({
                   placeholder="https://..."
                   className="mt-0.5 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-body)]"
                 />
+                <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">
+                  Opcional — úsalo solo si el servicio expone `/health` hacia el navegador.
+                </span>
               </label>
             </fieldset>
           </div>

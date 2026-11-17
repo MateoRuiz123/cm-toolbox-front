@@ -35,11 +35,14 @@ export interface PodMetricItem {
   readonly cpuMillicores: number | null;
   readonly memoryMiB: number | null;
   readonly startedAt: string | null;
+  readonly issueReason?: string | null;
+  readonly issueMessage?: string | null;
 }
 
 export interface TrafficMetricsSummary {
   readonly windowMinutes: number;
   readonly sampledPod: string | null;
+  readonly sampledPodsCount?: number;
   readonly totalRequests: number;
   readonly rpm: number;
   readonly count2xx: number;
@@ -47,6 +50,10 @@ export interface TrafficMetricsSummary {
   readonly count5xx: number;
   readonly rate4xxPercent: number;
   readonly rate5xxPercent: number;
+  readonly logLinesCount?: number;
+  readonly logsPerMinute?: number;
+  readonly errorLinesCount?: number;
+  readonly lastErrorMessage?: string | null;
 }
 
 export type WorkloadHealthStatus = "healthy" | "degraded" | "offline";
@@ -61,6 +68,13 @@ export interface WorkloadTelemetryData {
   readonly readyReplicas: number;
   readonly totalRestarts: number;
   readonly deployedAt: string | null;
+  readonly imageTag?: string | null;
+  readonly imageRef?: string | null;
+  readonly cpuRequestMillicores?: number | null;
+  readonly cpuLimitMillicores?: number | null;
+  readonly memoryRequestMiB?: number | null;
+  readonly memoryLimitMiB?: number | null;
+  readonly issueSummary?: string | null;
   readonly totalCpuMillicores: number | null;
   readonly totalMemoryMiB: number | null;
   readonly pods: readonly PodMetricItem[];

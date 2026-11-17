@@ -417,4 +417,195 @@ describe("BackendsPage", () => {
       (screen.getByLabelText("Namespace Test") as HTMLInputElement).value,
     ).toBe("guias");
   });
+
+  it("muestra guía para primera visita, paridad de versión, diagnóstico de fallo, logs/m, pods desplegables y filtros por estado", async () => {
+    const user = userEvent.setup();
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/me/backends")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "cm-aliados-consulta-ms",
+                name: "cm-aliados-consulta-ms",
+                description: "Consultas aliados",
+                tags: ["Aliados"],
+                testTarget: {
+                  cluster: "cm-cluster-test-apis-01",
+                  namespace: "aliados",
+                  workload: "cm-aliados-consulta-ms",
+                },
+                prodTarget: {
+                  cluster: "cm-cluster-prod-ap-apis-02",
+                  namespace: "aliados",
+                  workload: "cm-aliados-consulta-ms",
+                },
+                displayOrder: 10,
+              },
+              {
+                id: "service-api-guias",
+                name: "service-api-guias",
+                description: "Cotización y emisión de guías",
+                tags: ["Guías"],
+                testTarget: {
+                  cluster: "cluster-coordinadora-test-02",
+                  namespace: "apis",
+                  workload: "service-api-guias",
+                },
+                prodTarget: {
+                  cluster: "cluster-coordinadora-prod",
+                  namespace: "apis",
+                  workload: "service-api-guias",
+                },
+                displayOrder: 20,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.includes("/workload-telemetry")) {
+        const isProd = url.includes("env=prod");
+        if (url.includes("cm-aliados-consulta-ms")) {
+          return new Response(
+            JSON.stringify({
+              env: isProd ? "prod" : "test",
+              cluster: isProd
+                ? "cm-cluster-prod-ap-apis-02"
+                : "cm-cluster-test-apis-01",
+              namespace: "aliados",
+              workload: "cm-aliados-consulta-ms",
+              status: isProd ? "healthy" : "degraded",
+              desiredReplicas: isProd ? 3 : 1,
+              readyReplicas: isProd ? 3 : 0,
+              totalRestarts: isProd ? 0 : 2,
+              deployedAt: new Date(Date.now() - 120_000).toISOString(),
+              imageTag: isProd ? "184229" : "181011",
+              cpuLimitMillicores: isProd ? 1500 : 500,
+              memoryLimitMiB: isProd ? 2304 : 768,
+              issueSummary: isProd ? null : "ImagePullBackOff",
+              totalCpuMillicores: isProd ? 450 : 25,
+              totalMemoryMiB: isProd ? 1152 : 120,
+              pods: [
+                {
+                  name: isProd
+                    ? "cm-aliados-consulta-ms-prod-a"
+                    : "cm-aliados-consulta-ms-test-a",
+                  phase: isProd ? "Running" : "Pending",
+                  ready: isProd,
+                  restarts: isProd ? 0 : 2,
+                  cpuMillicores: isProd ? 150 : 25,
+                  memoryMiB: isProd ? 384 : 120,
+                  startedAt: new Date().toISOString(),
+                  issueReason: isProd ? null : "ImagePullBackOff",
+                  issueMessage: isProd ? null : "ErrImagePull on image :181011",
+                },
+              ],
+              traffic: {
+                windowMinutes: 5,
+                sampledPod: "cm-aliados-consulta-ms-prod-a",
+                totalRequests: 0,
+                rpm: 0,
+                count2xx: 0,
+                count4xx: 0,
+                count5xx: 0,
+                rate4xxPercent: 0,
+                rate5xxPercent: 0,
+                logLinesCount: isProd ? 30 : 0,
+                logsPerMinute: isProd ? 6 : 0,
+                errorLinesCount: 0,
+              },
+              checkedAt: new Date().toISOString(),
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            env: isProd ? "prod" : "test",
+            cluster: isProd
+              ? "cluster-coordinadora-prod"
+              : "cluster-coordinadora-test-02",
+            namespace: "apis",
+            workload: "service-api-guias",
+            status: isProd ? "healthy" : "offline",
+            desiredReplicas: isProd ? 8 : 0,
+            readyReplicas: isProd ? 8 : 0,
+            totalRestarts: 0,
+            deployedAt: new Date().toISOString(),
+            imageTag: isProd ? "v4.2" : null,
+            issueSummary: isProd ? null : "Escalado a 0 réplicas (0/0)",
+            totalCpuMillicores: isProd ? 900 : null,
+            totalMemoryMiB: isProd ? 2048 : null,
+            pods: [],
+            traffic: {
+              windowMinutes: 5,
+              sampledPod: isProd ? "service-api-guias-1" : null,
+              totalRequests: 0,
+              rpm: 0,
+              count2xx: 0,
+              count4xx: 0,
+              count5xx: 0,
+              rate4xxPercent: 0,
+              rate5xxPercent: 0,
+              logLinesCount: isProd ? 45 : 0,
+              logsPerMinute: isProd ? 9 : 0,
+              errorLinesCount: 0,
+            },
+            checkedAt: new Date().toISOString(),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderBackends();
+
+    expect(
+      await screen.findByText(/¿cómo leer este tablero\?/i),
+    ).toBeInTheDocument();
+
+    expect(
+      await screen.findByText(/Diferente versión: Test :181011 ≠ Prod :184229/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("ImagePullBackOff")).toBeInTheDocument();
+    expect(screen.getByText("6 logs/m")).toBeInTheDocument();
+    expect(screen.getByText("9 logs/m")).toBeInTheDocument();
+    expect(screen.getByText("Escalado 0/0")).toBeInTheDocument();
+
+    const expandPodsBtns = screen.getAllByRole("button", {
+      name: /ver pods \(1\)/i,
+    });
+    await user.click(expandPodsBtns[0]);
+    expect(
+      screen.getByText("cm-aliados-consulta-ms-test-a"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /con alerta/i }));
+    expect(
+      screen.getByRole("heading", { name: "cm-aliados-consulta-ms" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "service-api-guias" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^todos/i }));
+    expect(
+      screen.getByRole("heading", { name: "service-api-guias" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /entendido, ocultar guía/i }),
+    );
+    expect(
+      screen.queryByText(/¿cómo leer este tablero\?/i),
+    ).not.toBeInTheDocument();
+  });
 });
