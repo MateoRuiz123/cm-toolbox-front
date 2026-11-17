@@ -144,9 +144,10 @@ const runDocker = (args, cwd) =>
     child.on("exit", (code) => resolve(code ?? 1));
   });
 
-const runDockerCapture = (args) =>
+const runDockerCapture = (args, { env = process.env } = {}) =>
   new Promise((resolve) => {
     const child = spawn("docker", args, {
+      env,
       stdio: ["ignore", "pipe", "pipe"],
       shell: process.platform === "win32",
     });
@@ -162,6 +163,107 @@ const runDockerCapture = (args) =>
       resolve({ code: code ?? 1, stdout, stderr }),
     );
   });
+
+/**
+ * Docker Desktop y el daemon del sistema pueden coexistir. Si Postgres del
+ * toolbox ya corre en uno, fijamos DOCKER_HOST ahí para no chocar :5433/:6380.
+ * Respeta DOCKER_HOST si el usuario ya lo definió.
+ */
+const listDockerHostCandidates = () => {
+  const candidates = [];
+  const seen = new Set();
+  const add = (host) => {
+    const key = host ?? "";
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push(host);
+  };
+
+  add(undefined);
+  if (process.platform !== "win32" && existsSync("/var/run/docker.sock")) {
+    add("unix:///var/run/docker.sock");
+  }
+  const home = process.env.HOME?.trim();
+  if (home) {
+    const desktopSock = path.join(home, ".docker", "desktop", "docker.sock");
+    if (existsSync(desktopSock)) {
+      add(`unix://${desktopSock}`);
+    }
+  }
+  return candidates;
+};
+
+const dockerEnvForHost = (host) => {
+  const env = { ...process.env };
+  if (host) env.DOCKER_HOST = host;
+  else delete env.DOCKER_HOST;
+  return env;
+};
+
+const resolveDockerHost = async () => {
+  const userHost = process.env.DOCKER_HOST?.trim();
+  if (userHost) {
+    process.stdout.write(`[dev] DOCKER_HOST=${userHost} (env)\n`);
+    return;
+  }
+
+  /** @type {string | undefined | null} null = no hallado; undefined = contexto actual */
+  let withRunning = null;
+  /** @type {string | undefined | null} */
+  let withExists = null;
+  /** @type {string | undefined} */
+  let firstWorking;
+  let foundWorking = false;
+
+  for (const host of listDockerHostCandidates()) {
+    const env = dockerEnvForHost(host);
+    const info = await runDockerCapture(["info", "-f", "{{.ServerVersion}}"], {
+      env,
+    });
+    if (info.code !== 0) continue;
+    if (!foundWorking) {
+      foundWorking = true;
+      firstWorking = host;
+    }
+
+    const status = await runDockerCapture(
+      ["inspect", "-f", "{{.State.Status}}", DOCS_PG_CONTAINER],
+      { env },
+    );
+    if (status.code !== 0) continue;
+    const state = status.stdout.trim();
+    if (state === "running") {
+      withRunning = host;
+      break;
+    }
+    if (withExists === null) withExists = host;
+  }
+
+  if (!foundWorking) {
+    console.warn(
+      "[dev] Docker no responde; intento compose con el contexto actual.",
+    );
+    return;
+  }
+
+  const chosen =
+    withRunning !== null
+      ? withRunning
+      : withExists !== null
+        ? withExists
+        : firstWorking;
+
+  if (chosen) {
+    process.env.DOCKER_HOST = chosen;
+    process.stdout.write(
+      `[dev] DOCKER_HOST=${chosen} (auto: ${DOCS_PG_CONTAINER})\n`,
+    );
+    return;
+  }
+
+  delete process.env.DOCKER_HOST;
+  process.stdout.write("[dev] Docker: contexto actual\n");
+};
 
 const applySqlViaDocker = (sqlFile, database = DOCS_DB_NAME) =>
   new Promise((resolve) => {
@@ -367,6 +469,8 @@ const main = async () => {
     console.error(`[dev] No encontré Vite en ${viteJs}. Ejecuta pnpm install.`);
     process.exit(1);
   }
+
+  await resolveDockerHost();
 
   const docsRoot = path.join(LOCAL_ROOT, "cm-docs-ms");
 
