@@ -55,6 +55,19 @@ export const DEFAULT_APPS_CATALOG: readonly EffectiveAppAccess[] = [
     allowedActions: ["view", "view_prod"],
   },
   {
+    id: "backends",
+    name: "Mis Backends",
+    description:
+      "Tablero personal de microservicios en Test y Producción con estado GKE, consumo CPU/RAM, RPM/errores HTTP y acceso rápido a logs en vivo.",
+    route: "/backends",
+    icon: "pubsub",
+    tags: ["GKE", "Métricas", "Logs"],
+    status: "active",
+    displayOrder: 22,
+    canAccess: true,
+    allowedActions: ["view"],
+  },
+  {
     id: "docs",
     name: "Documentación de APIs",
     description:

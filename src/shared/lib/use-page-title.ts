@@ -28,6 +28,11 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
     description:
       "Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test) para troubleshooting operativo.",
   },
+  "/backends": {
+    title: "Mis Backends | Coordinadora Toolbox",
+    description:
+      "Tablero personal para comparar el estado en Test y Producción de tus microservicios GKE, CPU/RAM, RPM/errores HTTP y logs en vivo.",
+  },
   "/docs": {
     title: "Documentación de APIs | Coordinadora Toolbox",
     description:

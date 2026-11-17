@@ -377,19 +377,23 @@ const main = async () => {
   // El volumen de Postgres no re-ejecuta init. 005 agrega docs/manage
   // (sin esa acción el rol admin no ve Nueva documentación / Clientes).
   const accessDocsSeed = path.join(accessRoot, "sql", "005_seed_docs_app.sql");
-  if (existsSync(accessDocsSeed)) {
-    const seeded = await applySqlViaDocker(
-      accessDocsSeed,
-      "cm_toolbox_access",
-    );
-    if (seeded.code === 0) {
-      await runDockerCapture([
-        "exec",
-        "cm-toolbox-redis",
-        "redis-cli",
-        "DEL",
-        "rbac:catalog:apps",
-      ]);
+  const accessBackendsSeed = path.join(
+    accessRoot,
+    "sql",
+    "006_seed_backends_app.sql",
+  );
+  for (const seedPath of [accessDocsSeed, accessBackendsSeed]) {
+    if (existsSync(seedPath)) {
+      const seeded = await applySqlViaDocker(seedPath, "cm_toolbox_access");
+      if (seeded.code === 0) {
+        await runDockerCapture([
+          "exec",
+          "cm-toolbox-redis",
+          "redis-cli",
+          "DEL",
+          "rbac:catalog:apps",
+        ]);
+      }
     }
   }
 

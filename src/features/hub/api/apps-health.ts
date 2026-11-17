@@ -30,7 +30,9 @@ export interface IncidentReportResponse {
   readonly deliveryMode: "backend" | "local_fallback";
 }
 
-export type BentoSize = "featured" | "wide" | "standard";
+export type BentoSize = string;
+
+const BENTO_SIZE_PATTERN = /^(?:featured|wide|standard|(?:[3-9]|1[0-2])x[1-3])$/;
 
 export interface AppsUsageRankingData {
   readonly counts: Readonly<Record<string, number>>;
@@ -40,6 +42,7 @@ export interface AppsUsageRankingData {
 const HEALTH_ENDPOINTS: Readonly<Record<string, string>> = {
   diagnostico: "/diagnostico-api/health",
   logs: "/logs-api/health",
+  backends: "/logs-api/health",
   docs: "/docs-api/health",
 };
 
@@ -183,7 +186,7 @@ const parseLayoutMeta = (raw: unknown): Record<string, BentoSize> | null => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const result: Record<string, BentoSize> = {};
   for (const [key, val] of Object.entries(raw)) {
-    if (val === "featured" || val === "wide" || val === "standard") {
+    if (typeof val === "string" && BENTO_SIZE_PATTERN.test(val)) {
       result[key] = val;
     }
   }

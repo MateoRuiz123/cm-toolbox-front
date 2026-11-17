@@ -1,10 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "../../../src/app/theme-provider";
 import { guardarConsultaSesion } from "../../../src/features/diagnostico/consulta-sesion";
 import { resetAppsHealthCache } from "../../../src/features/hub/api/apps-health";
+import {
+  computeAutoPackedBentoSizes,
+  parseBentoDimensions,
+} from "../../../src/features/hub/hub-layout-storage";
 import { HubPage } from "../../../src/features/hub/hub-page";
 import { AccessContext } from "../../../src/shared/auth/access-context";
 import { buildFallbackAccessProfile } from "../../../src/shared/auth/access-types";
@@ -244,5 +248,80 @@ describe("HubPage Bento, Health Check y Editor", () => {
     expect(
       (savedBodies[0].layoutMeta as Record<string, string>).diagnostico,
     ).toBe("standard");
+  });
+
+  it("empaqueta cualquier número de apps sin huecos y permite redimensionar esquinas con cuadrículas guía", async () => {
+    const user = userEvent.setup();
+    const profile = buildFallbackAccessProfile("super.admin@coordinadora.com");
+    const sizesFor5 = computeAutoPackedBentoSizes(profile.apps);
+    const totalRow1 =
+      parseBentoDimensions(sizesFor5[profile.apps[0].id]).colSpan +
+      parseBentoDimensions(sizesFor5[profile.apps[1].id]).colSpan;
+    const totalRow2 =
+      parseBentoDimensions(sizesFor5[profile.apps[2].id]).colSpan +
+      parseBentoDimensions(sizesFor5[profile.apps[3].id]).colSpan +
+      parseBentoDimensions(sizesFor5[profile.apps[4].id]).colSpan;
+    expect(totalRow1).toBe(12);
+    expect(totalRow2).toBe(12);
+
+    const savedBodies: Array<Record<string, unknown>> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/apps/usage-ranking")) {
+        return new Response(
+          JSON.stringify({ data: { counts: {}, layoutMeta: null } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/admin/apps/order") && init?.method === "PUT") {
+        savedBodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+        return new Response(JSON.stringify({ data: { updated: 5 } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AccessContext.Provider value={createAccessValue({ isSuperAdmin: true })}>
+        <ThemeProvider>
+          <MemoryRouter initialEntries={["/"]}>
+            <HubPage />
+          </MemoryRouter>
+        </ThemeProvider>
+      </AccessContext.Provider>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /personalizar portal/i }),
+    );
+
+    expect(screen.getByTestId("bento-grid-guides")).toBeInTheDocument();
+
+    const cornerHandle = screen.getByRole("button", {
+      name: /redimensionar esquina inferior derecha de diagnóstico de migración/i,
+    });
+    fireEvent.pointerDown(cornerHandle, { clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 260, clientY: 290 });
+    fireEvent.mouseUp(window);
+
+    await user.click(
+      screen.getByRole("button", { name: /guardar para todos/i }),
+    );
+
+    await waitFor(() => {
+      expect(savedBodies).toHaveLength(1);
+    });
+    expect(
+      (savedBodies[0].layoutMeta as Record<string, string>).diagnostico,
+    ).toBe("9x2");
   });
 });

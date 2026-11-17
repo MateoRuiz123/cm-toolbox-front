@@ -22,6 +22,8 @@ import {
 import { BentoAppCard, type UnavailableReason } from "./bento-app-card";
 import {
   clearCachedBentoSizes,
+  computeAutoPackedBentoSizes,
+  formatBentoSize,
   readSortModePreference,
   resolveBentoSizes,
   saveCachedBentoSizes,
@@ -192,10 +194,18 @@ export const HubPage = () => {
     clearCachedBentoSizes();
     const freshOrder = sortAppsForHub(visibleApps, "portal", usageCounts);
     setDraftOrder(freshOrder.map((app) => app.id));
-    setDraftSizes(resolveBentoSizes(freshOrder, {}));
+    setDraftSizes(computeAutoPackedBentoSizes(freshOrder));
     setEditorFeedback({
       type: "success",
-      text: "Diseño asimétrico restablecido en el borrador. Guarda para aplicarlo a todos.",
+      text: "Diseño automático sin huecos restablecido en el borrador. Guarda para aplicarlo a todos.",
+    });
+  };
+
+  const handleAutoPackLayout = () => {
+    setDraftSizes(computeAutoPackedBentoSizes(displaySortedApps));
+    setEditorFeedback({
+      type: "success",
+      text: "Tarjetas auto-ajustadas en filas exactas de 12 columnas. Guarda para aplicarlo.",
     });
   };
 
@@ -433,11 +443,18 @@ export const HubPage = () => {
               Modo editor del portal (SuperAdmin)
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              Arrastra las tarjetas, muévelas con las flechas o cambia su ancho
-              Bento. El orden guardado será el predeterminado para todos.
+              Arrastra esquinas o bordes de cualquier tarjeta para ajustar sus
+              columnas/filas sobre la cuadrícula guía, o reordena con flechas.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAutoPackLayout}
+              className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--surface-card)] px-3.5 py-2 text-xs font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+            >
+              Auto-ajustar sin huecos
+            </button>
             <button
               type="button"
               onClick={handleResetLayout}
@@ -535,40 +552,75 @@ export const HubPage = () => {
       {loadingAccess ? (
         <HubSkeletonGrid />
       ) : (
-        <section
-          aria-label="Herramientas del portal"
-          className="grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12"
-        >
-          {displaySortedApps.map((app, index) => (
-            <BentoAppCard
-              key={app.id}
-              app={app}
-              bentoSize={resolvedSizes[app.id] ?? "wide"}
-              health={healthByAppId[app.id]}
-              usageCount={usageCounts[app.id] ?? 0}
-              userEmail={auth?.email}
-              isEditing={isEditing}
-              canMovePrev={index > 0}
-              canMoveNext={index < displaySortedApps.length - 1}
-              isDragging={draggingAppId === app.id}
-              reportingAppId={reportingAppId}
-              reportedTicketId={reportedTickets[app.id]?.ticketId}
-              showUsageBadge={sortMode === "most_used"}
-              onOpenApp={handleOpenApp}
-              onClickUnavailable={(targetApp, reason) =>
-                setDialogState({ app: targetApp, reason })
-              }
-              onQuickReport={(targetApp, detected) =>
-                void handleQuickReport(targetApp, detected)
-              }
-              onMoveCard={handleMoveCard}
-              onChangeSize={handleChangeCardSize}
-              onDragStartCard={handleDragStartCard}
-              onDropOnCard={handleDropOnCard}
-              onDragEndCard={handleDragEndCard}
-            />
-          ))}
-        </section>
+        <div className="relative">
+          {isEditing && (
+            <>
+              <div
+                aria-hidden="true"
+                className="mb-2 hidden grid-cols-12 gap-6 text-center lg:grid"
+              >
+                {Array.from({ length: 12 }, (_, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded border border-dashed border-[var(--color-primary)]/35 bg-[var(--color-primary-soft)]/30 py-1 font-mono text-[10px] font-bold text-[var(--color-primary)]"
+                  >
+                    C{idx + 1}
+                  </div>
+                ))}
+              </div>
+              <div
+                aria-hidden="true"
+                data-testid="bento-grid-guides"
+                className="pointer-events-none absolute inset-x-0 bottom-0 top-8 hidden grid-cols-12 gap-6 lg:grid"
+              >
+                {Array.from({ length: 12 }, (_, idx) => (
+                  <div
+                    key={idx}
+                    className="h-full rounded-[var(--radius-2)] border border-dashed border-[var(--color-primary)]/20 bg-[var(--color-primary-soft)]/10"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          <section
+            aria-label="Herramientas del portal"
+            className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12 lg:grid-flow-dense lg:auto-rows-[minmax(230px,auto)]"
+          >
+            {displaySortedApps.map((app, index) => (
+              <BentoAppCard
+                key={app.id}
+                app={app}
+                bentoSize={resolvedSizes[app.id] ?? "wide"}
+                health={healthByAppId[app.id]}
+                usageCount={usageCounts[app.id] ?? 0}
+                userEmail={auth?.email}
+                isEditing={isEditing}
+                canMovePrev={index > 0}
+                canMoveNext={index < displaySortedApps.length - 1}
+                isDragging={draggingAppId === app.id}
+                reportingAppId={reportingAppId}
+                reportedTicketId={reportedTickets[app.id]?.ticketId}
+                showUsageBadge={sortMode === "most_used"}
+                onOpenApp={handleOpenApp}
+                onClickUnavailable={(targetApp, reason) =>
+                  setDialogState({ app: targetApp, reason })
+                }
+                onQuickReport={(targetApp, detected) =>
+                  void handleQuickReport(targetApp, detected)
+                }
+                onMoveCard={handleMoveCard}
+                onChangeSize={handleChangeCardSize}
+                onResizeDimensions={(appId, cols, rows) =>
+                  handleChangeCardSize(appId, formatBentoSize(cols, rows))
+                }
+                onDragStartCard={handleDragStartCard}
+                onDropOnCard={handleDropOnCard}
+                onDragEndCard={handleDragEndCard}
+              />
+            ))}
+          </section>
+        </div>
       )}
 
       {dialogState && (

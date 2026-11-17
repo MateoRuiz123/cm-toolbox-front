@@ -51,6 +51,12 @@ const LogsPage = lazy(() =>
   import("../features/logs/logs-page").then((m) => ({ default: m.LogsPage })),
 );
 
+const BackendsPage = lazy(() =>
+  import("../features/backends/backends-page").then((m) => ({
+    default: m.BackendsPage,
+  })),
+);
+
 const AdminPage = lazy(() =>
   import("../features/admin/admin-page").then((m) => ({
     default: m.AdminPage,
@@ -132,7 +138,7 @@ const ClienteDocsRoutes = lazy(() =>
 /** Indicador de carga para páginas de feature resueltas con import dinámico. */
 const RouteFallback = () => <RouteSkeletonFallback />;
 
-const STATIC_TOOL_IDS = new Set(["diagnostico", "logs", "docs"]);
+const STATIC_TOOL_IDS = new Set(["diagnostico", "logs", "backends", "docs"]);
 
 export const AppRoutes = () => {
   usePageTitle();
@@ -161,6 +167,14 @@ export const AppRoutes = () => {
         element={
           <AppAccessGuard appId="logs">
             <LogsPage />
+          </AppAccessGuard>
+        }
+      />
+      <Route
+        path="/backends"
+        element={
+          <AppAccessGuard appId="backends">
+            <BackendsPage />
           </AppAccessGuard>
         }
       />

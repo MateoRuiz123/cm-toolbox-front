@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router";
 import type {
   AppIconType,
@@ -7,7 +7,11 @@ import type {
 import { leerConsultaSesion } from "../diagnostico/consulta-sesion";
 import { leerLogsRecientes } from "../logs/logs-sesion";
 import type { AppHealthResult, BentoSize } from "./api/apps-health";
-import { BENTO_SIZE_LABEL, BENTO_SPAN_CLASS } from "./hub-layout-storage";
+import {
+  BENTO_SIZE_LABEL,
+  getBentoSpanClasses,
+  parseBentoDimensions,
+} from "./hub-layout-storage";
 
 export type UnavailableReason = "offline" | "maintenance";
 
@@ -32,6 +36,11 @@ export interface BentoAppCardProps {
   readonly onQuickReport: (app: EffectiveAppAccess, detectedState: string) => void;
   readonly onMoveCard: (appId: string, delta: -1 | 1) => void;
   readonly onChangeSize: (appId: string, nextSize: BentoSize) => void;
+  readonly onResizeDimensions?: (
+    appId: string,
+    colSpan: number,
+    rowSpan: number,
+  ) => void;
   readonly onDragStartCard: (appId: string, e: DragEvent<HTMLElement>) => void;
   readonly onDropOnCard: (targetAppId: string, e: DragEvent<HTMLElement>) => void;
   readonly onDragEndCard: () => void;
@@ -170,13 +179,17 @@ export const BentoAppCard = ({
   onQuickReport,
   onMoveCard,
   onChangeSize,
+  onResizeDimensions,
   onDragStartCard,
   onDropOnCard,
   onDragEndCard,
 }: BentoAppCardProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const cardRef = useRef<HTMLElement | null>(null);
 
-  const esFeatured = bentoSize === "featured";
+  const dims = parseBentoDimensions(bentoSize);
+  const esFeatured = bentoSize === "featured" || dims.colSpan >= 7;
   const esConstruccion = app.status === "disabled";
   const enMantenimiento = app.status === "maintenance";
   const puedeAbrirConPermiso = app.canAccess;
@@ -223,7 +236,78 @@ export const BentoAppCard = ({
     userEmail,
   ]);
 
-  const spanClass = BENTO_SPAN_CLASS[bentoSize];
+  const spanClass = getBentoSpanClasses(bentoSize);
+
+  const startResize = (
+    dir: "e" | "w" | "s" | "n" | "se" | "sw" | "ne" | "nw",
+    e: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!isEditing || !onResizeDimensions) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startCols = dims.colSpan;
+    const startRows = dims.rowSpan;
+    const gridWidth =
+      cardRef.current?.parentElement?.getBoundingClientRect().width ?? 0;
+    const colStepPx = gridWidth > 0 ? gridWidth / 12 : 80;
+    const rowStepPx = 190;
+
+    const hSign =
+      dir === "e" || dir === "se" || dir === "ne"
+        ? 1
+        : dir === "w" || dir === "sw" || dir === "nw"
+          ? -1
+          : 0;
+    const vSign =
+      dir === "s" || dir === "se" || dir === "sw"
+        ? 1
+        : dir === "n" || dir === "ne" || dir === "nw"
+          ? -1
+          : 0;
+
+    setIsResizing(true);
+
+    const handleMove = (clientX: number, clientY: number) => {
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const nextCols =
+        hSign === 0
+          ? startCols
+          : Math.min(
+              12,
+              Math.max(3, Math.round(startCols + (hSign * dx) / colStepPx)),
+            );
+      const nextRows =
+        vSign === 0
+          ? startRows
+          : Math.min(
+              3,
+              Math.max(1, Math.round(startRows + (vSign * dy) / rowStepPx)),
+            );
+      onResizeDimensions(app.id, nextCols, nextRows);
+    };
+
+    const onPointerMove = (ev: globalThis.PointerEvent) =>
+      handleMove(ev.clientX, ev.clientY);
+    const onMouseMove = (ev: globalThis.MouseEvent) =>
+      handleMove(ev.clientX, ev.clientY);
+
+    const finish = () => {
+      setIsResizing(false);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("mouseup", finish);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("mouseup", finish);
+  };
 
   const handleDragOver = (e: DragEvent<HTMLElement>) => {
     if (!isEditing) return;
@@ -402,27 +486,92 @@ export const BentoAppCard = ({
 
   return (
     <article
-      draggable={isEditing}
-      onDragStart={(e) => isEditing && onDragStartCard(app.id, e)}
+      ref={cardRef}
+      draggable={isEditing && !isResizing}
+      onDragStart={(e) => isEditing && !isResizing && onDragStartCard(app.id, e)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onDragEnd={onDragEndCard}
       style={{ boxShadow: "var(--elevation-card)" }}
-      className={`${spanClass} relative flex flex-col justify-between overflow-hidden rounded-[var(--radius-3)] border bg-[var(--surface-card)] transition-all duration-200 ${
+      className={`${spanClass} relative flex flex-col justify-between rounded-[var(--radius-3)] border bg-[var(--surface-card)] transition-all duration-200 ${
         esFeatured ? "p-6 sm:p-7" : "p-5 sm:p-6"
       } ${
         isEditing
-          ? "cursor-grab border-dashed border-[var(--color-primary)]/50 hover:border-[var(--color-primary)] active:cursor-grabbing"
+          ? "overflow-visible cursor-grab border-dashed border-[var(--color-primary)]/70 hover:border-[var(--color-primary)] active:cursor-grabbing"
           : esOffline
-            ? "border-[var(--state-error)]/40 hover:border-[var(--state-error)]/60"
+            ? "overflow-hidden border-[var(--state-error)]/40 hover:border-[var(--state-error)]/60"
             : enMantenimiento || esDegraded
-              ? "border-[var(--state-warning)]/40 hover:border-[var(--state-warning)]/60"
-              : "border-[var(--border-default)] hover:-translate-y-0.5 hover:border-[var(--color-primary)]/45"
+              ? "overflow-hidden border-[var(--state-warning)]/40 hover:border-[var(--state-warning)]/60"
+              : "overflow-hidden border-[var(--border-default)] hover:-translate-y-0.5 hover:border-[var(--color-primary)]/45"
       } ${isDragging ? "opacity-50 scale-[0.98]" : ""} ${
-        isDragOver ? "ring-2 ring-[var(--color-primary)] ring-offset-2" : ""
+        isDragOver || isResizing ? "ring-2 ring-[var(--color-primary)] ring-offset-2" : ""
       }`}
     >
+      {isEditing && (
+        <>
+          {/* Tiradores de borde */}
+          <button
+            type="button"
+            data-resize-handle="e"
+            aria-label={`Redimensionar borde derecho de ${app.name}`}
+            onPointerDown={(e) => startResize("e", e)}
+            className="absolute right-0 top-6 bottom-6 z-20 w-2 cursor-ew-resize rounded-full transition hover:bg-[var(--color-primary)]/35"
+          />
+          <button
+            type="button"
+            data-resize-handle="w"
+            aria-label={`Redimensionar borde izquierdo de ${app.name}`}
+            onPointerDown={(e) => startResize("w", e)}
+            className="absolute left-0 top-6 bottom-6 z-20 w-2 cursor-ew-resize rounded-full transition hover:bg-[var(--color-primary)]/35"
+          />
+          <button
+            type="button"
+            data-resize-handle="s"
+            aria-label={`Redimensionar borde inferior de ${app.name}`}
+            onPointerDown={(e) => startResize("s", e)}
+            className="absolute bottom-0 left-6 right-6 z-20 h-2 cursor-ns-resize rounded-full transition hover:bg-[var(--color-primary)]/35"
+          />
+          <button
+            type="button"
+            data-resize-handle="n"
+            aria-label={`Redimensionar borde superior de ${app.name}`}
+            onPointerDown={(e) => startResize("n", e)}
+            className="absolute top-0 left-6 right-6 z-20 h-2 cursor-ns-resize rounded-full transition hover:bg-[var(--color-primary)]/35"
+          />
+
+          {/* Esquinas cuadradas tipo lienzo/dibujo */}
+          <button
+            type="button"
+            data-resize-handle="nw"
+            aria-label={`Redimensionar esquina superior izquierda de ${app.name}`}
+            onPointerDown={(e) => startResize("nw", e)}
+            className="absolute -left-1.5 -top-1.5 z-30 size-3.5 cursor-nwse-resize rounded-[2px] border-2 border-[var(--color-primary)] bg-[var(--surface-card)] shadow-xs transition hover:scale-125"
+          />
+          <button
+            type="button"
+            data-resize-handle="ne"
+            aria-label={`Redimensionar esquina superior derecha de ${app.name}`}
+            onPointerDown={(e) => startResize("ne", e)}
+            className="absolute -right-1.5 -top-1.5 z-30 size-3.5 cursor-nesw-resize rounded-[2px] border-2 border-[var(--color-primary)] bg-[var(--surface-card)] shadow-xs transition hover:scale-125"
+          />
+          <button
+            type="button"
+            data-resize-handle="sw"
+            aria-label={`Redimensionar esquina inferior izquierda de ${app.name}`}
+            onPointerDown={(e) => startResize("sw", e)}
+            className="absolute -left-1.5 -bottom-1.5 z-30 size-3.5 cursor-nesw-resize rounded-[2px] border-2 border-[var(--color-primary)] bg-[var(--surface-card)] shadow-xs transition hover:scale-125"
+          />
+          <button
+            type="button"
+            data-resize-handle="se"
+            aria-label={`Redimensionar esquina inferior derecha de ${app.name}`}
+            onPointerDown={(e) => startResize("se", e)}
+            className="absolute -right-1.5 -bottom-1.5 z-30 size-3.5 cursor-nwse-resize rounded-[2px] border-2 border-[var(--color-primary)] bg-[var(--surface-card)] shadow-xs transition hover:scale-125"
+          />
+        </>
+      )}
+
       {esFeatured && !esConstruccion && (
         <div
           aria-hidden="true"
@@ -455,6 +604,9 @@ export const BentoAppCard = ({
               >
                 &rarr;
               </button>
+              <span className="ml-1 rounded border border-[var(--color-primary)]/30 bg-[var(--surface-card)] px-2 py-0.5 font-mono text-[10px] font-bold text-[var(--color-primary)]">
+                {dims.colSpan} &times; {dims.rowSpan}
+              </span>
             </div>
 
             <div
