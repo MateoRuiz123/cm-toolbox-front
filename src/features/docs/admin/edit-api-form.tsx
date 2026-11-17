@@ -6,6 +6,7 @@ import {
   updateAdminApi,
 } from "../api/docs-api";
 import type { DocsClient } from "../api/types";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 
 type EditApiFormProps = {
   readonly apiId: string;
@@ -117,9 +118,11 @@ export const EditApiForm = ({ apiId, onUpdated }: EditApiFormProps) => {
       </p>
 
       {loading ? (
-        <p className="mt-3 text-xs text-[var(--text-muted)]" aria-busy="true">
-          Cargando datos…
-        </p>
+        <SkeletonRegion label="Cargando datos…" className="mt-4 space-y-4">
+          <Skeleton className="h-10 w-full rounded-[var(--radius-2)]" />
+          <Skeleton className="h-20 w-full rounded-[var(--radius-2)]" />
+          <Skeleton className="h-10 w-1/2 rounded-[var(--radius-2)]" />
+        </SkeletonRegion>
       ) : (
         <form className="mt-4 space-y-4" onSubmit={(e) => void handleSubmit(e)}>
           <label className="block">

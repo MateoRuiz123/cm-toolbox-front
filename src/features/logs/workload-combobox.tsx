@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { WorkloadInfo } from './api/logs-types'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 interface WorkloadComboboxProps {
   readonly id: string
@@ -208,12 +209,11 @@ export const WorkloadCombobox = ({
             className="max-h-64 overflow-y-auto py-1"
           >
             {loading && (
-              <li className="flex items-center gap-2 px-3.5 py-3 text-xs text-[var(--text-muted)]" role="status">
-                <span
-                  aria-hidden="true"
-                  className="size-3.5 animate-spin rounded-full border-2 border-[var(--color-primary)]/30 border-t-[var(--color-primary)]"
-                />
-                Cargando cargas de trabajo…
+              <li className="space-y-2 px-3.5 py-3" role="status" aria-busy="true">
+                <span className="sr-only">Cargando cargas de trabajo…</span>
+                {["w-3/4", "w-2/3", "w-4/5", "w-1/2"].map((width) => (
+                  <Skeleton key={width} className={`h-4 ${width}`} />
+                ))}
               </li>
             )}
 

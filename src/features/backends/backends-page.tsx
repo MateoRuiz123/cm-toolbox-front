@@ -25,6 +25,7 @@ import {
   BackendComparisonCard,
   type BackendEnvSnapshot,
 } from "./backend-comparison-card";
+import { BackendsListSkeleton } from "./backend-skeleton";
 import { QuickLogsDrawer } from "./quick-logs-drawer";
 
 const GUIDE_STORAGE_KEY = "cm-toolbox:backends-guide-hidden";
@@ -593,12 +594,7 @@ export const BackendsPage = () => {
       )}
 
       {loadingList ? (
-        <div
-          role="status"
-          className="rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-8 text-center text-sm text-[var(--text-muted)]"
-        >
-          Cargando catálogo personal de backends...
-        </div>
+        <BackendsListSkeleton compact={layoutMode === "compact"} />
       ) : filteredBackends.length === 0 ? (
         <div className="rounded-[var(--radius-3)] border border-dashed border-[var(--border-default)] bg-[var(--surface-card)] p-10 text-center">
           <h2 className="text-lg font-bold text-[var(--text-body)]">

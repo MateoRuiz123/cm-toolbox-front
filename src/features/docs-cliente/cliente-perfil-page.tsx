@@ -9,6 +9,7 @@ import {
 } from "../docs/api/docs-api";
 import type { DocsClient } from "../docs/api/types";
 import { resetPasswordCliente } from "./auth/cliente-session";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 
 type ClientePerfilPageProps = {
   readonly onUnauthorized?: () => void;
@@ -92,12 +93,15 @@ export const ClientePerfilPage = ({
 
   if (loading) {
     return (
-      <div
-        className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]"
-        aria-busy="true"
+      <SkeletonRegion
+        label="Cargando perfil…"
+        className="mx-auto w-full max-w-xl space-y-4 px-4 py-10"
       >
-        Cargando perfil…
-      </div>
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-11 w-full rounded-[var(--radius-2)]" />
+        <Skeleton className="h-11 w-full rounded-[var(--radius-2)]" />
+        <Skeleton className="h-10 w-32 rounded-full" />
+      </SkeletonRegion>
     );
   }
 

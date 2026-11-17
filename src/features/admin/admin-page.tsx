@@ -28,6 +28,7 @@ import { AppsStatusTab } from "./apps-status-tab";
 import { AuditLogsTab } from "./audit-logs-tab";
 import { RolesTab } from "./roles-tab";
 import { UsersPermissionsTab } from "./users-permissions-tab";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 
 type AdminTab = "users" | "roles" | "apps" | "audit";
 
@@ -408,9 +409,24 @@ export const AdminPage = () => {
       )}
 
       {loading ? (
-        <div className="rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-10 text-center text-sm text-[var(--text-muted)]">
-          Cargando configuración de control de acceso...
-        </div>
+        <SkeletonRegion label="Cargando configuración de control de acceso...">
+          <div
+            aria-hidden="true"
+            className="divide-y divide-[var(--border-default)]/60 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)]"
+          >
+            {[0, 1, 2, 3, 4].map((row) => (
+              <div key={row} className="flex items-center gap-4 px-4 py-3.5">
+                <Skeleton className="size-8 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-48" />
+                  <Skeleton className="h-2.5 w-32" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="hidden h-6 w-24 rounded-full sm:block" />
+              </div>
+            ))}
+          </div>
+        </SkeletonRegion>
       ) : (
         <>
           {activeTab === "users" && (

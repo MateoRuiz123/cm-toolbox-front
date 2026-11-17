@@ -8,6 +8,7 @@ import {
   resetPasswordCliente,
 } from "./auth/cliente-session";
 import { ClienteShell } from "./cliente-shell";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 
 /**
  * Login clientes: Keycloak client OIDC distinto (sin Google).
@@ -69,12 +70,15 @@ export const ClienteLoginPage = () => {
   if (checking) {
     return (
       <ClienteShell>
-        <div
-          className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-muted)]"
-          aria-busy="true"
+        <SkeletonRegion
+          label="Cargando…"
+          className="mx-auto w-full max-w-sm space-y-4 px-4 py-16"
         >
-          Cargando…
-        </div>
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-11 w-full rounded-[var(--radius-2)]" />
+          <Skeleton className="h-11 w-full rounded-[var(--radius-2)]" />
+          <Skeleton className="h-10 w-full rounded-full" />
+        </SkeletonRegion>
       </ClienteShell>
     );
   }

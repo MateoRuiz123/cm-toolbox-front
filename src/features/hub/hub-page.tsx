@@ -33,29 +33,49 @@ import {
 } from "./hub-layout-storage";
 import { useAppsHealth } from "./use-apps-health";
 
+import { Skeleton, SkeletonRegion, SkeletonText } from "@/shared/ui/skeleton";
+
 interface UnavailableDialogState {
   readonly app: EffectiveAppAccess;
   readonly reason: UnavailableReason;
 }
 
+const HUB_SKELETON_SPANS: readonly string[] = [
+  "md:col-span-3 lg:col-span-6",
+  "md:col-span-3 lg:col-span-6",
+  "md:col-span-2 lg:col-span-4",
+  "md:col-span-2 lg:col-span-4",
+  "md:col-span-2 lg:col-span-4",
+];
+
 const HubSkeletonGrid = () => (
-  <div
-    role="status"
-    aria-live="polite"
-    aria-busy="true"
-    className="space-y-6"
+  <SkeletonRegion
+    label="Cargando herramientas del portal..."
+    className="grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12"
   >
-    <div className="flex items-center gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-muted)]">
-      <span className="size-3 animate-ping rounded-full bg-[var(--color-primary)]" />
-      <span>Cargando herramientas del portal...</span>
-    </div>
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-6 lg:grid-cols-12">
-      <div className="h-56 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-6 lg:col-span-7" />
-      <div className="h-56 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-3 lg:col-span-5" />
-      <div className="h-48 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-3 lg:col-span-4" />
-      <div className="h-48 animate-pulse rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 md:col-span-6 lg:col-span-8" />
-    </div>
-  </div>
+    {HUB_SKELETON_SPANS.map((span, index) => (
+      <div
+        key={index}
+        aria-hidden="true"
+        className={`flex min-h-52 flex-col justify-between rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6 ${span}`}
+      >
+        <div>
+          <div className="flex items-start justify-between">
+            <Skeleton className="size-11 rounded-[var(--radius-2)]" />
+            <Skeleton className="h-5 w-24 rounded-full" />
+          </div>
+          <Skeleton className="mt-5 h-6 w-2/3" />
+          <SkeletonText lines={2} className="mt-3" />
+          <div className="mt-4 flex gap-1.5">
+            <Skeleton className="h-4 w-16 rounded-full" />
+            <Skeleton className="h-4 w-20 rounded-full" />
+            <Skeleton className="h-4 w-14 rounded-full" />
+          </div>
+        </div>
+        <Skeleton className="mt-6 h-9 w-full rounded-full" />
+      </div>
+    ))}
+  </SkeletonRegion>
 );
 
 export const HubPage = () => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { LogEnvironment } from "../logs/api/logs-types";
+import { BackendEnvMetricsSkeleton } from "./backend-skeleton";
 import { buildGcpLogsExplorerUrl, buildGkeWorkloadUrl } from "../logs/gcp-links";
 import type {
   BackendEnvTarget,
@@ -362,6 +363,11 @@ const BackendEnvColumn = ({
                 {snapshot.error}
               </div>
             )}
+
+            {!telemetry &&
+              !snapshot?.error &&
+              !snapshot?.requiresAuth &&
+              (!snapshot || snapshot.loading) && <BackendEnvMetricsSkeleton />}
 
             {telemetry && scaledZero && (
               <div className="mb-2.5 rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)]">

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 import { useAccess } from "./access-context";
 
@@ -13,13 +14,14 @@ interface AppAccessGuardProps {
  * Bloquea el acceso directo por URL si la app está en mantenimiento, desactivada o sin permiso 'view'.
  */
 const AccessLoadingFallback = () => (
-  <div
-    className="flex min-h-[40vh] items-center justify-center bg-[var(--surface-app)] text-sm text-[var(--text-muted)]"
-    aria-busy="true"
-    aria-live="polite"
+  <SkeletonRegion
+    label="Cargando permisos…"
+    className="mx-auto w-full max-w-6xl space-y-4 bg-[var(--surface-app)] px-4 py-8 sm:px-6"
   >
-    Cargando permisos…
-  </div>
+    <Skeleton className="h-5 w-40 rounded-full" />
+    <Skeleton className="h-9 w-72 max-w-full" />
+    <Skeleton className="h-56 w-full rounded-[var(--radius-3)]" />
+  </SkeletonRegion>
 );
 
 export const AppAccessGuard = ({ appId, children }: AppAccessGuardProps) => {

@@ -6,6 +6,7 @@ import {
   validateOpenApiSource,
   type OpenApiSourceMode,
 } from "./openapi-source";
+import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 
 type PublishSpecFormProps = {
   readonly apiId: string;
@@ -93,9 +94,13 @@ export const PublishSpecForm = ({
       </p>
 
       {loadingEditor ? (
-        <p className="mt-2 text-xs text-[var(--text-muted)]" aria-busy="true">
-          Cargando especificación actual…
-        </p>
+        <SkeletonRegion
+          label="Cargando especificación actual…"
+          className="mt-3 space-y-3"
+        >
+          <Skeleton className="h-9 w-48 rounded-full" />
+          <Skeleton className="h-48 w-full rounded-[var(--radius-2)]" />
+        </SkeletonRegion>
       ) : (
         <div className="mt-3">
           <OpenApiSourceInput

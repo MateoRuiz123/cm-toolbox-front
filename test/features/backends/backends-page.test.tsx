@@ -222,6 +222,87 @@ describe("BackendsPage", () => {
     });
   });
 
+  it("muestra esqueleto de carga mientras llega la telemetría y lo reemplaza por datos", async () => {
+    let releaseTelemetry: (() => void) | undefined;
+    const telemetryGate = new Promise<void>((resolve) => {
+      releaseTelemetry = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/me/backends")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "cm-docs-ms",
+                name: "cm-docs-ms",
+                description: "",
+                tags: [],
+                testTarget: {
+                  cluster: "cm-cluster-test",
+                  namespace: "apps",
+                  workload: "cm-docs-ms",
+                },
+                prodTarget: null,
+                displayOrder: 10,
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/workload-telemetry")) {
+        await telemetryGate;
+        return new Response(
+          JSON.stringify({
+            env: "test",
+            cluster: "cm-cluster-test",
+            namespace: "apps",
+            workload: "cm-docs-ms",
+            status: "healthy",
+            desiredReplicas: 1,
+            readyReplicas: 1,
+            totalRestarts: 0,
+            deployedAt: new Date().toISOString(),
+            totalCpuMillicores: 10,
+            totalMemoryMiB: 64,
+            pods: [],
+            traffic: {
+              windowMinutes: 5,
+              sampledPod: null,
+              totalRequests: 0,
+              rpm: 0,
+              count2xx: 0,
+              count4xx: 0,
+              count5xx: 0,
+              rate4xxPercent: 0,
+              rate5xxPercent: 0,
+            },
+            checkedAt: new Date().toISOString(),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = renderBackends();
+
+    await screen.findByRole("heading", { name: "cm-docs-ms" });
+    await waitFor(() => {
+      expect(
+        container.querySelectorAll(".skeleton-shimmer").length,
+      ).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("1/1 Ready")).not.toBeInTheDocument();
+
+    releaseTelemetry?.();
+
+    expect(await screen.findByText("1/1 Ready")).toBeInTheDocument();
+    expect(container.querySelectorAll(".skeleton-shimmer")).toHaveLength(0);
+  });
+
   it("importa favoritos de Logs GKE y agrupa Test y Prod en una misma tarjeta", async () => {
     const user = userEvent.setup();
     alternarLogFavorito(

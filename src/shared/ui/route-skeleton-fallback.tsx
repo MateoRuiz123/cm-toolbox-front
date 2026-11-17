@@ -4,6 +4,7 @@ export type RouteSkeletonVariant =
   | "hub"
   | "diagnostico"
   | "logs"
+  | "backends"
   | "docs"
   | "admin"
   | "default";
@@ -21,6 +22,7 @@ const inferVariantFromLocation = (): RouteSkeletonVariant => {
   if (path === "/" || path.startsWith("/hub")) return "hub";
   if (path.startsWith("/diagnostico")) return "diagnostico";
   if (path.startsWith("/logs")) return "logs";
+  if (path.startsWith("/backends")) return "backends";
   if (path.startsWith("/docs") || path.startsWith("/cliente/docs")) {
     return "docs";
   }
@@ -37,7 +39,7 @@ export const RouteSkeletonFallback = ({
 }: RouteSkeletonFallbackProps) => {
   const reducirMovimiento = useMovimientoReducido();
   const activeVariant = variant ?? inferVariantFromLocation();
-  const pulseClass = reducirMovimiento ? "" : "animate-pulse";
+  const pulseClass = reducirMovimiento ? "" : "skeleton-shimmer";
 
   return (
     <div
@@ -108,6 +110,25 @@ export const RouteSkeletonFallback = ({
           />
           <div
             className={`h-80 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] lg:col-span-8 ${pulseClass}`}
+          />
+        </div>
+      )}
+
+      {activeVariant === "backends" && (
+        <div className="space-y-4">
+          <div className="space-y-2 border-b border-[var(--border-default)] pb-4">
+            <div
+              className={`h-5 w-40 rounded-full bg-[var(--surface-card)] ${pulseClass}`}
+            />
+            <div
+              className={`h-9 w-64 max-w-full rounded-[var(--radius-2)] bg-[var(--surface-card)] ${pulseClass}`}
+            />
+          </div>
+          <div
+            className={`h-12 rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] ${pulseClass}`}
+          />
+          <div
+            className={`h-72 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] ${pulseClass}`}
           />
         </div>
       )}

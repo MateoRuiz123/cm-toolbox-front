@@ -5,6 +5,7 @@ import { DocsApiError, fetchDocsCatalog } from "./api/docs-api";
 import type { DocsApiSummary } from "./api/types";
 import { ApiCard } from "./api-card";
 import { DocsEmptyState } from "./empty-state";
+import { Skeleton, SkeletonRegion, SkeletonText } from "@/shared/ui/skeleton";
 
 type DocsPageProps = {
   readonly basePath?: string;
@@ -112,18 +113,25 @@ export const DocsPage = ({
       </header>
 
       {loading ? (
-        <div
+        <SkeletonRegion
+          label="Cargando catálogo de APIs…"
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
-          aria-busy="true"
-          aria-live="polite"
         >
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="h-32 animate-pulse rounded-[var(--radius-3)] bg-[var(--surface-sunken)]"
-            />
+              aria-hidden="true"
+              className="space-y-3 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-5"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+              </div>
+              <SkeletonText lines={2} />
+              <Skeleton className="h-3 w-24" />
+            </div>
           ))}
-        </div>
+        </SkeletonRegion>
       ) : null}
 
       {!loading && error ? (

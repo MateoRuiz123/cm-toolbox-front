@@ -14,6 +14,7 @@ import { ExportPdfModal } from "./export-pdf-modal";
 import { OpenApiViewer } from "./openapi-viewer";
 import { EditApiForm } from "./admin/edit-api-form";
 import { PublishSpecForm } from "./admin/publish-spec-form";
+import { Skeleton, SkeletonRegion, SkeletonText } from "@/shared/ui/skeleton";
 
 const API_ID_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -261,12 +262,14 @@ const ManageApiModal = ({
                 anterior en un clic.
               </p>
               {loadingVersions ? (
-                <p
-                  className="text-xs text-[var(--text-muted)]"
-                  aria-busy="true"
+                <SkeletonRegion
+                  label="Cargando versiones…"
+                  className="space-y-2"
                 >
-                  Cargando versiones…
-                </p>
+                  {[0, 1, 2].map((row) => (
+                    <Skeleton key={row} className="h-12 w-full rounded-[var(--radius-2)]" />
+                  ))}
+                </SkeletonRegion>
               ) : versions.length === 0 ? (
                 <p className="text-sm text-[var(--text-muted)]">
                   Aún no hay versiones registradas en el historial.
@@ -384,10 +387,15 @@ export const DocsViewerPage = ({
       </div>
 
       {loading ? (
-        <div
-          className="h-64 animate-pulse rounded-[var(--radius-3)] bg-[var(--surface-sunken)]"
-          aria-busy="true"
-        />
+        <SkeletonRegion
+          label="Cargando documentación…"
+          className="space-y-4 rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] p-6"
+        >
+          <Skeleton className="h-7 w-1/3" />
+          <SkeletonText lines={3} />
+          <Skeleton className="h-32 w-full rounded-[var(--radius-2)]" />
+          <SkeletonText lines={2} />
+        </SkeletonRegion>
       ) : null}
 
       {!loading && error ? (
