@@ -91,10 +91,15 @@ export const ensureClienteSession = async (): Promise<ClienteSessionStatus> => {
   return "anonymous";
 };
 
-/** Dispara login Keycloak (usuario+clave, sin Google). */
-export const loginCliente = async (): Promise<void> => {
+/** Dispara login Keycloak (usuario+clave, sin Google) o asigna sesión cliente por NIT en bypass. */
+export const loginCliente = async (clientId?: string): Promise<void> => {
   if (esAuthBypassActivo()) {
-    guardarTokenCliente("dev-cliente-token");
+    const normalized = clientId?.trim();
+    guardarTokenCliente(
+      normalized && normalized !== "demo"
+        ? `dev-cliente-token:${normalized}`
+        : "dev-cliente-token",
+    );
     return;
   }
   const kc = getClienteKeycloak();

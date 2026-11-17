@@ -8,7 +8,10 @@ import {
 import { buildFallbackAccessProfile } from "../../../src/shared/auth/access-types";
 import { DocsPage } from "../../../src/features/docs/docs-page";
 import { DocsAdminPage } from "../../../src/features/docs/admin/docs-admin-page";
-import { DocsNewApiPage } from "../../../src/features/docs/admin/new-api-form";
+import {
+  DocsNewApiPage,
+  NewApiForm,
+} from "../../../src/features/docs/admin/new-api-form";
 import { ClientsPage } from "../../../src/features/docs/admin/clients-page";
 import { EditApiForm } from "../../../src/features/docs/admin/edit-api-form";
 import * as docsApi from "../../../src/features/docs/api/docs-api";
@@ -241,5 +244,124 @@ describe("Docs Admin UI & CA-A07", () => {
       expect(createSpy).toHaveBeenCalled();
       expect(screen.getByText("Detalle API Creada")).toBeInTheDocument();
     });
+  });
+
+  it("EditApiForm muestra el buscador de clientes con menos de 5 clientes y filtra por nombre, NIT o correo", async () => {
+    vi.spyOn(docsApi, "fetchAdminClients").mockResolvedValue([
+      {
+        id: "demo",
+        name: "Cliente Demo",
+        email: "demo@cliente.com",
+        status: "active",
+        createdAt: "2026-10-10T00:00:00.000Z",
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      },
+      {
+        id: "otro",
+        name: "Cliente Otro",
+        email: "otro@empresa.co",
+        status: "active",
+        createdAt: "2026-10-10T00:00:00.000Z",
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      },
+      {
+        id: "1020105637",
+        name: "Mateo-test",
+        email: "mateo@coordinadora.com",
+        status: "active",
+        createdAt: "2026-10-10T00:00:00.000Z",
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      },
+    ]);
+    vi.spyOn(docsApi, "fetchApiDetail").mockResolvedValue({
+      id: "api-demo",
+      name: "API Demo",
+      description: "Desc",
+      version: "1.0.0",
+      updatedAt: "2026-10-10T00:00:00.000Z",
+      audiences: ["internal", "client:1020105637"],
+    });
+
+    render(<EditApiForm apiId="api-demo" />);
+
+    const searchInput = await screen.findByLabelText(
+      "Filtrar clientes en audiencias",
+    );
+    expect(screen.getByText("3 de 3 clientes")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "102010" } });
+    expect(screen.getByText("1 de 3 clientes")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Mateo-test \(client:1020105637\)/i),
+    ).toBeChecked();
+    expect(
+      screen.queryByLabelText(/Cliente Demo \(client:demo\)/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "otro@empresa.co" } });
+    expect(
+      screen.getByLabelText(/Cliente Otro \(client:otro\)/i),
+    ).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "sin-coincidencias" } });
+    expect(screen.getByText("0 de 3 clientes")).toBeInTheDocument();
+    expect(
+      screen.getByText(/No se encontraron clientes para «sin-coincidencias»\./i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Limpiar búsqueda de clientes" }),
+    );
+    expect(screen.getByText("3 de 3 clientes")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Cliente Demo \(client:demo\)/i),
+    ).toBeInTheDocument();
+  });
+
+  it("NewApiForm muestra el buscador de clientes con menos de 5 clientes y estado vacío", async () => {
+    vi.spyOn(docsApi, "fetchAdminClients").mockResolvedValue([
+      {
+        id: "demo",
+        name: "Cliente Demo",
+        email: "demo@cliente.com",
+        status: "active",
+        createdAt: "2026-10-10T00:00:00.000Z",
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      },
+      {
+        id: "900111222",
+        name: "Logística Norte",
+        email: "api@logisticanorte.com",
+        status: "active",
+        createdAt: "2026-10-10T00:00:00.000Z",
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <NewApiForm />
+      </MemoryRouter>,
+    );
+
+    const searchInput = await screen.findByLabelText(
+      "Filtrar clientes en audiencias",
+    );
+    expect(screen.getByText("2 de 2 clientes")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "Logística" } });
+    expect(screen.getByText("1 de 2 clientes")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Logística Norte \(client:900111222\)/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/Cliente Demo \(client:demo\)/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "inexistente" } });
+    expect(screen.getByText("0 de 2 clientes")).toBeInTheDocument();
+    expect(
+      screen.getByText(/No se encontraron clientes para «inexistente»\./i),
+    ).toBeInTheDocument();
   });
 });

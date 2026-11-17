@@ -47,6 +47,7 @@ export type DocsClient = {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly activationUrl?: string;
+  readonly emailSent?: boolean;
 };
 
 export type DocsClientsListResponse = {

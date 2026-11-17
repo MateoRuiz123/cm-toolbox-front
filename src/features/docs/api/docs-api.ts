@@ -38,16 +38,27 @@ type HeaderOptions = {
   readonly includePublishBypass?: boolean;
 };
 
+const resolveDevClienteAudience = (token: string | null): string | null => {
+  if (token === "dev-cliente-token") {
+    return "client:demo";
+  }
+  if (token?.startsWith("dev-cliente-token:")) {
+    const clientId = token.slice("dev-cliente-token:".length).trim();
+    return clientId ? `client:${clientId}` : null;
+  }
+  return null;
+};
+
 const authHeaders = (options: HeaderOptions = {}): HeadersInit => {
   const token = getDocsAuthToken();
-  /** Token de humo local de la puerta /cliente → simula audiencia client:demo en el MS. */
-  const isDevCliente = token === "dev-cliente-token";
-  const isInternalDevBypass = !isDevCliente && esAuthBypassActivo();
+  /** Token de humo local de la puerta /cliente → simula audiencia client:<NIT> en el MS. */
+  const devClienteAudience = resolveDevClienteAudience(token);
+  const isInternalDevBypass = !devClienteAudience && esAuthBypassActivo();
   return {
     Accept: "application/json",
     ...(options.includeJson ? { "Content-Type": "application/json" } : {}),
-    ...(token && !isDevCliente ? { Authorization: `Bearer ${token}` } : {}),
-    ...(isDevCliente ? { "X-Dev-Audiences": "client:demo" } : {}),
+    ...(token && !devClienteAudience ? { Authorization: `Bearer ${token}` } : {}),
+    ...(devClienteAudience ? { "X-Dev-Audiences": devClienteAudience } : {}),
     ...(isInternalDevBypass && options.includeManageBypass
       ? { "X-Dev-Can-Manage": "true" }
       : {}),
@@ -154,8 +165,8 @@ export const publishSpec = async (
   file: File,
 ): Promise<DocsPublishResponse["data"]> => {
   const token = getDocsAuthToken();
-  const isDevCliente = token === "dev-cliente-token";
-  const isInternalDevBypass = !isDevCliente && esAuthBypassActivo();
+  const devClienteAudience = resolveDevClienteAudience(token);
+  const isInternalDevBypass = !devClienteAudience && esAuthBypassActivo();
   const form = new FormData();
   form.append("file", file);
   const res = await fetch(
@@ -163,8 +174,8 @@ export const publishSpec = async (
     {
       method: "POST",
       headers: {
-        ...(token && !isDevCliente ? { Authorization: `Bearer ${token}` } : {}),
-        ...(isDevCliente ? { "X-Dev-Audiences": "client:demo" } : {}),
+        ...(token && !devClienteAudience ? { Authorization: `Bearer ${token}` } : {}),
+        ...(devClienteAudience ? { "X-Dev-Audiences": devClienteAudience } : {}),
         ...(isInternalDevBypass ? { "X-Dev-Can-Publish": "true" } : {}),
       },
       body: form,
@@ -186,8 +197,8 @@ export const createAdminApi = async (
   payload: DocsCreateApiPayload,
 ): Promise<DocsApiDetail> => {
   const token = getDocsAuthToken();
-  const isDevCliente = token === "dev-cliente-token";
-  const isInternalDevBypass = !isDevCliente && esAuthBypassActivo();
+  const devClienteAudience = resolveDevClienteAudience(token);
+  const isInternalDevBypass = !devClienteAudience && esAuthBypassActivo();
   const form = new FormData();
   if (payload.id?.trim()) {
     form.append("id", payload.id.trim());
@@ -203,8 +214,8 @@ export const createAdminApi = async (
     method: "POST",
     headers: {
       Accept: "application/json",
-      ...(token && !isDevCliente ? { Authorization: `Bearer ${token}` } : {}),
-      ...(isDevCliente ? { "X-Dev-Audiences": "client:demo" } : {}),
+      ...(token && !devClienteAudience ? { Authorization: `Bearer ${token}` } : {}),
+      ...(devClienteAudience ? { "X-Dev-Audiences": devClienteAudience } : {}),
       ...(isInternalDevBypass ? { "X-Dev-Can-Manage": "true" } : {}),
     },
     body: form,
@@ -354,9 +365,69 @@ export const createAdminClient = async (
   return body.data;
 };
 
+export const claimClientActivationLink = async (payload: {
+  readonly clientId: string;
+  readonly activationToken: string;
+  readonly expiresAt?: string | null;
+}): Promise<{ readonly valid: boolean; readonly claimToken?: string }> => {
+  const res = await fetch(`${API_BASE}/clients/activation/open`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      clientId: payload.clientId,
+      activationToken: payload.activationToken,
+      ...(payload.expiresAt ? { expiresAt: payload.expiresAt } : {}),
+    }),
+  });
+  if (!res.ok) {
+    await parseError(
+      res,
+      "Este enlace de activación ya fue utilizado y se encuentra inhabilitado.",
+    );
+  }
+  const body = (await res.json()) as {
+    readonly data: { readonly valid: boolean; readonly claimToken?: string };
+  };
+  return body.data;
+};
+
+export const activateClientAccount = async (payload: {
+  readonly clientId: string;
+  readonly activationToken: string;
+  readonly claimToken?: string | null;
+  readonly expiresAt?: string | null;
+  readonly password?: string;
+}): Promise<DocsClient> => {
+  const res = await fetch(`${API_BASE}/clients/activate`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      clientId: payload.clientId,
+      activationToken: payload.activationToken,
+      ...(payload.claimToken ? { claimToken: payload.claimToken } : {}),
+      ...(payload.expiresAt ? { expiresAt: payload.expiresAt } : {}),
+      ...(payload.password !== undefined ? { password: payload.password } : {}),
+    }),
+  });
+  if (!res.ok) {
+    await parseError(
+      res,
+      "No fue posible activar la cuenta con este enlace.",
+    );
+  }
+  const body = (await res.json()) as DocsClientResponse;
+  return body.data;
+};
+
 export const resendClientActivation = async (
   clientId: string,
-): Promise<{ activationUrl?: string }> => {
+): Promise<{ activationUrl?: string; emailSent: boolean }> => {
   const res = await fetch(
     `${API_BASE}/admin/clients/${encodeURIComponent(clientId)}/activation`,
     {
@@ -368,7 +439,8 @@ export const resendClientActivation = async (
     await parseError(res, "No fue posible reenviar el enlace de activación.");
   }
   const headerUrl = res.headers.get("X-Activation-Url") ?? undefined;
-  return { activationUrl: headerUrl };
+  const emailSent = res.headers.get("X-Email-Sent") === "true";
+  return { activationUrl: headerUrl, emailSent };
 };
 
 export const updateAdminClientStatus = async (

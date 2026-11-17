@@ -52,6 +52,7 @@ export const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ClientStatusFilter>("all");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [emailStatusNote, setEmailStatusNote] = useState<string | null>(null);
   const [activationUrl, setActivationUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +112,13 @@ export const ClientsPage = () => {
     setStatusMessage(
       "Se envió el enlace para que el cliente cree su contraseña.",
     );
+    setEmailStatusNote(
+      created.emailSent === true
+        ? `Correo institucional enviado vía SendGrid a ${created.email}.`
+        : created.emailSent === false
+          ? `No se pudo enviar automáticamente al correo ${created.email}; comparte el enlace manual abajo.`
+          : null,
+    );
     setActivationUrl(created.activationUrl ?? null);
     setCopied(false);
     void loadClients();
@@ -119,11 +127,17 @@ export const ClientsPage = () => {
   const handleResend = async (client: DocsClient) => {
     setError(null);
     setStatusMessage(null);
+    setEmailStatusNote(null);
     setCopied(false);
     try {
       const res = await resendClientActivation(client.id);
       setStatusMessage(
         "Se envió el enlace para que el cliente cree su contraseña.",
+      );
+      setEmailStatusNote(
+        res.emailSent
+          ? `Correo reenviado a ${client.email}.`
+          : `No se pudo enviar automáticamente al correo ${client.email}; comparte el enlace manual abajo.`,
       );
       setActivationUrl(res.activationUrl ?? null);
       void loadClients();
@@ -204,6 +218,11 @@ export const ClientsPage = () => {
           <p className="text-sm font-medium text-[var(--text-body)]">
             {statusMessage}
           </p>
+          {emailStatusNote ? (
+            <p className="mt-1 text-xs font-medium text-[var(--color-primary)]">
+              {emailStatusNote}
+            </p>
+          ) : null}
           {activationUrl ? (
             <div className="mt-3">
               <p className="text-xs text-[var(--text-muted)]">

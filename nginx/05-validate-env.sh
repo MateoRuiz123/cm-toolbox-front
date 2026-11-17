@@ -27,27 +27,22 @@ case "$upstream" in
     ;;
 esac
 
-logs_upstream="${LOGS_API_UPSTREAM:-}"
-if [ -n "$logs_upstream" ]; then
-  case "$logs_upstream" in
+validate_optional_origin_upstream() {
+  var_name="$1"
+  val="$2"
+  [ -n "$val" ] || return 0
+  case "$val" in
     http://* | https://*) ;;
-    *) fallar "LOGS_API_UPSTREAM debe incluir el esquema http:// o https:// (valor: '$logs_upstream')." ;;
+    *) fallar "${var_name} debe incluir el esquema http:// o https:// (valor: '$val')." ;;
   esac
-  case "${logs_upstream#*://}" in
-    */*) fallar "LOGS_API_UPSTREAM solo admite esquema://host[:puerto], sin path (valor: '$logs_upstream')." ;;
+  case "${val#*://}" in
+    */*) fallar "${var_name} solo admite esquema://host[:puerto], sin path (valor: '$val')." ;;
   esac
-fi
+}
 
-docs_upstream="${DOCS_API_UPSTREAM:-}"
-if [ -n "$docs_upstream" ]; then
-  case "$docs_upstream" in
-    http://* | https://*) ;;
-    *) fallar "DOCS_API_UPSTREAM debe incluir el esquema http:// o https:// (valor: '$docs_upstream')." ;;
-  esac
-  case "${docs_upstream#*://}" in
-    */*) fallar "DOCS_API_UPSTREAM solo admite esquema://host[:puerto], sin path (valor: '$docs_upstream')." ;;
-  esac
-fi
+validate_optional_origin_upstream "LOGS_API_UPSTREAM" "${LOGS_API_UPSTREAM:-}"
+validate_optional_origin_upstream "ACCESS_API_UPSTREAM" "${ACCESS_API_UPSTREAM:-}"
+validate_optional_origin_upstream "DOCS_API_UPSTREAM" "${DOCS_API_UPSTREAM:-}"
 
 # nginx escucha en $PORT dentro de este mismo contenedor: apuntar el upstream ahí
 # genera un proxy recursivo que termina en 502.
