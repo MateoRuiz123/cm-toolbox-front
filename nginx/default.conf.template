@@ -113,6 +113,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Evita que rutas .webp inexistentes de ambientación reciban index.html vía fallback SPA.
+    location /hub-ambient/ {
+        try_files $uri =404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

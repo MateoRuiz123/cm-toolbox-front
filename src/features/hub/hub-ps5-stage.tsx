@@ -9,7 +9,10 @@ import { leerLogsRecientes } from "../logs/logs-sesion";
 import type { AppHealthResult, IncidentReportResponse } from "./api/apps-health";
 import { HubArrowIcon, type UnavailableReason } from "./bento-app-card";
 import { HubAmbientBackground } from "./hub-ambient-background";
-import { resolveHubAmbientTheme } from "./hub-ambient-config";
+import {
+  resolveHubAmbientTheme,
+  shouldIgnoreHubArrowKey,
+} from "./hub-ambient-config";
 import type { HubSortMode } from "./hub-layout-storage";
 
 export interface HubPs5StageProps {
@@ -193,12 +196,7 @@ export const HubPs5Stage = ({
     if (apps.length === 0) return;
 
     const handleArrowNav = (event: KeyboardEvent) => {
-      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-      if (event.altKey || event.ctrlKey || event.metaKey) return;
-
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (shouldIgnoreHubArrowKey(event)) return;
 
       event.preventDefault();
       const currentIdx = effectiveActiveAppId

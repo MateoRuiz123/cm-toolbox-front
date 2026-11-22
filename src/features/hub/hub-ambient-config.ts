@@ -18,6 +18,41 @@ export interface HubAmbientTheme {
   readonly spotlightLabel: string;
 }
 
+/**
+ * Manifiesto explícito de imágenes .webp disponibles en `public/hub-ambient/`.
+ * Permanece vacío mientras la carpeta solo contenga README.md para evitar peticiones 404.
+ * Al añadir archivos reales (p. ej. `"/hub-ambient/diagnostico.webp"`), regístralos aquí.
+ */
+export const AVAILABLE_AMBIENT_IMAGES: ReadonlySet<string> = new Set();
+
+export const hasAmbientImageAsset = (
+  imagePath: string,
+  manifest: ReadonlySet<string> = AVAILABLE_AMBIENT_IMAGES,
+): boolean => manifest.has(imagePath);
+
+const INTERACTIVE_OVERLAY_SELECTOR =
+  '[role="dialog"], [aria-modal="true"], [role="menu"], [role="listbox"]';
+
+/** Determina si la navegación con flechas ← → del Hub debe ceder el foco a un diálogo o control editable. */
+export const shouldIgnoreHubArrowKey = (event: KeyboardEvent): boolean => {
+  if (event.defaultPrevented) return true;
+  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return true;
+  if (event.altKey || event.ctrlKey || event.metaKey) return true;
+  if (document.querySelector('[role="dialog"], [aria-modal="true"]')) {
+    return true;
+  }
+
+  const target = event.target as HTMLElement | null;
+  if (!target) return false;
+  const tag = typeof target.tagName === "string" ? target.tagName.toLowerCase() : "";
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  if (target.isContentEditable) return true;
+  return (
+    typeof target.closest === "function" &&
+    Boolean(target.closest(INTERACTIVE_OVERLAY_SELECTOR))
+  );
+};
+
 const KNOWN_AMBIENTS_BY_ID: Readonly<Record<string, Omit<HubAmbientTheme, "id">>> = {
   diagnostico: {
     motif: "diagnostico",

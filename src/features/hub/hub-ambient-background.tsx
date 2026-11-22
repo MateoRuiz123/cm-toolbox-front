@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import type { EffectiveAppAccess } from "../../shared/auth/access-types";
 import { useMovimientoReducido } from "../../shared/lib/use-movimiento-reducido";
 import {
+  AVAILABLE_AMBIENT_IMAGES,
+  hasAmbientImageAsset,
   resolveHubAmbientTheme,
   type HubAmbientMotif,
 } from "./hub-ambient-config";
@@ -10,6 +12,7 @@ import {
 interface HubAmbientBackgroundProps {
   readonly apps: readonly EffectiveAppAccess[];
   readonly activeAppId: string | null;
+  readonly availableImages?: ReadonlySet<string>;
 }
 
 /**
@@ -183,6 +186,7 @@ const AmbientSceneMotif = ({ motif }: { readonly motif: HubAmbientMotif }) => {
 export const HubAmbientBackground = ({
   apps,
   activeAppId,
+  availableImages = AVAILABLE_AMBIENT_IMAGES,
 }: HubAmbientBackgroundProps) => {
   const movimientoReducido = useMovimientoReducido();
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
@@ -194,6 +198,20 @@ export const HubAmbientBackground = ({
         .map((app) => resolveHubAmbientTheme(app)),
     [apps],
   );
+
+  // Solo pre-cargamos imagen si está registrada en el manifiesto y corresponde a la app activa o sus vecinas inmediatas
+  const neighborAppIds = useMemo(() => {
+    const ids = new Set<string>();
+    const activeIdx = themes.findIndex((theme) => theme.id === activeAppId);
+    if (activeIdx === -1 || themes.length === 0) return ids;
+
+    const prevIdx = (activeIdx - 1 + themes.length) % themes.length;
+    const nextIdx = (activeIdx + 1) % themes.length;
+    ids.add(themes[activeIdx].id);
+    ids.add(themes[prevIdx].id);
+    ids.add(themes[nextIdx].id);
+    return ids;
+  }, [themes, activeAppId]);
 
   return (
     <div
@@ -213,7 +231,10 @@ export const HubAmbientBackground = ({
 
       {themes.map((theme) => {
         const isActive = activeAppId === theme.id;
-        const hideImg = Boolean(failedImages[theme.id]);
+        const shouldMountImage =
+          hasAmbientImageAsset(theme.imagePath, availableImages) &&
+          neighborAppIds.has(theme.id) &&
+          !failedImages[theme.id];
 
         return (
           <motion.div
@@ -234,7 +255,7 @@ export const HubAmbientBackground = ({
           >
             <AmbientSceneMotif motif={theme.motif} />
 
-            {!hideImg && (
+            {shouldMountImage && (
               <img
                 src={theme.imagePath}
                 alt=""

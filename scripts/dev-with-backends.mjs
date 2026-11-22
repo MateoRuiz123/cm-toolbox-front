@@ -478,8 +478,8 @@ const main = async () => {
   const accessRoot = path.join(LOCAL_ROOT, "cm-toolbox-access-ms");
   await startDevInfra(accessRoot);
 
-  // El volumen de Postgres no re-ejecuta init. 005 agrega docs/manage
-  // (sin esa acción el rol admin no ve Nueva documentación / Clientes).
+  // El volumen de Postgres no re-ejecuta init. 005/006/007 viven en ../cm-toolbox-access-ms/sql/
+  // (cm-toolbox-front/sql/ solo conserva 001-003). Se omiten sin fallar si no existen.
   const accessDocsSeed = path.join(accessRoot, "sql", "005_seed_docs_app.sql");
   const accessBackendsSeed = path.join(
     accessRoot,
@@ -496,17 +496,21 @@ const main = async () => {
     accessBackendsSeed,
     accessIconsMigration,
   ]) {
-    if (existsSync(seedPath)) {
-      const seeded = await applySqlViaDocker(seedPath, "cm_toolbox_access");
-      if (seeded.code === 0) {
-        await runDockerCapture([
-          "exec",
-          "cm-toolbox-redis",
-          "redis-cli",
-          "DEL",
-          "rbac:catalog:apps",
-        ]);
-      }
+    if (!existsSync(seedPath)) {
+      console.info(
+        `[dev] SQL opcional no encontrado (${path.relative(LOCAL_ROOT, seedPath)}); omitiendo.`,
+      );
+      continue;
+    }
+    const seeded = await applySqlViaDocker(seedPath, "cm_toolbox_access");
+    if (seeded.code === 0) {
+      await runDockerCapture([
+        "exec",
+        "cm-toolbox-redis",
+        "redis-cli",
+        "DEL",
+        "rbac:catalog:apps",
+      ]);
     }
   }
 

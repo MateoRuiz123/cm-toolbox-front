@@ -77,6 +77,11 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
     description:
       "Preferencia visual oficial del toolbox (SIGO Droop), comodidad visual, disposición del Hub y pantalla de bienvenida.",
   },
+  "/bienvenida": {
+    title: "Bienvenida | Coordinadora Toolbox",
+    description:
+      "Pantalla de bienvenida al ecosistema de herramientas de soporte y diagnóstico de Coordinadora Mercantil S.A.",
+  },
   "/404": {
     title: "404 - Página no encontrada | Coordinadora Toolbox",
     description:
@@ -84,8 +89,9 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
   },
 };
 
-export const usePageTitle = () => {
-  const { pathname } = useLocation();
+export const usePageTitle = (overridePathname?: string) => {
+  const { pathname: routePathname } = useLocation();
+  const pathname = overridePathname ?? routePathname;
 
   useEffect(() => {
     const meta = pathname.startsWith("/diagnostico")

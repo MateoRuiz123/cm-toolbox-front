@@ -23,6 +23,7 @@ import {
 } from "./api/apps-health";
 import { BentoAppCard, type UnavailableReason } from "./bento-app-card";
 import { HubAmbientBackground } from "./hub-ambient-background";
+import { shouldIgnoreHubArrowKey } from "./hub-ambient-config";
 import { HubPs5Stage } from "./hub-ps5-stage";
 import {
   clearCachedBentoSizes,
@@ -393,12 +394,7 @@ export const HubPage = () => {
     }
 
     const handleArrowNav = (event: KeyboardEvent) => {
-      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-      if (event.altKey || event.ctrlKey || event.metaKey) return;
-
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (shouldIgnoreHubArrowKey(event)) return;
 
       event.preventDefault();
       const currentIdx = activeAppId

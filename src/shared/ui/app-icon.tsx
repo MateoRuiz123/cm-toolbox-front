@@ -33,8 +33,14 @@ export const APP_ICON_OPTIONS: readonly {
 ];
 
 /**
- * Resuelve el identificador efectivo del ícono manteniendo compatibilidad con bases de datos
- * donde `logs` o `backends` aún conserven `'pubsub'` antes de migrar con 007_update_app_icons.sql.
+ * Resuelve el identificador efectivo del ícono manteniendo compatibilidad temporal con bases de datos
+ * donde `logs` o `backends` aún conserven `'pubsub'`.
+ * Nota: la migración `007_update_app_icons.sql` vive en el repositorio hermano
+ * `cm-toolbox-access-ms/sql/007_update_app_icons.sql` (`cm-toolbox-front/sql/` solo conserva 001–003).
+ *
+ * Condición de retiro: eliminar esta función una vez ejecutada `007_update_app_icons.sql` en
+ * todos los ambientes (local, test y producción) y verificado que
+ * `SELECT COUNT(*) FROM apps WHERE id IN ('logs', 'backends') AND icon = 'pubsub'` sea 0.
  */
 export const resolveEffectiveAppIcon = (
   icon: AppIconType,

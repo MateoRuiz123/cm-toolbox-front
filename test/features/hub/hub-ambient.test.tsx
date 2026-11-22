@@ -3,10 +3,14 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "../../../src/app/theme-provider";
 import { resetAppsHealthCache } from "../../../src/features/hub/api/apps-health";
+import { HubAmbientBackground } from "../../../src/features/hub/hub-ambient-background";
 import { HubPage } from "../../../src/features/hub/hub-page";
 import { AccessContext } from "../../../src/shared/auth/access-context";
 import { createContextValueFromProfile } from "../../../src/shared/auth/access-context-base";
-import { buildFallbackAccessProfile } from "../../../src/shared/auth/access-types";
+import {
+  DEFAULT_APPS_CATALOG,
+  buildFallbackAccessProfile,
+} from "../../../src/shared/auth/access-types";
 import {
   PREFERENCIAS_KEYS,
   guardarPreferenciaHubLayout,
@@ -210,5 +214,83 @@ describe("HubPage Escenario PS5", () => {
     expect(
       screen.queryByTestId("hub-bento-spotlight"),
     ).not.toBeInTheDocument();
+  });
+
+  it("ignora ArrowRight y ArrowLeft cuando existe un diálogo abierto o defaultPrevented", async () => {
+    const profile = buildFallbackAccessProfile("operador@coordinadora.com");
+    const renderView = (withDialog: boolean) => (
+      <AccessContext.Provider value={createContextValueFromProfile(profile)}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <HubPage />
+            {withDialog && (
+              <div role="dialog" aria-modal="true" aria-label="Paleta abierta">
+                Contenido modal
+              </div>
+            )}
+          </MemoryRouter>
+        </ThemeProvider>
+      </AccessContext.Provider>
+    );
+
+    const { rerender } = render(renderView(true));
+
+    const ambient = await screen.findByTestId("hub-ambient-background");
+    expect(ambient).toHaveAttribute("data-active-app-id", "diagnostico");
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(ambient).toHaveAttribute("data-active-app-id", "diagnostico");
+
+    // Retirar el diálogo y comprobar que defaultPrevented también evita la navegación
+    rerender(renderView(false));
+    const preventedEvent = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      cancelable: true,
+    });
+    preventedEvent.preventDefault();
+    window.dispatchEvent(preventedEvent);
+
+    expect(ambient).toHaveAttribute("data-active-app-id", "diagnostico");
+  });
+
+  it("no monta <img> sin manifiesto y cuando existen assets carga solo activa y vecinas", () => {
+    const { container, rerender } = render(
+      <ThemeProvider>
+        <HubAmbientBackground
+          apps={DEFAULT_APPS_CATALOG}
+          activeAppId="backends"
+        />
+      </ThemeProvider>,
+    );
+
+    // Manifiesto vacío por defecto: cero peticiones .webp
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+
+    const manifest = new Set([
+      "/hub-ambient/diagnostico.webp",
+      "/hub-ambient/logs.webp",
+      "/hub-ambient/backends.webp",
+      "/hub-ambient/docs.webp",
+      "/hub-ambient/auditoria.webp",
+    ]);
+
+    rerender(
+      <ThemeProvider>
+        <HubAmbientBackground
+          apps={DEFAULT_APPS_CATALOG}
+          activeAppId="backends"
+          availableImages={manifest}
+        />
+      </ThemeProvider>,
+    );
+
+    const mountedSrcs = Array.from(container.querySelectorAll("img")).map(
+      (img) => img.getAttribute("src"),
+    );
+    expect(mountedSrcs).toEqual([
+      "/hub-ambient/logs.webp",
+      "/hub-ambient/backends.webp",
+      "/hub-ambient/docs.webp",
+    ]);
   });
 });
