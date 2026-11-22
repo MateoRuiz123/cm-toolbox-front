@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { AppIconType, AppStatus } from "../../shared/auth/access-types";
+import { AppIcon, APP_ICON_OPTIONS } from "../../shared/ui/app-icon";
 import type {
   AdminAppActionItem,
   AdminAppItem,
@@ -348,18 +349,32 @@ export const RegisterAppModal = ({
               <span className="text-xs font-bold text-[var(--text-body)]">
                 Icono de tarjeta
               </span>
-              <select
-                value={icon}
-                onChange={(e) => setIcon(e.target.value as AppIconType)}
-                className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
-              >
-                <option value="diagnostico">Checklist / Diagnóstico</option>
-                <option value="pubsub">
-                  Servidores / Registros / Mensajería
-                </option>
-                <option value="auditoria">Documento / Auditoría</option>
-                <option value="docs">Catálogo / API Docs</option>
-              </select>
+              <div className="mt-1 flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--color-primary)]"
+                >
+                  <AppIcon
+                    icon={icon}
+                    appId={initialApp?.id}
+                    className="size-5"
+                  />
+                </span>
+                <select
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value as AppIconType)}
+                  className="w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-body)]"
+                >
+                  {APP_ICON_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  {!APP_ICON_OPTIONS.some((option) => option.value === icon) && (
+                    <option value={icon}>{icon} (personalizado)</option>
+                  )}
+                </select>
+              </div>
             </label>
 
             <label className="block">

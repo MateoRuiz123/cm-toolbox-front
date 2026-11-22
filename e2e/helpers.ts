@@ -1,6 +1,10 @@
 import type { Page } from '@playwright/test'
 
 export const dismissCookieBanner = async (page: Page) => {
+  const enterPortal = page.getByRole('button', { name: /entrar al portal|volver al portal/i })
+  if (await enterPortal.isVisible().catch(() => false)) {
+    await enterPortal.click()
+  }
   const essential = page.getByRole('button', { name: /solo esenciales/i })
   if (await essential.isVisible().catch(() => false)) {
     await essential.click()

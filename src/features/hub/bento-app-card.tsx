@@ -1,9 +1,7 @@
 import { useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router";
-import type {
-  AppIconType,
-  EffectiveAppAccess,
-} from "../../shared/auth/access-types";
+import type { EffectiveAppAccess } from "../../shared/auth/access-types";
+import { AppIcon } from "../../shared/ui/app-icon";
 import { leerConsultaSesion } from "../diagnostico/consulta-sesion";
 import { leerLogsRecientes } from "../logs/logs-sesion";
 import type { AppHealthResult, BentoSize } from "./api/apps-health";
@@ -44,95 +42,15 @@ export interface BentoAppCardProps {
   readonly onDragStartCard: (appId: string, e: DragEvent<HTMLElement>) => void;
   readonly onDropOnCard: (targetAppId: string, e: DragEvent<HTMLElement>) => void;
   readonly onDragEndCard: () => void;
+  readonly isPs5Mode?: boolean;
+  readonly isActiveAmbient?: boolean;
+  readonly isDimmedAmbient?: boolean;
+  readonly onActivate?: (appId: string) => void;
+  readonly onDeactivate?: (appId: string) => void;
+  readonly cardRefCallback?: (el: HTMLElement | null) => void;
 }
 
 const BENTO_SIZES_ORDER: readonly BentoSize[] = ["featured", "wide", "standard"];
-
-/** Ícono institucional correspondiente a cada herramienta del portal. */
-const HubAppIcon = ({
-  icono,
-  featured = false,
-}: {
-  readonly icono: AppIconType;
-  readonly featured?: boolean;
-}) => {
-  const sizeClass = featured ? "size-7" : "size-6";
-  if (icono === "diagnostico") {
-    return (
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className={sizeClass}
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          d="M9 12l2 2 4-4"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <rect x="4" y="4" width="16" height="16" rx="4" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-  if (icono === "pubsub") {
-    return (
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className={sizeClass}
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          d="M4 6h16M4 12h10M4 18h14"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <circle cx="18" cy="12" r="2.2" strokeWidth="1.8" />
-      </svg>
-    );
-  }
-  if (icono === "docs") {
-    return (
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className={sizeClass}
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          d="M7 4h7l5 5v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M14 4v5h5M9 13h6M9 17h4"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className={sizeClass}
-      fill="none"
-      stroke="currentColor"
-    >
-      <path
-        d="M9 17H7A5 5 0 0 1 7 7h10a5 5 0 0 1 0 10h-2"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path d="M12 15v6M9 18l3-3 3 3" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-};
 
 export const HubArrowIcon = () => (
   <svg
@@ -183,6 +101,12 @@ export const BentoAppCard = ({
   onDragStartCard,
   onDropOnCard,
   onDragEndCard,
+  isPs5Mode = false,
+  isActiveAmbient = false,
+  isDimmedAmbient = false,
+  onActivate,
+  onDeactivate,
+  cardRefCallback,
 }: BentoAppCardProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -484,17 +408,50 @@ export const BentoAppCard = ({
         ? "degraded"
         : null;
 
+  const canTriggerAmbient =
+    isPs5Mode && !isEditing && app.status === "active" && app.canAccess;
+
+  const handleAmbientEnterOrFocus = () => {
+    if (canTriggerAmbient) {
+      onActivate?.(app.id);
+    }
+  };
+
+  const handleAmbientLeaveOrBlur = () => {
+    if (isPs5Mode && !isEditing) {
+      onDeactivate?.(app.id);
+    }
+  };
+
   return (
     <article
-      ref={cardRef}
+      ref={(node) => {
+        cardRef.current = node;
+        cardRefCallback?.(node);
+      }}
+      tabIndex={canTriggerAmbient ? 0 : undefined}
       draggable={isEditing && !isResizing}
       onDragStart={(e) => isEditing && !isResizing && onDragStartCard(app.id, e)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onDragEnd={onDragEndCard}
-      style={{ boxShadow: "var(--elevation-card)" }}
-      className={`${spanClass} relative flex flex-col justify-between rounded-[var(--radius-3)] border bg-[var(--surface-card)] transition-all duration-200 ${
+      onPointerEnter={handleAmbientEnterOrFocus}
+      onFocus={handleAmbientEnterOrFocus}
+      onPointerLeave={handleAmbientLeaveOrBlur}
+      onBlur={(e) => {
+        if (cardRef.current?.contains(e.relatedTarget as Node | null)) return;
+        handleAmbientLeaveOrBlur();
+      }}
+      data-ambient-state={
+        isActiveAmbient ? "active" : isDimmedAmbient ? "dimmed" : "idle"
+      }
+      style={{
+        boxShadow: isActiveAmbient
+          ? "var(--elevation-card-hover)"
+          : "var(--elevation-card)",
+      }}
+      className={`${spanClass} relative flex flex-col justify-between rounded-[var(--radius-3)] border bg-[var(--surface-card)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
         esFeatured ? "p-6 sm:p-7" : "p-5 sm:p-6"
       } ${
         isEditing
@@ -503,8 +460,12 @@ export const BentoAppCard = ({
             ? "overflow-hidden border-[var(--state-error)]/40 hover:border-[var(--state-error)]/60"
             : enMantenimiento || esDegraded
               ? "overflow-hidden border-[var(--state-warning)]/40 hover:border-[var(--state-warning)]/60"
-              : "overflow-hidden border-[var(--border-default)] hover:-translate-y-0.5 hover:border-[var(--color-primary)]/45"
-      } ${isDragging ? "opacity-50 scale-[0.98]" : ""} ${
+              : isActiveAmbient
+                ? "z-20 scale-[1.03] overflow-hidden border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/35"
+                : "overflow-hidden border-[var(--border-default)] hover:-translate-y-0.5 hover:border-[var(--color-primary)]/45"
+      } ${isDimmedAmbient ? "opacity-65" : ""} ${
+        isDragging ? "opacity-50 scale-[0.98]" : ""
+      } ${
         isDragOver || isResizing ? "ring-2 ring-[var(--color-primary)] ring-offset-2" : ""
       }`}
     >
@@ -647,7 +608,11 @@ export const BentoAppCard = ({
                 : "border-[var(--color-primary)]/20 bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
             }`}
           >
-            <HubAppIcon icono={app.icon} featured={esFeatured} />
+            <AppIcon
+              icon={app.icon}
+              appId={app.id}
+              className={esFeatured ? "size-7" : "size-6"}
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-1.5">

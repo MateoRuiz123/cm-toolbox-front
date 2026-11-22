@@ -140,6 +140,10 @@ describe("AdminPage y AppAccessGuard", () => {
     expect(
       screen.getByRole("tab", { name: /Roles y Plantillas/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Buscador rápido de administración/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Cobertura del portal/i)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(
@@ -151,6 +155,11 @@ describe("AdminPage y AppAccessGuard", () => {
     });
 
     const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /roles configurados/i }));
+    expect(
+      screen.getByRole("heading", { name: /Plantillas de Roles/i }),
+    ).toBeInTheDocument();
+
     await user.click(screen.getByRole("tab", { name: /Auditoría/i }));
     expect(
       screen.getByText(/No hay eventos de auditoría registrados/i),

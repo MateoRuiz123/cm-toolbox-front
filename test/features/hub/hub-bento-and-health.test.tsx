@@ -12,6 +12,7 @@ import {
 import { HubPage } from "../../../src/features/hub/hub-page";
 import { AccessContext } from "../../../src/shared/auth/access-context";
 import { buildFallbackAccessProfile } from "../../../src/shared/auth/access-types";
+import { guardarPreferenciaHubLayout } from "../../../src/shared/lib/ui-preferences";
 
 const createAccessValue = (
   overrides?: Partial<{
@@ -157,6 +158,7 @@ describe("HubPage Bento, Health Check y Editor", () => {
   });
 
   it("permite a SuperAdmin personalizar orden/tamaño Bento, alternar ranking 'Más usadas' y mostrar 'Continuar consulta'", async () => {
+    guardarPreferenciaHubLayout("bento");
     const user = userEvent.setup();
     const refreshAccess = vi.fn(async () => undefined);
     guardarConsultaSesion({ remisiones: "70001234", despachos: "" });
@@ -251,6 +253,7 @@ describe("HubPage Bento, Health Check y Editor", () => {
   });
 
   it("empaqueta cualquier número de apps sin huecos y permite redimensionar esquinas con cuadrículas guía", async () => {
+    guardarPreferenciaHubLayout("bento");
     const user = userEvent.setup();
     const profile = buildFallbackAccessProfile("super.admin@coordinadora.com");
     const sizesFor5 = computeAutoPackedBentoSizes(profile.apps);

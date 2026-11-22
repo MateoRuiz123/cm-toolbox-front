@@ -2,8 +2,9 @@ import { safeStorage } from "./safe-storage";
 
 export type ModoVista = "list" | "grid";
 export type ModoTema = "light" | "dark";
-export type SistemaVisual = "sigo" | "visitors" | "glass";
+export type SistemaVisual = "sigo";
 export type ModoDescanso = "normal" | "calido";
+export type ModoHubLayout = "ps5" | "bento";
 
 export const PREFERENCIAS_KEYS = {
   THEME: "theme",
@@ -11,6 +12,7 @@ export const PREFERENCIAS_KEYS = {
   SISTEMA: "sistema_visual",
   DESCANSO: "descanso_visual",
   MOVIMIENTO: "reducir_movimiento",
+  HUB_LAYOUT: "hub_layout_mode",
 } as const;
 
 export interface PreferenciasUI {
@@ -19,6 +21,7 @@ export interface PreferenciasUI {
   sistema: string | null;
   descanso?: string | null;
   movimiento?: string | null;
+  hubLayout?: string | null;
 }
 
 /** Obtiene el tema guardado o null si no se ha configurado. */
@@ -46,16 +49,10 @@ export const guardarPreferenciaVista = (vista: ModoVista): void => {
   safeStorage.setItem(PREFERENCIAS_KEYS.VIEW_MODE, vista);
 };
 
-/** Obtiene el sistema visual guardado. SIGO es el valor por defecto. */
-export const obtenerPreferenciaSistema = (): SistemaVisual => {
-  const guardado = safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA);
-  if (guardado === "visitors" || guardado === "glass") {
-    return guardado;
-  }
-  return "sigo";
-};
+/** Obtiene el sistema visual oficial del portal. Devuelve siempre SIGO Droop. */
+export const obtenerPreferenciaSistema = (): SistemaVisual => "sigo";
 
-/** Guarda el sistema visual (SIGO Droop, Visitors o Glass Spatial). */
+/** Guarda el sistema visual oficial (SIGO Droop). */
 export const guardarPreferenciaSistema = (sistema: SistemaVisual): void => {
   safeStorage.setItem(PREFERENCIAS_KEYS.SISTEMA, sistema);
 };
@@ -85,6 +82,17 @@ export const guardarPreferenciaMovimientoReducido = (
   );
 };
 
+/** Obtiene la disposición visual del Hub de aplicaciones. PS5 es la vista principal por defecto. */
+export const obtenerPreferenciaHubLayout = (): ModoHubLayout => {
+  const guardado = safeStorage.getItem(PREFERENCIAS_KEYS.HUB_LAYOUT);
+  return guardado === "bento" ? "bento" : "ps5";
+};
+
+/** Guarda la preferencia de disposición del Hub (PS5 o cuadrícula Bento clásica). */
+export const guardarPreferenciaHubLayout = (modo: ModoHubLayout): void => {
+  safeStorage.setItem(PREFERENCIAS_KEYS.HUB_LAYOUT, modo);
+};
+
 /** Extrae snapshot de las preferencias de UI para que sobrevivan a limpiezas de sesión/logout. */
 export const obtenerSnapshotPreferencias = (): PreferenciasUI => ({
   theme: safeStorage.getItem(PREFERENCIAS_KEYS.THEME),
@@ -92,6 +100,7 @@ export const obtenerSnapshotPreferencias = (): PreferenciasUI => ({
   sistema: safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA),
   descanso: safeStorage.getItem(PREFERENCIAS_KEYS.DESCANSO),
   movimiento: safeStorage.getItem(PREFERENCIAS_KEYS.MOVIMIENTO),
+  hubLayout: safeStorage.getItem(PREFERENCIAS_KEYS.HUB_LAYOUT),
 });
 
 /** Restaura snapshot de preferencias de UI tras un logout o reseteo de almacenamiento. */
@@ -105,4 +114,6 @@ export const restaurarSnapshotPreferencias = (prefs: PreferenciasUI): void => {
     safeStorage.setItem(PREFERENCIAS_KEYS.DESCANSO, prefs.descanso);
   if (prefs.movimiento)
     safeStorage.setItem(PREFERENCIAS_KEYS.MOVIMIENTO, prefs.movimiento);
+  if (prefs.hubLayout)
+    safeStorage.setItem(PREFERENCIAS_KEYS.HUB_LAYOUT, prefs.hubLayout);
 };

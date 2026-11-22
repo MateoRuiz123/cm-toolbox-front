@@ -2,7 +2,17 @@ export type RoleId = string;
 
 export type AppStatus = "active" | "maintenance" | "disabled" | "hidden";
 
-export type AppIconType = "diagnostico" | "pubsub" | "auditoria" | "docs";
+export const APP_ICON_KEYS = [
+  "diagnostico",
+  "logs",
+  "backends",
+  "docs",
+  "auditoria",
+  "pubsub",
+] as const;
+
+export type KnownAppIconType = (typeof APP_ICON_KEYS)[number];
+export type AppIconType = KnownAppIconType | (string & {});
 
 export interface EffectiveAppAccess {
   readonly id: string;
@@ -24,6 +34,7 @@ export interface EffectiveUserAccess {
   readonly isSuperAdmin: boolean;
   readonly canManageApps: boolean;
   readonly canManageUsers: boolean;
+  readonly showWelcomeLanding?: boolean;
   readonly apps: readonly EffectiveAppAccess[];
 }
 
@@ -47,7 +58,7 @@ export const DEFAULT_APPS_CATALOG: readonly EffectiveAppAccess[] = [
     description:
       "Auditoría en tiempo real de clusters, namespaces y cargas de trabajo en Kubernetes (Prod y Test).",
     route: "/logs",
-    icon: "pubsub",
+    icon: "logs",
     tags: ["Kubernetes", "Troubleshooting", "GCP"],
     status: "active",
     displayOrder: 20,
@@ -60,7 +71,7 @@ export const DEFAULT_APPS_CATALOG: readonly EffectiveAppAccess[] = [
     description:
       "Tablero personal de microservicios en Test y Producción con estado GKE, consumo CPU/RAM, RPM/errores HTTP y acceso rápido a logs en vivo.",
     route: "/backends",
-    icon: "pubsub",
+    icon: "backends",
     tags: ["GKE", "Métricas", "Logs"],
     status: "active",
     displayOrder: 22,
@@ -104,6 +115,7 @@ export const buildFallbackAccessProfile = (
   isSuperAdmin: true,
   canManageApps: true,
   canManageUsers: true,
+  showWelcomeLanding: true,
   apps: DEFAULT_APPS_CATALOG,
 });
 
@@ -116,6 +128,7 @@ export const buildRestrictedFallbackAccessProfile = (
   isSuperAdmin: false,
   canManageApps: false,
   canManageUsers: false,
+  showWelcomeLanding: true,
   apps: DEFAULT_APPS_CATALOG.map((app) => ({
     ...app,
     canAccess: app.status === "active",

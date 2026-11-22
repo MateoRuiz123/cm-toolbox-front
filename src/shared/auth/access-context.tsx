@@ -9,7 +9,10 @@ import {
   AccessApiError,
   fetchMyAccess,
   getDevImpersonatedEmail,
+  getLocalWelcomeLandingPreference,
   setDevImpersonatedEmail,
+  setLocalWelcomeLandingPreference,
+  updateMyPreferences,
 } from "./access-api";
 import {
   buildFallbackAccessProfile,
@@ -56,7 +59,18 @@ export const AccessProvider = ({
       try {
         const remoteProfile = await fetchMyAccess();
         if (isCancelled?.()) return;
-        setProfile(remoteProfile);
+        const resolvedShowWelcome =
+          remoteProfile.showWelcomeLanding ??
+          getLocalWelcomeLandingPreference(remoteProfile.email) ??
+          true;
+        setLocalWelcomeLandingPreference(
+          remoteProfile.email,
+          resolvedShowWelcome,
+        );
+        setProfile({
+          ...remoteProfile,
+          showWelcomeLanding: resolvedShowWelcome,
+        });
         setIsUserBlocked(false);
         setBlockedMessage(null);
       } catch (error) {
@@ -66,13 +80,18 @@ export const AccessProvider = ({
           setBlockedMessage(error.message);
           return;
         }
-        setProfile(
-          esAuthBypassActivo()
-            ? buildFallbackAccessProfile(email || "dev.local@coordinadora.com")
-            : buildRestrictedFallbackAccessProfile(
-                email || "operador@coordinadora.com",
-              ),
-        );
+        const fallbackProfile = esAuthBypassActivo()
+          ? buildFallbackAccessProfile(email || "dev.local@coordinadora.com")
+          : buildRestrictedFallbackAccessProfile(
+              email || "operador@coordinadora.com",
+            );
+        const targetEmail = devImpersonatedEmail ?? fallbackProfile.email;
+        const localWelcome = getLocalWelcomeLandingPreference(targetEmail);
+        setProfile({
+          ...fallbackProfile,
+          email: targetEmail,
+          showWelcomeLanding: localWelcome ?? true,
+        });
         setIsUserBlocked(false);
         setBlockedMessage(null);
       } finally {
@@ -81,7 +100,7 @@ export const AccessProvider = ({
         }
       }
     },
-    [estadoAuth, email],
+    [estadoAuth, email, devImpersonatedEmail],
   );
 
   useEffect(() => {
@@ -105,6 +124,31 @@ export const AccessProvider = ({
     [loadAccess],
   );
 
+  const updateWelcomeLandingPreference = useCallback(
+    async (show: boolean) => {
+      const targetEmail = profile.email || email || "dev.local@coordinadora.com";
+      setLocalWelcomeLandingPreference(targetEmail, show);
+      setProfile((prev) => ({
+        ...prev,
+        showWelcomeLanding: show,
+      }));
+      try {
+        const saved = await updateMyPreferences({ showWelcomeLanding: show });
+        setLocalWelcomeLandingPreference(
+          targetEmail,
+          saved.showWelcomeLanding,
+        );
+        setProfile((prev) => ({
+          ...prev,
+          showWelcomeLanding: saved.showWelcomeLanding,
+        }));
+      } catch {
+        // Mantiene preferencia local si el microservicio no está disponible en desarrollo
+      }
+    },
+    [profile.email, email],
+  );
+
   const value = useMemo<AccessContextValue>(
     () =>
       createContextValueFromProfile(profile, {
@@ -112,8 +156,10 @@ export const AccessProvider = ({
         isUserBlocked,
         blockedMessage,
         devImpersonatedEmail,
+        showWelcomeLanding: profile.showWelcomeLanding ?? true,
         refreshAccess: loadAccess,
         switchDevUser,
+        updateWelcomeLandingPreference,
       }),
     [
       profile,
@@ -123,6 +169,7 @@ export const AccessProvider = ({
       devImpersonatedEmail,
       loadAccess,
       switchDevUser,
+      updateWelcomeLandingPreference,
     ],
   );
 

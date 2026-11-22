@@ -75,7 +75,7 @@ const METADATA_MAP: Record<string, RouteMetadata> = {
   "/configuracion": {
     title: "Apariencia | Coordinadora Toolbox",
     description:
-      "Preferencia visual del toolbox: SIGO Droop o Visitors, combinada con el modo claro u oscuro.",
+      "Preferencia visual oficial del toolbox (SIGO Droop), comodidad visual, disposición del Hub y pantalla de bienvenida.",
   },
   "/404": {
     title: "404 - Página no encontrada | Coordinadora Toolbox",

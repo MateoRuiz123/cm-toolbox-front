@@ -17,10 +17,12 @@ export interface AccessContextValue {
   readonly isUserBlocked: boolean;
   readonly blockedMessage: string | null;
   readonly devImpersonatedEmail: string | null;
+  readonly showWelcomeLanding?: boolean;
   readonly canAccessApp: (appId: string) => boolean;
   readonly canPerformAction: (appId: string, actionCode: string) => boolean;
   readonly refreshAccess: () => Promise<void>;
   readonly switchDevUser: (email: string | null) => Promise<void>;
+  readonly updateWelcomeLandingPreference?: (show: boolean) => Promise<void>;
 }
 
 export const createContextValueFromProfile = (
@@ -37,6 +39,7 @@ export const createContextValueFromProfile = (
   isUserBlocked: false,
   blockedMessage: null,
   devImpersonatedEmail: null,
+  showWelcomeLanding: profile.showWelcomeLanding ?? true,
   canAccessApp: (appId: string) => {
     const app = profile.apps.find((a) => a.id === appId);
     return app ? app.canAccess : false;
@@ -48,6 +51,7 @@ export const createContextValueFromProfile = (
   },
   refreshAccess: async () => undefined,
   switchDevUser: async () => undefined,
+  updateWelcomeLandingPreference: async () => undefined,
   ...overrides,
 });
 

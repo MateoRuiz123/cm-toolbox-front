@@ -8,14 +8,17 @@ import {
 import { flushSync } from "react-dom";
 import {
   guardarPreferenciaDescanso,
+  guardarPreferenciaHubLayout,
   guardarPreferenciaMovimientoReducido,
   guardarPreferenciaSistema,
   guardarPreferenciaTema,
   obtenerPreferenciaDescanso,
+  obtenerPreferenciaHubLayout,
   obtenerPreferenciaMovimientoReducido,
   obtenerPreferenciaSistema,
   obtenerPreferenciaTema,
   type ModoDescanso,
+  type ModoHubLayout,
   type SistemaVisual,
 } from "../shared/lib/ui-preferences";
 import { ThemeContext, type Theme } from "./theme-context";
@@ -26,18 +29,6 @@ const getInitialTheme = (): Theme => {
   return globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
-};
-
-let fuenteVisitorsPromesa: Promise<unknown> | null = null;
-
-const cargarFuenteVisitors = () => {
-  if (fuenteVisitorsPromesa) return;
-  fuenteVisitorsPromesa = Promise.all([
-    import("@fontsource/inter/400.css"),
-    import("@fontsource/inter/500.css"),
-    import("@fontsource/inter/600.css"),
-    import("@fontsource/inter/700.css"),
-  ]).catch(() => undefined);
 };
 
 /** Aplica un cambio de estado con fundido de View Transitions si el navegador lo soporta y no hay reduced motion. */
@@ -62,25 +53,21 @@ const conTransicionSuave = (aplicar: () => void) => {
 /** Sincroniza y expone el tema visual de la aplicación. */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
-  const [sistema, setSistemaEstado] = useState<SistemaVisual>(
-    obtenerPreferenciaSistema,
-  );
+  const [sistema] = useState<SistemaVisual>(obtenerPreferenciaSistema);
   const [descanso, setDescansoEstado] = useState<ModoDescanso>(
     obtenerPreferenciaDescanso,
   );
   const [movimientoReducido, setMovimientoReducidoEstado] = useState(
     obtenerPreferenciaMovimientoReducido,
   );
+  const [hubLayout, setHubLayoutEstado] = useState<ModoHubLayout>(
+    obtenerPreferenciaHubLayout,
+  );
 
   useEffect(() => {
     const raiz = document.documentElement;
     raiz.classList.toggle("dark", theme === "dark");
-    if (sistema === "visitors" || sistema === "glass") {
-      raiz.dataset.sistema = sistema;
-      cargarFuenteVisitors();
-    } else {
-      delete raiz.dataset.sistema;
-    }
+    delete raiz.dataset.sistema;
     if (descanso === "calido") {
       raiz.dataset.descanso = "calido";
     } else {
@@ -95,15 +82,16 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     guardarPreferenciaSistema(sistema);
     guardarPreferenciaDescanso(descanso);
     guardarPreferenciaMovimientoReducido(movimientoReducido);
-  }, [theme, sistema, descanso, movimientoReducido]);
+    guardarPreferenciaHubLayout(hubLayout);
+  }, [theme, sistema, descanso, movimientoReducido, hubLayout]);
 
   const toggleTheme = useCallback(() => {
     const nextTheme = theme === "light" ? "dark" : "light";
     conTransicionSuave(() => setTheme(nextTheme));
   }, [theme]);
 
-  const setSistema = useCallback((siguiente: SistemaVisual) => {
-    conTransicionSuave(() => setSistemaEstado(siguiente));
+  const setSistema = useCallback(() => {
+    guardarPreferenciaSistema("sigo");
   }, []);
 
   const setDescanso = useCallback((siguiente: ModoDescanso) => {
@@ -118,6 +106,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     setMovimientoReducidoEstado(reducido);
   }, []);
 
+  const setHubLayout = useCallback((modo: ModoHubLayout) => {
+    setHubLayoutEstado(modo);
+  }, []);
+
   const value = useMemo(
     () => ({
       theme,
@@ -129,6 +121,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       toggleDescanso,
       movimientoReducido,
       setMovimientoReducido,
+      hubLayout,
+      setHubLayout,
     }),
     [
       theme,
@@ -140,6 +134,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       toggleDescanso,
       movimientoReducido,
       setMovimientoReducido,
+      hubLayout,
+      setHubLayout,
     ],
   );
 

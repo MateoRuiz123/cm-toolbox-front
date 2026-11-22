@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ModoDescanso, SistemaVisual } from '../shared/lib/ui-preferences'
+import type { ModoDescanso, ModoHubLayout, SistemaVisual } from '../shared/lib/ui-preferences'
 
 export type Theme = 'light' | 'dark'
 
@@ -13,6 +13,8 @@ export interface ThemeContextValue {
   toggleDescanso: () => void
   movimientoReducido: boolean
   setMovimientoReducido: (reducido: boolean) => void
+  hubLayout?: ModoHubLayout
+  setHubLayout?: (modo: ModoHubLayout) => void
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null)

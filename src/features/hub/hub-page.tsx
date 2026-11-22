@@ -3,10 +3,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent,
 } from "react";
 import { Link, useNavigate } from "react-router";
+import { ThemeContext } from "../../app/theme-context";
 import type { EffectiveAppAccess } from "../../shared/auth/access-types";
 import { AuthContext } from "../../shared/auth/auth-context-base";
 import { useAccess } from "../../shared/auth/use-access";
@@ -20,6 +22,8 @@ import {
   type IncidentReportResponse,
 } from "./api/apps-health";
 import { BentoAppCard, type UnavailableReason } from "./bento-app-card";
+import { HubAmbientBackground } from "./hub-ambient-background";
+import { HubPs5Stage } from "./hub-ps5-stage";
 import {
   clearCachedBentoSizes,
   computeAutoPackedBentoSizes,
@@ -81,7 +85,12 @@ const HubSkeletonGrid = () => (
 export const HubPage = () => {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
+  const themeContext = useContext(ThemeContext);
+  const hubLayout = themeContext?.hubLayout ?? "ps5";
   const { apps, loadingAccess, isSuperAdmin, refreshAccess } = useAccess();
+
+  const [activeAppId, setActiveAppId] = useState<string | null>(null);
+  const cardElementRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const visibleApps = useMemo(
     () => apps.filter((app) => app.status !== "hidden"),
@@ -196,6 +205,7 @@ export const HubPage = () => {
   }, []);
 
   const handleStartEditing = () => {
+    setActiveAppId(null);
     setEditorFeedback(null);
     setDraftOrder(portalSortedApps.map((app) => app.id));
     setDraftSizes(
@@ -366,9 +376,88 @@ export const HubPage = () => {
   const primaryIncidentTicket = primaryIncident
     ? reportedTickets[primaryIncident.id]
     : undefined;
+  const isBentoAmbientActive = hubLayout === "bento" && !isEditing;
+  const effectiveActiveAppId = isBentoAmbientActive ? activeAppId : null;
+
+  const interactiveApps = useMemo(
+    () =>
+      displaySortedApps.filter(
+        (app) => app.status === "active" && app.canAccess,
+      ),
+    [displaySortedApps],
+  );
+
+  useEffect(() => {
+    if (!isBentoAmbientActive || dialogState || interactiveApps.length === 0) {
+      return;
+    }
+
+    const handleArrowNav = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+      event.preventDefault();
+      const currentIdx = activeAppId
+        ? interactiveApps.findIndex((item) => item.id === activeAppId)
+        : -1;
+      const nextIdx =
+        currentIdx === -1
+          ? event.key === "ArrowRight"
+            ? 0
+            : interactiveApps.length - 1
+          : (currentIdx +
+              (event.key === "ArrowRight" ? 1 : -1) +
+              interactiveApps.length) %
+            interactiveApps.length;
+      const nextApp = interactiveApps[nextIdx];
+      if (!nextApp) return;
+      setActiveAppId(nextApp.id);
+      cardElementRefs.current[nextApp.id]?.focus();
+    };
+
+    window.addEventListener("keydown", handleArrowNav);
+    return () => window.removeEventListener("keydown", handleArrowNav);
+  }, [isBentoAmbientActive, dialogState, interactiveApps, activeAppId]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+    <>
+      {!loadingAccess && hubLayout === "ps5" && !isEditing ? (
+        <HubPs5Stage
+          apps={displaySortedApps}
+          sortMode={sortMode}
+          onChangeSortMode={handleSortModeChange}
+          usageCounts={usageCounts}
+          healthByAppId={healthByAppId}
+          isCheckingHealth={isCheckingHealth}
+          onRefreshHealth={() => void refreshHealth()}
+          unhealthyApps={unhealthyApps}
+          reportError={reportError}
+          reportedTickets={reportedTickets}
+          reportingAppId={reportingAppId}
+          editorFeedback={editorFeedback}
+          userEmail={auth?.email}
+          onOpenApp={handleOpenApp}
+          onClickUnavailable={(targetApp, reason) =>
+            setDialogState({ app: targetApp, reason })
+          }
+          onQuickReport={(targetApp, detected) =>
+            void handleQuickReport(targetApp, detected)
+          }
+        />
+      ) : (
+        <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+          {isBentoAmbientActive && !loadingAccess && (
+            <HubAmbientBackground
+              apps={displaySortedApps}
+              activeAppId={effectiveActiveAppId}
+            />
+          )}
+
+          <div className="relative z-10">
       <header className="mb-8 flex flex-col gap-5 border-b border-[var(--border-default)] pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
@@ -572,7 +661,12 @@ export const HubPage = () => {
       {loadingAccess ? (
         <HubSkeletonGrid />
       ) : (
-        <div className="relative">
+        <div
+          className="relative"
+          onPointerLeave={() => {
+            if (isBentoAmbientActive) setActiveAppId(null);
+          }}
+        >
           {isEditing && (
             <>
               <div
@@ -637,9 +731,27 @@ export const HubPage = () => {
                 onDragStartCard={handleDragStartCard}
                 onDropOnCard={handleDropOnCard}
                 onDragEndCard={handleDragEndCard}
+                isPs5Mode={isBentoAmbientActive}
+                isActiveAmbient={effectiveActiveAppId === app.id}
+                isDimmedAmbient={
+                  isBentoAmbientActive &&
+                  effectiveActiveAppId !== null &&
+                  effectiveActiveAppId !== app.id
+                }
+                onActivate={(id) => setActiveAppId(id)}
+                onDeactivate={(id) =>
+                  setActiveAppId((prev) => (prev === id ? null : prev))
+                }
+                cardRefCallback={(el) => {
+                  cardElementRefs.current[app.id] = el;
+                }}
               />
             ))}
           </section>
+        </div>
+      )}
+
+          </div>
         </div>
       )}
 
@@ -738,6 +850,6 @@ export const HubPage = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

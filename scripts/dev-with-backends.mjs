@@ -486,7 +486,16 @@ const main = async () => {
     "sql",
     "006_seed_backends_app.sql",
   );
-  for (const seedPath of [accessDocsSeed, accessBackendsSeed]) {
+  const accessIconsMigration = path.join(
+    accessRoot,
+    "sql",
+    "007_update_app_icons.sql",
+  );
+  for (const seedPath of [
+    accessDocsSeed,
+    accessBackendsSeed,
+    accessIconsMigration,
+  ]) {
     if (existsSync(seedPath)) {
       const seeded = await applySqlViaDocker(seedPath, "cm_toolbox_access");
       if (seeded.code === 0) {

@@ -45,7 +45,7 @@ test.describe("Navegación del portal", () => {
     ).toBeVisible();
   });
 
-  test("permite cambiar el sistema visual a Glass Spatial en apariencia", async ({
+  test("muestra controles de apariencia sin selector de temas y permite cambiar disposición a Cuadrícula Bento", async ({
     page,
   }) => {
     await page.goto("/configuracion");
@@ -54,10 +54,14 @@ test.describe("Navegación del portal", () => {
     await expect(
       page.getByRole("heading", { name: /apariencia del toolbox/i }),
     ).toBeVisible();
+    await expect(
+      page.getByText(/visitors|glass spatial|tema oficial activo/i),
+    ).toHaveCount(0);
 
-    const glassRadio = page.getByRole("radio", { name: /glass spatial/i });
-    await glassRadio.click();
-    await expect(glassRadio).toHaveAttribute("aria-checked", "true");
-    await expect(page.locator("html")).toHaveAttribute("data-sistema", "glass");
+    const bentoRadio = page.getByRole("radio", {
+      name: /cuadrícula bento clásica/i,
+    });
+    await bentoRadio.click();
+    await expect(bentoRadio).toHaveAttribute("aria-checked", "true");
   });
 });

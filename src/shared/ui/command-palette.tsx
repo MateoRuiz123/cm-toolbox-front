@@ -8,7 +8,9 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { ThemeContext } from "../../app/theme-context";
+import type { AppIconType } from "../auth/access-types";
 import { useAccess } from "../auth/use-access";
+import { AppIcon } from "./app-icon";
 import {
   recordAppOpenEvent,
   sendAutomaticIncidentReport,
@@ -20,6 +22,8 @@ interface CommandActionItem {
   readonly label: string;
   readonly hint: string;
   readonly keywords: string;
+  readonly icon?: AppIconType;
+  readonly appId?: string;
   readonly onSelect: () => void | Promise<void>;
 }
 
@@ -108,6 +112,8 @@ export const CommandPalette = () => {
         label: app.name,
         hint: app.route,
         keywords: `${app.id} ${app.name} ${app.description} ${app.tags.join(" ")}`,
+        icon: app.icon,
+        appId: app.id,
         onSelect: () => {
           void recordAppOpenEvent(app.id);
           setOpen(false);
@@ -148,7 +154,7 @@ export const CommandPalette = () => {
         category: "Navegación",
         label: "Ir a Apariencia y Sistema Visual",
         hint: "/configuracion",
-        keywords: "configuracion sigo visitors glass apariencia",
+        keywords: "configuracion sigo droop apariencia",
         onSelect: () => {
           setOpen(false);
           navigate("/configuracion");
@@ -346,13 +352,24 @@ export const CommandPalette = () => {
                             : "text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
                         }`}
                       >
-                        <div className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">
-                            {item.label}
-                          </span>
-                          <span className="text-[11px] text-[var(--text-muted)]">
-                            {item.category}
-                          </span>
+                        <div className="flex min-w-0 items-center gap-3">
+                          {item.icon && (
+                            <span className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--color-primary)]">
+                              <AppIcon
+                                icon={item.icon}
+                                appId={item.appId}
+                                className="size-4"
+                              />
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <span className="block truncate text-sm font-semibold">
+                              {item.label}
+                            </span>
+                            <span className="text-[11px] text-[var(--text-muted)]">
+                              {item.category}
+                            </span>
+                          </div>
                         </div>
                         <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)]">
                           {item.hint}

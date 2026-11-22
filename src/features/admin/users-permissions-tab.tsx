@@ -178,13 +178,13 @@ export const UsersPermissionsTab = ({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--border-default)] bg-[var(--surface-sunken)] text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
               <tr>
-                <th className="px-4 py-3">Usuario</th>
-                <th className="px-4 py-3">Rol Asignado</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">
-                  Herramientas a las que tiene acceso efectivo
+                <th className="px-3 py-3">Usuario</th>
+                <th className="px-3 py-3">Rol Asignado</th>
+                <th className="px-3 py-3">Estado</th>
+                <th className="px-3 py-3">
+                  Herramientas con acceso efectivo
                 </th>
-                <th className="px-4 py-3 text-right">Acciones</th>
+                <th className="px-3 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-default)]">
@@ -203,8 +203,8 @@ export const UsersPermissionsTab = ({
                     key={user.email}
                     className="hover:bg-[var(--surface-sunken)]/40"
                   >
-                    <td className="px-4 py-3.5 align-middle">
-                      <div className="font-mono text-xs font-bold text-[var(--text-body)]">
+                    <td className="px-3 py-3 align-middle">
+                      <div className="font-mono text-xs font-bold text-[var(--text-body)] break-all">
                         {user.email}
                       </div>
                       {user.displayName && (
@@ -219,7 +219,7 @@ export const UsersPermissionsTab = ({
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                    <td className="px-3 py-3 align-middle whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="inline-flex items-center rounded-full border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--color-primary)]">
                           {roleObj?.name ?? user.roleId}
@@ -232,7 +232,7 @@ export const UsersPermissionsTab = ({
                       </div>
                     </td>
 
-                    <td className="px-4 py-3.5 align-middle whitespace-nowrap">
+                    <td className="px-3 py-3 align-middle whitespace-nowrap">
                       {user.isBlocked ? (
                         <span className="inline-flex items-center rounded-full border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--state-error)]">
                           Bloqueado
@@ -244,7 +244,7 @@ export const UsersPermissionsTab = ({
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5 align-middle">
+                    <td className="px-3 py-3 align-middle">
                       {accessibleApps.length === 0 ? (
                         <span className="text-xs text-[var(--text-muted)]">
                           Sin herramientas habilitadas
@@ -254,7 +254,7 @@ export const UsersPermissionsTab = ({
                           {accessibleApps.map(({ app, access }) => (
                             <span
                               key={app.id}
-                              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2.5 py-1 text-[11px] leading-tight text-[var(--text-body)]"
+                              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-2 py-0.5 text-[11px] leading-tight text-[var(--text-body)]"
                             >
                               <strong className="font-semibold text-[var(--state-success)]">
                                 ✓ {app.name}
@@ -270,16 +270,16 @@ export const UsersPermissionsTab = ({
                       )}
                     </td>
 
-                    <td className="px-4 py-3.5 text-right align-middle whitespace-nowrap">
+                    <td className="px-3 py-3 text-right align-middle">
                       {editable ? (
-                        <div className="inline-flex items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => {
                               setEditingUser(user);
                               setModalOpen(true);
                             }}
-                            className="rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-body)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] cursor-pointer"
+                            className="cursor-pointer whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-body)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                           >
                             Configurar accesos
                           </button>
@@ -300,7 +300,7 @@ export const UsersPermissionsTab = ({
                                       setConfirmDeleteEmail(null);
                                     }
                                   }}
-                                  className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--state-error)] px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                                  className="cursor-pointer rounded-[var(--radius-pill)] bg-[var(--state-error)] px-2.5 py-1 text-[11px] font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                                 >
                                   {deletingEmail === user.email
                                     ? "Eliminando…"
@@ -309,7 +309,7 @@ export const UsersPermissionsTab = ({
                                 <button
                                   type="button"
                                   onClick={() => setConfirmDeleteEmail(null)}
-                                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)]"
+                                  className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)]"
                                 >
                                   Cancelar
                                 </button>
@@ -320,7 +320,7 @@ export const UsersPermissionsTab = ({
                                 onClick={() =>
                                   setConfirmDeleteEmail(user.email)
                                 }
-                                className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--state-error)] transition hover:bg-[var(--state-error)]/15"
+                                className="cursor-pointer whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--state-error)] transition hover:bg-[var(--state-error)]/15"
                               >
                                 Eliminar
                               </button>

@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   PREFERENCIAS_KEYS,
   guardarPreferenciaDescanso,
+  guardarPreferenciaHubLayout,
   guardarPreferenciaMovimientoReducido,
   guardarPreferenciaSistema,
   obtenerPreferenciaDescanso,
+  obtenerPreferenciaHubLayout,
   obtenerPreferenciaMovimientoReducido,
   guardarPreferenciaTema,
   guardarPreferenciaVista,
@@ -42,12 +44,12 @@ describe("ui-preferences", () => {
   it("preserva snapshot de preferencias ante reinicios de storage", () => {
     guardarPreferenciaTema("dark");
     guardarPreferenciaVista("grid");
-    guardarPreferenciaSistema("visitors");
+    guardarPreferenciaSistema("sigo");
 
     const snapshot = obtenerSnapshotPreferencias();
     expect(snapshot.theme).toBe("dark");
     expect(snapshot.viewMode).toBe("grid");
-    expect(snapshot.sistema).toBe("visitors");
+    expect(snapshot.sistema).toBe("sigo");
 
     safeStorage.removeItem(PREFERENCIAS_KEYS.THEME);
     safeStorage.removeItem(PREFERENCIAS_KEYS.VIEW_MODE);
@@ -56,15 +58,15 @@ describe("ui-preferences", () => {
     restaurarSnapshotPreferencias(snapshot);
     expect(obtenerPreferenciaTema()).toBe("dark");
     expect(obtenerPreferenciaVista()).toBe("grid");
-    expect(obtenerPreferenciaSistema()).toBe("visitors");
+    expect(obtenerPreferenciaSistema()).toBe("sigo");
   });
 
-  it("usa SIGO cuando no hay sistema guardado y persiste Visitors y Glass", () => {
+  it("resuelve siempre a SIGO aunque existan valores legados (visitors / glass)", () => {
     expect(obtenerPreferenciaSistema()).toBe("sigo");
-    guardarPreferenciaSistema("visitors");
-    expect(obtenerPreferenciaSistema()).toBe("visitors");
-    guardarPreferenciaSistema("glass");
-    expect(obtenerPreferenciaSistema()).toBe("glass");
+    safeStorage.setItem(PREFERENCIAS_KEYS.SISTEMA, "visitors");
+    expect(obtenerPreferenciaSistema()).toBe("sigo");
+    safeStorage.setItem(PREFERENCIAS_KEYS.SISTEMA, "glass");
+    expect(obtenerPreferenciaSistema()).toBe("sigo");
     guardarPreferenciaSistema("sigo");
     expect(obtenerPreferenciaSistema()).toBe("sigo");
   });
@@ -97,5 +99,19 @@ describe("ui-preferences", () => {
     restaurarSnapshotPreferencias(snapshot);
     expect(obtenerPreferenciaMovimientoReducido()).toBe(true);
     safeStorage.removeItem(PREFERENCIAS_KEYS.MOVIMIENTO);
+  });
+
+  it("usa vista PS5 por defecto y conserva bento en el snapshot", () => {
+    safeStorage.removeItem(PREFERENCIAS_KEYS.HUB_LAYOUT);
+    expect(obtenerPreferenciaHubLayout()).toBe("ps5");
+
+    guardarPreferenciaHubLayout("bento");
+    const snapshot = obtenerSnapshotPreferencias();
+    expect(snapshot.hubLayout).toBe("bento");
+
+    safeStorage.removeItem(PREFERENCIAS_KEYS.HUB_LAYOUT);
+    restaurarSnapshotPreferencias(snapshot);
+    expect(obtenerPreferenciaHubLayout()).toBe("bento");
+    safeStorage.removeItem(PREFERENCIAS_KEYS.HUB_LAYOUT);
   });
 });

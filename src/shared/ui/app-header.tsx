@@ -1,5 +1,6 @@
 import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
+import { AppSwitcher } from "./app-switcher";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../auth/use-auth";
 import { useAccess } from "../auth/access-context";
@@ -21,43 +22,21 @@ export const AppHeader = () => {
   const esHome = path === "/" || path === "/hub";
   const esAdmin = path.startsWith("/admin");
   const puedeAdministrar = canManageApps || canManageUsers;
-  const herramientasRapidas = apps.filter(
-    (app) =>
-      app.canAccess &&
-      app.status !== "disabled" &&
-      app.status !== "hidden" &&
-      app.route.startsWith("/"),
-  );
-  const obtenerNombreCorto = (appId: string, nombre: string) => {
-    if (appId === "diagnostico") return "Diagnóstico";
-    if (appId === "logs") return "Logs GKE";
-    if (appId === "docs") return "Documentación";
-    return nombre;
-  };
-
-  const obtenerTituloRuta = () => {
-    if (path.startsWith("/diagnostico")) return "Diagnóstico de migración";
-    if (path.startsWith("/logs")) return "Visor de Logs GKE";
-    if (path.startsWith("/backends")) return "Mis Backends";
-    if (path.startsWith("/docs")) return "Documentación de APIs";
-    if (path.startsWith("/admin")) return "Administración de Accesos";
-    if (path.startsWith("/configuracion")) return "Apariencia";
-    if (path.startsWith("/privacidad")) return "Política de Privacidad";
-    if (path.startsWith("/terminos")) return "Términos y Condiciones";
-    if (path.startsWith("/contacto")) return "Contacto y Soporte";
-    if (path.startsWith("/gracias")) return "Confirmación";
-    const dynamicApp = apps.find(
-      (app) => app.route !== "/" && path.startsWith(app.route),
-    );
-    if (dynamicApp) return dynamicApp.name;
-    return "Página";
-  };
 
   return (
-    <header
-      style={{ boxShadow: "var(--shadow-1)" }}
-      className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[var(--border-default)] bg-[var(--surface-header)] px-4 sm:px-8"
-    >
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -bottom-5 -z-10 backdrop-blur-md"
+        style={{
+          background:
+            "linear-gradient(to bottom, color-mix(in srgb, var(--surface-header) 92%, transparent) 0%, color-mix(in srgb, var(--surface-header) 72%, transparent) 52%, color-mix(in srgb, var(--surface-header) 24%, transparent) 80%, transparent 100%)",
+          maskImage:
+            "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+        }}
+      />
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <Link
           to="/"
@@ -73,80 +52,19 @@ export const AppHeader = () => {
 
         <div className="h-4 w-px bg-[var(--border-default)] shrink-0 hidden sm:block" />
 
-        <div className="flex items-center gap-2 min-w-0 text-xs sm:text-sm">
-          {!esHome ? (
-            <div className="flex items-center gap-2 truncate">
-              <Link
-                to="/"
-                className="hidden sm:inline-block font-medium text-[var(--text-muted)] hover:text-[var(--color-primary)] transition-colors truncate"
-              >
-                Portal
-              </Link>
-              <span className="hidden sm:inline-block text-[var(--text-muted)]">
-                /
-              </span>
-              <span className="font-bold tracking-tight text-[var(--text-body)] truncate">
-                {obtenerTituloRuta()}
-              </span>
-            </div>
-          ) : (
+        {!esHome ? (
+          <AppSwitcher apps={apps} currentPath={path} />
+        ) : (
+          <div className="flex items-center gap-2 min-w-0 text-xs sm:text-sm">
             <span className="font-bold tracking-tight text-[var(--text-body)] truncate">
               Toolbox de Apoyo
             </span>
-          )}
-        </div>
-
-        {!esHome && herramientasRapidas.length > 1 && (
-          <nav
-            aria-label="Cambiar de herramienta"
-            className="hidden shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-0.5 xl:flex"
-          >
-            {herramientasRapidas.map((app) => {
-              const activa = path.startsWith(app.route);
-              return (
-                <Link
-                  key={app.id}
-                  to={app.route}
-                  aria-current={activa ? "page" : undefined}
-                  title={`Ir a ${app.name}`}
-                  className={`whitespace-nowrap rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] ${
-                    activa
-                      ? "bg-[var(--surface-card)] text-[var(--text-body)] shadow-xs"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-body)]"
-                  }`}
-                >
-                  {obtenerNombreCorto(app.id, app.name)}
-                </Link>
-              );
-            })}
-          </nav>
+          </div>
         )}
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         <CommandPalette />
-        {!esHome && (
-          <Link
-            to="/"
-            className="hidden items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:bg-[var(--surface-sunken)] hover:text-[var(--color-primary)] md:flex xl:hidden"
-            title="Volver a la lista de aplicaciones"
-          >
-            <svg
-              className="size-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            <span>Volver al portal</span>
-          </Link>
-        )}
 
         {puedeAdministrar && !esAdmin && (
           <Link

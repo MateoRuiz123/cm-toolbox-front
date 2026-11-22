@@ -28,49 +28,20 @@ describe("ConfiguracionPage", () => {
     document.documentElement.classList.remove("dark");
   });
 
-  it("muestra el título accesible y deja SIGO activo por defecto", () => {
+  it("muestra controles configurables sin selector o tarjeta de temas alternativos y limpia preferencias legadas", () => {
+    safeStorage.setItem(PREFERENCIAS_KEYS.SISTEMA, "visitors");
+    document.documentElement.dataset.sistema = "glass";
+
     renderPagina();
 
     expect(
       screen.getByRole("heading", { name: /apariencia del toolbox/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /sigo droop/i })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    expect(document.documentElement.dataset.sistema).toBeUndefined();
-  });
-
-  it("marca Visitors en el documento y vuelve a SIGO", async () => {
-    const user = userEvent.setup();
-    renderPagina();
-
-    await user.click(screen.getByRole("radio", { name: /visitors/i }));
-
-    expect(screen.getByRole("radio", { name: /visitors/i })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    expect(document.documentElement.dataset.sistema).toBe("visitors");
-    expect(safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA)).toBe("visitors");
-
-    await user.click(screen.getByRole("radio", { name: /sigo droop/i }));
-
+    expect(screen.queryByText(/tema oficial activo/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/visitors/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/glass spatial/i)).not.toBeInTheDocument();
     expect(document.documentElement.dataset.sistema).toBeUndefined();
     expect(safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA)).toBe("sigo");
-  });
-
-  it("marca Glass Spatial en el documento y lo persiste", async () => {
-    const user = userEvent.setup();
-    renderPagina();
-
-    await user.click(screen.getByRole("radio", { name: /glass spatial/i }));
-
-    expect(
-      screen.getByRole("radio", { name: /glass spatial/i }),
-    ).toHaveAttribute("aria-checked", "true");
-    expect(document.documentElement.dataset.sistema).toBe("glass");
-    expect(safeStorage.getItem(PREFERENCIAS_KEYS.SISTEMA)).toBe("glass");
   });
 
   it("activa y desactiva el descanso visual cálido", async () => {
@@ -108,5 +79,29 @@ describe("ConfiguracionPage", () => {
     expect(interruptor).toHaveAttribute("aria-checked", "true");
     expect(document.documentElement.dataset.movimiento).toBe("reducido");
     expect(safeStorage.getItem(PREFERENCIAS_KEYS.MOVIMIENTO)).toBe("reducido");
+  });
+
+  it("permite alternar la experiencia del Hub entre Vista inmersiva y Bento y el switch de bienvenida", async () => {
+    safeStorage.removeItem(PREFERENCIAS_KEYS.HUB_LAYOUT);
+    const user = userEvent.setup();
+    renderPagina();
+
+    const immersiveRadio = screen.getByRole("radio", {
+      name: /vista inmersiva/i,
+    });
+    const bentoRadio = screen.getByRole("radio", { name: /cuadrícula bento/i });
+    expect(immersiveRadio).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByText(/ps5|consola/i)).not.toBeInTheDocument();
+
+    await user.click(bentoRadio);
+    expect(bentoRadio).toHaveAttribute("aria-checked", "true");
+    expect(safeStorage.getItem(PREFERENCIAS_KEYS.HUB_LAYOUT)).toBe("bento");
+
+    expect(
+      screen.getByRole("link", { name: /ver pantalla de bienvenida/i }),
+    ).toHaveAttribute("href", "/bienvenida");
+    expect(
+      screen.getByRole("switch", { name: /mostrar pantalla de bienvenida/i }),
+    ).toBeInTheDocument();
   });
 });

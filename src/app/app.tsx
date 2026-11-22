@@ -93,6 +93,12 @@ const ConfiguracionPage = lazy(() =>
   })),
 );
 
+const WelcomeLandingPage = lazy(() =>
+  import("../features/welcome/welcome-landing-page").then((m) => ({
+    default: m.WelcomeLandingPage,
+  })),
+);
+
 const InternalDocsPage = lazy(() =>
   import("../features/docs/internal-docs-pages").then((m) => ({
     default: m.InternalDocsPage,
@@ -219,6 +225,10 @@ export const AppRoutes = () => {
         }
       />
       <Route path="/configuracion" element={<ConfiguracionPage />} />
+      <Route
+        path="/bienvenida"
+        element={<WelcomeLandingPage standalone />}
+      />
       {dynamicInternalApps.map((app) => (
         <Route
           key={app.id}
@@ -238,7 +248,9 @@ export const AppRoutes = () => {
 
 const AppShell = () => {
   const { pathname } = useLocation();
-  const isFullHeightTool = pathname.startsWith("/logs");
+  const isFullHeightTool =
+    pathname.startsWith("/logs") || pathname.startsWith("/bienvenida");
+  const isWelcomeRoute = pathname.startsWith("/bienvenida");
 
   return (
     <AuthProvider>
@@ -255,7 +267,7 @@ const AppShell = () => {
             >
               Saltar al contenido
             </a>
-            <AppHeader />
+            {!isWelcomeRoute && <AppHeader />}
             <main
               id="contenido-principal"
               tabIndex={-1}
