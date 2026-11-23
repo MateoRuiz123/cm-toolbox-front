@@ -7,12 +7,13 @@ import {
   useState,
   type DragEvent,
 } from "react";
-import { Link, useNavigate } from "react-router";
 import { ThemeContext } from "../../app/theme-context";
 import type { EffectiveAppAccess } from "../../shared/auth/access-types";
 import { AuthContext } from "../../shared/auth/auth-context-base";
 import { useAccess } from "../../shared/auth/use-access";
+import { useTransitionNavigate } from "../../shared/lib/use-transition-navigate";
 import { SmoothTitleAccent } from "../../shared/ui/smoothui";
+import { TransitionLink } from "../../shared/ui/transition-link";
 import {
   fetchAppsUsageRanking,
   recordAppOpenEvent,
@@ -84,7 +85,7 @@ const HubSkeletonGrid = () => (
 );
 
 export const HubPage = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const auth = useContext(AuthContext);
   const themeContext = useContext(ThemeContext);
   const hubLayout = themeContext?.hubLayout ?? "ps5";
@@ -827,13 +828,13 @@ export const HubPage = () => {
               )}
 
               <div className="flex items-center justify-between gap-3 pt-1">
-                <Link
+                <TransitionLink
                   to={`/contacto?app=${encodeURIComponent(dialogState.app.id)}&asunto=${encodeURIComponent(dialogState.reason === "maintenance" ? "mantenimiento" : "diagnostico")}&estado=${encodeURIComponent(dialogState.reason)}`}
                   onClick={() => setDialogState(null)}
                   className="text-xs font-semibold text-[var(--text-link)] hover:underline"
                 >
                   Abrir formulario detallado
-                </Link>
+                </TransitionLink>
                 <button
                   type="button"
                   onClick={() => setDialogState(null)}

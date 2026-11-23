@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { Link } from "react-router";
 import type { EffectiveAppAccess } from "../../shared/auth/access-types";
 import { AppIcon } from "../../shared/ui/app-icon";
+import { TransitionLink } from "../../shared/ui/transition-link";
 import { leerConsultaSesion } from "../diagnostico/consulta-sesion";
 import { leerLogsRecientes } from "../logs/logs-sesion";
 import type { AppHealthResult, BentoSize } from "./api/apps-health";
@@ -389,14 +389,14 @@ export const BentoAppCard = ({
     }
 
     return (
-      <Link
+      <TransitionLink
         to={app.route}
         onClick={() => onOpenApp(app)}
         className={buttonClasses}
       >
         <span>{ctaText}</span>
         <HubArrowIcon />
-      </Link>
+      </TransitionLink>
     );
   };
 
@@ -652,7 +652,7 @@ export const BentoAppCard = ({
 
         {resumeContext && (
           <div className="mt-4">
-            <Link
+            <TransitionLink
               to={resumeContext.to}
               onClick={() => onOpenApp(app)}
               className="inline-flex items-center gap-2 rounded-[var(--radius-2)] border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)]/55 px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
@@ -660,7 +660,7 @@ export const BentoAppCard = ({
               <span className="size-1.5 rounded-full bg-[var(--color-accent)]" />
               <span className="truncate">{resumeContext.label}</span>
               <span aria-hidden="true">&rarr;</span>
-            </Link>
+            </TransitionLink>
           </div>
         )}
       </div>

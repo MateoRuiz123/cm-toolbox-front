@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
 import { useAccess } from "@/shared/auth/access-context";
+import { useTransitionNavigate } from "@/shared/lib/use-transition-navigate";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
+import { TransitionLink } from "@/shared/ui/transition-link";
 import {
   createAdminApi,
   DocsApiError,
@@ -27,7 +28,7 @@ const slugifyApiId = (value: string): string =>
     .replace(/-{2,}/g, "-");
 
 export const NewApiForm = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const [name, setName] = useState("");
   const [customId, setCustomId] = useState("");
   const [description, setDescription] = useState("");
@@ -312,12 +313,12 @@ export const NewApiForm = () => {
         >
           {submitting ? "Creando…" : "Crear documentación"}
         </button>
-        <Link
+        <TransitionLink
           to="/docs"
           className="rounded-[var(--radius-pill)] border border-[var(--border-default)] px-4 py-2 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--surface-sunken)]"
         >
           Cancelar
-        </Link>
+        </TransitionLink>
       </div>
     </form>
   );
@@ -340,19 +341,19 @@ export const DocsNewApiPage = () => {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center gap-4 text-sm">
-        <Link
+        <TransitionLink
           to="/docs"
           className="font-medium text-[var(--color-primary)] hover:underline"
         >
           Catálogo
-        </Link>
+        </TransitionLink>
         <span className="text-[var(--text-muted)]">/</span>
-        <Link
+        <TransitionLink
           to="/docs/admin"
           className="font-medium text-[var(--color-primary)] hover:underline"
         >
           Administrar
-        </Link>
+        </TransitionLink>
       </div>
 
       <header className="mb-6">

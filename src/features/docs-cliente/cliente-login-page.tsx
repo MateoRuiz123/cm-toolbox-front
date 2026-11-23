@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { esAuthBypassActivo } from "@/shared/auth/auth-bypass";
 import { safeStorage } from "@/shared/lib/safe-storage";
+import { useTransitionNavigate } from "@/shared/lib/use-transition-navigate";
 import { Skeleton, SkeletonRegion } from "@/shared/ui/skeleton";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 import {
@@ -129,7 +130,7 @@ const AnimatedEyeButton = ({
  * valida seguridad de contraseña e inhabilita re-aperturas futuras.
  */
 export const ClienteLoginPage = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

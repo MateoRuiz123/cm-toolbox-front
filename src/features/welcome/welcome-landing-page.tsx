@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { useAccess } from "../../shared/auth/access-context";
 import { useMovimientoReducido } from "../../shared/lib/use-movimiento-reducido";
 import { usePageTitle } from "../../shared/lib/use-page-title";
+import { useTransitionNavigate } from "../../shared/lib/use-transition-navigate";
 import { startVolumetricWord } from "./volumetric-word-renderer";
 
 interface WelcomeLandingPageProps {
@@ -55,7 +55,7 @@ export const WelcomeLandingPage = ({
   onContinue,
   standalone = false,
 }: WelcomeLandingPageProps) => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wordSlotRef = useRef<HTMLDivElement | null>(null);
   const {

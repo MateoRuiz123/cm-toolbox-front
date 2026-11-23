@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Link } from "react-router";
 import type { EffectiveAppAccess } from "../auth/access-types";
 import { useMovimientoReducido } from "../lib/use-movimiento-reducido";
 import { AppIcon } from "./app-icon";
+import { TransitionLink } from "./transition-link";
 
 const STATIC_ROUTE_TITLES: readonly {
   readonly prefix: string;
@@ -170,12 +170,12 @@ export const AppSwitcher = ({ apps, currentPath }: AppSwitcherProps) => {
     <div ref={containerRef} className="relative flex min-w-0 items-center gap-3">
       {/* Breadcrumb con disparador del selector */}
       <div className="flex shrink-0 items-center gap-2 text-xs sm:text-sm">
-        <Link
+        <TransitionLink
           to="/"
           className="hidden shrink-0 font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--color-primary)] sm:inline-block"
         >
           Portal
-        </Link>
+        </TransitionLink>
         <span className="hidden shrink-0 text-[var(--text-muted)] sm:inline-block">
           /
         </span>
@@ -263,7 +263,7 @@ export const AppSwitcher = ({ apps, currentPath }: AppSwitcherProps) => {
                 filteredApps.map((app, index) => {
                   const activa = currentPath.startsWith(app.route);
                   return (
-                    <Link
+                    <TransitionLink
                       key={app.id}
                       ref={(el) => {
                         optionRefs.current[index] = el;
@@ -307,21 +307,21 @@ export const AppSwitcher = ({ apps, currentPath }: AppSwitcherProps) => {
                           {app.description}
                         </span>
                       </span>
-                    </Link>
+                    </TransitionLink>
                   );
                 })
               )}
             </div>
 
             <div className="border-t border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2">
-              <Link
+              <TransitionLink
                 to="/"
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-between rounded-[var(--radius-1)] px-2 py-1 text-xs font-semibold text-[var(--color-primary)] transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
               >
                 <span>Ver todas en el portal</span>
                 <span aria-hidden="true">&rarr;</span>
-              </Link>
+              </TransitionLink>
             </div>
           </motion.div>
         )}

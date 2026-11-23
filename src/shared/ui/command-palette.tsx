@@ -6,10 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router";
 import { ThemeContext } from "../../app/theme-context";
 import type { AppIconType } from "../auth/access-types";
 import { useAccess } from "../auth/use-access";
+import { useTransitionNavigate } from "../lib/use-transition-navigate";
 import { AppIcon } from "./app-icon";
 import {
   recordAppOpenEvent,
@@ -32,7 +32,7 @@ interface CommandActionItem {
  * alternar apariencia o enviar reportes automáticos de fallo en 1 clic.
  */
 export const CommandPalette = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const themeContext = useContext(ThemeContext);
   const { apps, canManageApps, canManageUsers } = useAccess();
 

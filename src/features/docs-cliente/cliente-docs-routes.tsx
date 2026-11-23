@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
+import { useTransitionNavigate } from "../../shared/lib/use-transition-navigate";
 import { DocsPage } from "../docs/docs-page";
 import { DocsViewerPage } from "../docs/docs-viewer-page";
 import {
@@ -13,7 +14,7 @@ import { ClientePerfilPage } from "./cliente-perfil-page";
 import { ClienteShell } from "./cliente-shell";
 
 export const ClienteDocsRoutes = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
 
   useEffect(() => {
     setDocsAuthTokenProvider(obtenerTokenCliente);

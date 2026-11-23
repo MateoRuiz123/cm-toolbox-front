@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Link } from "react-router";
 import type { EffectiveAppAccess } from "../../shared/auth/access-types";
 import { useMovimientoReducido } from "../../shared/lib/use-movimiento-reducido";
 import { AppIcon } from "../../shared/ui/app-icon";
+import { TransitionLink } from "../../shared/ui/transition-link";
 import { leerConsultaSesion } from "../diagnostico/consulta-sesion";
 import { leerLogsRecientes } from "../logs/logs-sesion";
 import type { AppHealthResult, IncidentReportResponse } from "./api/apps-health";
@@ -315,10 +315,14 @@ export const HubPs5Stage = ({
     }
 
     return (
-      <Link to={app.route} onClick={() => onOpenApp(app)} className={ctaClass}>
+      <TransitionLink
+        to={app.route}
+        onClick={() => onOpenApp(app)}
+        className={ctaClass}
+      >
         <span>Abrir herramienta</span>
         <HubArrowIcon />
-      </Link>
+      </TransitionLink>
     );
   };
 
@@ -699,7 +703,7 @@ export const HubPs5Stage = ({
               }
 
               return (
-                <Link
+                <TransitionLink
                   key={app.id}
                   to={app.route}
                   aria-label={app.name}
@@ -707,7 +711,7 @@ export const HubPs5Stage = ({
                   {...commonHandlers}
                 >
                   {tileInner}
-                </Link>
+                </TransitionLink>
               );
             })}
           </section>

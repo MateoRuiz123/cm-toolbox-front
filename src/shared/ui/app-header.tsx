@@ -1,7 +1,8 @@
 import { ThemeToggle } from "./theme-toggle";
 import { CommandPalette } from "./command-palette";
 import { AppSwitcher } from "./app-switcher";
-import { Link, useLocation } from "react-router";
+import { TransitionLink } from "./transition-link";
+import { useLocation } from "react-router";
 import { useAuth } from "../auth/use-auth";
 import { useAccess } from "../auth/access-context";
 
@@ -24,7 +25,7 @@ export const AppHeader = () => {
   const puedeAdministrar = canManageApps || canManageUsers;
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-8">
+    <header className="vt-app-header sticky top-0 z-40 flex h-16 w-full items-center justify-between px-4 sm:px-8">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -bottom-5 -z-10 backdrop-blur-md"
@@ -38,7 +39,7 @@ export const AppHeader = () => {
         }}
       />
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-        <Link
+        <TransitionLink
           to="/"
           className="flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           title="Ir al portal de aplicaciones"
@@ -48,7 +49,7 @@ export const AppHeader = () => {
             alt="Logotipo oficial de Coordinadora Mercantil"
             className="h-6 w-auto object-contain shrink-0 dark:brightness-0 dark:invert"
           />
-        </Link>
+        </TransitionLink>
 
         <div className="h-4 w-px bg-[var(--border-default)] shrink-0 hidden sm:block" />
 
@@ -67,7 +68,7 @@ export const AppHeader = () => {
         <CommandPalette />
 
         {puedeAdministrar && !esAdmin && (
-          <Link
+          <TransitionLink
             to="/admin"
             className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)] px-3 py-1.5 text-xs font-bold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-on)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             title="Administrar usuarios, permisos y estado de aplicaciones"
@@ -86,7 +87,7 @@ export const AppHeader = () => {
               />
             </svg>
             <span className="hidden sm:inline">Administración</span>
-          </Link>
+          </TransitionLink>
         )}
 
         {email && (
@@ -139,7 +140,7 @@ export const AppHeader = () => {
           </svg>
         </button>
 
-        <Link
+        <TransitionLink
           to="/configuracion"
           aria-label="Apariencia"
           title="Apariencia"
@@ -165,7 +166,7 @@ export const AppHeader = () => {
               d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
             />
           </svg>
-        </Link>
+        </TransitionLink>
 
         <ThemeToggle />
       </div>

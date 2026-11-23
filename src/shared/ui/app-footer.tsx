@@ -1,11 +1,11 @@
-import { Link } from "react-router";
+import { TransitionLink } from "./transition-link";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const AppFooter = () => {
 
   return (
-    <footer className="relative z-10 mt-16 border-t border-[var(--border-default)] bg-[var(--surface-header)] text-xs text-[var(--text-muted)] transition-colors">
+    <footer className="vt-app-footer relative z-10 mt-16 border-t border-[var(--border-default)] bg-[var(--surface-header)] text-xs text-[var(--text-muted)] transition-colors">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
@@ -27,36 +27,36 @@ export const AppFooter = () => {
             aria-label="Enlaces institucionales y legales"
             className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs"
           >
-            <Link
+            <TransitionLink
               to="/"
               className="transition hover:text-[var(--color-primary)] hover:underline"
             >
               Inicio
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               to="/diagnostico"
               className="transition hover:text-[var(--color-primary)] hover:underline"
             >
               Diagnóstico
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               to="/privacidad"
               className="transition hover:text-[var(--color-primary)] hover:underline"
             >
               Privacidad
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               to="/terminos"
               className="transition hover:text-[var(--color-primary)] hover:underline"
             >
               Términos
-            </Link>
-            <Link
+            </TransitionLink>
+            <TransitionLink
               to="/contacto"
               className="transition hover:text-[var(--color-primary)] hover:underline"
             >
               Contacto
-            </Link>
+            </TransitionLink>
           </nav>
         </div>
 

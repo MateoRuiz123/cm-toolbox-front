@@ -1,4 +1,11 @@
-import { lazy, Suspense } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import { Route, Routes, useLocation } from "react-router";
 import {
   BlockInternalOnClienteDoor,
@@ -10,6 +17,11 @@ import { AppAccessGuard } from "../shared/auth/app-access-guard";
 import { DynamicAppRoutePage } from "../shared/auth/dynamic-app-route-page";
 import { AuthProvider } from "../shared/auth/auth-context";
 import { AuthGate } from "../shared/auth/auth-gate";
+import {
+  getLoadedRouteComponent,
+  ROUTE_LOADERS,
+  type RouteLoaderKey,
+} from "../shared/lib/route-preload";
 import { usePageTitle } from "../shared/lib/use-page-title";
 import { AppFooter } from "../shared/ui/app-footer";
 import { AppHeader } from "../shared/ui/app-header";
@@ -23,122 +35,106 @@ const ClientePageTitle = () => {
   return null;
 };
 
-const CorporateKeycloakProvider = lazy(() =>
-  import("../shared/auth/corporate-keycloak-provider").then((m) => ({
-    default: m.CorporateKeycloakProvider,
-  })),
-);
+/**
+ * Envuelve un componente `lazy(ROUTE_LOADERS.x)` para renderizarlo síncronamente
+ * cuando su chunk ya fue precargado, evitando el flash del fallback de Suspense en View Transitions.
+ */
+const withPreloadedRoute = <P extends object>(
+  key: RouteLoaderKey,
+  LazyComponent: ComponentType<P>,
+): ComponentType<P> => {
+  const PreloadableRoute = (props: P) => {
+    const [{ component: SyncComponent }] = useState(() => ({
+      component: getLoadedRouteComponent<P>(key),
+    }));
+    return SyncComponent ? (
+      <SyncComponent {...props} />
+    ) : (
+      <LazyComponent {...props} />
+    );
+  };
+  return PreloadableRoute;
+};
 
-const HubPage = lazy(() =>
-  import("../features/hub/hub-page").then((m) => ({
-    default: m.HubPage,
-  })),
-);
+/** Restaura el scroll superior y mueve el foco accesible al contenido principal al cambiar de ruta. */
+const RouteFocusScrollManager = () => {
+  const { pathname } = useLocation();
+  const prevPathnameRef = useRef(pathname);
 
-const NotFoundPage = lazy(() =>
-  import("../features/not-found/not-found-page").then((m) => ({
-    default: m.NotFoundPage,
-  })),
-);
+  useEffect(() => {
+    if (pathname === prevPathnameRef.current) return;
+    prevPathnameRef.current = pathname;
 
-const DiagnosticoPage = lazy(() =>
-  import("../features/diagnostico/diagnostico-page").then((m) => ({
-    default: m.DiagnosticoPage,
-  })),
-);
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
 
-const LogsPage = lazy(() =>
-  import("../features/logs/logs-page").then((m) => ({ default: m.LogsPage })),
-);
+    document.getElementById("contenido-principal")?.focus({ preventScroll: true });
+  }, [pathname]);
 
-const BackendsPage = lazy(() =>
-  import("../features/backends/backends-page").then((m) => ({
-    default: m.BackendsPage,
-  })),
-);
+  return null;
+};
 
-const AdminPage = lazy(() =>
-  import("../features/admin/admin-page").then((m) => ({
-    default: m.AdminPage,
-  })),
+const CorporateKeycloakProvider = lazy(ROUTE_LOADERS.corporateKeycloakProvider);
+const HubPage = withPreloadedRoute("hub", lazy(ROUTE_LOADERS.hub));
+const NotFoundPage = withPreloadedRoute(
+  "notFound",
+  lazy(ROUTE_LOADERS.notFound),
 );
-
-const ContactPage = lazy(() =>
-  import("../features/contact/contact-page").then((m) => ({
-    default: m.ContactPage,
-  })),
+const DiagnosticoPage = withPreloadedRoute(
+  "diagnostico",
+  lazy(ROUTE_LOADERS.diagnostico),
 );
-
-const ThankYouPage = lazy(() =>
-  import("../features/feedback/thank-you-page").then((m) => ({
-    default: m.ThankYouPage,
-  })),
+const LogsPage = withPreloadedRoute("logs", lazy(ROUTE_LOADERS.logs));
+const BackendsPage = withPreloadedRoute(
+  "backends",
+  lazy(ROUTE_LOADERS.backends),
 );
-
-const PrivacyPage = lazy(() =>
-  import("../features/legal/privacy-page").then((m) => ({
-    default: m.PrivacyPage,
-  })),
+const AdminPage = withPreloadedRoute("admin", lazy(ROUTE_LOADERS.admin));
+const ContactPage = withPreloadedRoute("contact", lazy(ROUTE_LOADERS.contact));
+const ThankYouPage = withPreloadedRoute(
+  "thankYou",
+  lazy(ROUTE_LOADERS.thankYou),
 );
-
-const TermsPage = lazy(() =>
-  import("../features/legal/terms-page").then((m) => ({
-    default: m.TermsPage,
-  })),
+const PrivacyPage = withPreloadedRoute("privacy", lazy(ROUTE_LOADERS.privacy));
+const TermsPage = withPreloadedRoute("terms", lazy(ROUTE_LOADERS.terms));
+const ConfiguracionPage = withPreloadedRoute(
+  "configuracion",
+  lazy(ROUTE_LOADERS.configuracion),
 );
-
-const ConfiguracionPage = lazy(() =>
-  import("../features/configuracion/configuracion-page").then((m) => ({
-    default: m.ConfiguracionPage,
-  })),
+const WelcomeLandingPage = withPreloadedRoute(
+  "welcomeLanding",
+  lazy(ROUTE_LOADERS.welcomeLanding),
 );
-
-const WelcomeLandingPage = lazy(() =>
-  import("../features/welcome/welcome-landing-page").then((m) => ({
-    default: m.WelcomeLandingPage,
-  })),
+const InternalDocsPage = withPreloadedRoute(
+  "internalDocs",
+  lazy(ROUTE_LOADERS.internalDocs),
 );
-
-const InternalDocsPage = lazy(() =>
-  import("../features/docs/internal-docs-pages").then((m) => ({
-    default: m.InternalDocsPage,
-  })),
+const InternalDocsViewerPage = withPreloadedRoute(
+  "internalDocsViewer",
+  lazy(ROUTE_LOADERS.internalDocsViewer),
 );
-
-const InternalDocsViewerPage = lazy(() =>
-  import("../features/docs/internal-docs-pages").then((m) => ({
-    default: m.InternalDocsViewerPage,
-  })),
+const DocsAdminPage = withPreloadedRoute(
+  "docsAdmin",
+  lazy(ROUTE_LOADERS.docsAdmin),
 );
-
-const DocsAdminPage = lazy(() =>
-  import("../features/docs/admin/docs-admin-page").then((m) => ({
-    default: m.DocsAdminPage,
-  })),
+const DocsNewApiPage = withPreloadedRoute(
+  "docsNewApi",
+  lazy(ROUTE_LOADERS.docsNewApi),
 );
-
-const DocsNewApiPage = lazy(() =>
-  import("../features/docs/admin/new-api-form").then((m) => ({
-    default: m.DocsNewApiPage,
-  })),
+const DocsClientsPage = withPreloadedRoute(
+  "docsClients",
+  lazy(ROUTE_LOADERS.docsClients),
 );
-
-const DocsClientsPage = lazy(() =>
-  import("../features/docs/admin/clients-page").then((m) => ({
-    default: m.ClientsPage,
-  })),
+const ClienteLoginPage = withPreloadedRoute(
+  "clienteLogin",
+  lazy(ROUTE_LOADERS.clienteLogin),
 );
-
-const ClienteLoginPage = lazy(() =>
-  import("../features/docs-cliente/cliente-login-page").then((m) => ({
-    default: m.ClienteLoginPage,
-  })),
-);
-
-const ClienteDocsRoutes = lazy(() =>
-  import("../features/docs-cliente/cliente-docs-routes").then((m) => ({
-    default: m.ClienteDocsRoutes,
-  })),
+const ClienteDocsRoutes = withPreloadedRoute(
+  "clienteDocs",
+  lazy(ROUTE_LOADERS.clienteDocs),
 );
 
 /** Indicador de carga para páginas de feature resueltas con import dinámico. */
@@ -261,6 +257,7 @@ const AppShell = () => {
               isFullHeightTool ? "lg:h-dvh lg:min-h-0 lg:overflow-hidden" : ""
             }`}
           >
+            <RouteFocusScrollManager />
             <a
               href="#contenido-principal"
               className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:m-0 focus:inline-flex focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-[var(--radius-1)] focus:bg-[var(--color-action)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--color-action-contrast)] focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)] focus:[clip:auto]"
@@ -271,11 +268,13 @@ const AppShell = () => {
             <main
               id="contenido-principal"
               tabIndex={-1}
-              className={
+              className={`${
+                isWelcomeRoute ? "" : "vt-app-main "
+              }${
                 isFullHeightTool
                   ? "flex-1 lg:min-h-0 lg:overflow-hidden"
                   : "flex-1"
-              }
+              } focus:outline-none`}
             >
               <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>

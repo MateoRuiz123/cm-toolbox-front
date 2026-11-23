@@ -321,11 +321,92 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-/* Transición suave entre tema claro y oscuro (View Transitions API) */
+@keyframes vt-page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Transición suave entre tema claro y oscuro y navegación entre rutas (View Transitions API) */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 200ms;
   animation-timing-function: var(--ease-standard);
+}
+
+html[data-vt-mode="route"] .vt-app-header {
+  view-transition-name: app-header;
+}
+
+html[data-vt-mode="route"] .vt-app-footer {
+  view-transition-name: app-footer;
+}
+
+html[data-vt-mode="route"] .vt-app-main {
+  view-transition-name: app-main;
+}
+
+::view-transition-group(app-header),
+::view-transition-group(app-footer) {
+  animation: none;
+  z-index: 2;
+}
+
+::view-transition-old(app-header),
+::view-transition-old(app-footer) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(app-header),
+::view-transition-new(app-footer) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(app-footer):only-child {
+  animation: vt-page-out 200ms var(--ease-standard) both;
+  opacity: 1;
+}
+
+::view-transition-new(app-footer):only-child {
+  animation: vt-page-in 200ms var(--ease-standard) both;
+}
+
+::view-transition-group(app-main) {
+  z-index: 1;
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-standard);
+}
+
+::view-transition-old(app-main),
+::view-transition-new(app-main) {
+  height: auto;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(app-main) {
+  animation: vt-page-out 200ms var(--ease-standard) both;
+}
+
+::view-transition-new(app-main) {
+  animation: vt-page-in 200ms var(--ease-standard) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -334,6 +415,7 @@ a:focus-visible {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+    animation-duration: 0.01ms !important;
     transition: none !important;
   }
 }
@@ -343,6 +425,7 @@ html[data-movimiento="reducido"] ::view-transition-group(*),
 html[data-movimiento="reducido"] ::view-transition-old(*),
 html[data-movimiento="reducido"] ::view-transition-new(*) {
   animation: none !important;
+  animation-duration: 0.01ms !important;
   transition: none !important;
 }
 

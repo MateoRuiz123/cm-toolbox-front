@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 import { useAccess } from "@/shared/auth/use-access";
 import { safeStorage } from "@/shared/lib/safe-storage";
+import { useTransitionNavigate } from "@/shared/lib/use-transition-navigate";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
 import type { LogEnvironment } from "../logs/api/logs-types";
 import { GcloudLoginModal } from "../logs/gcloud-login-modal";
@@ -79,7 +79,7 @@ const classifyBackend = (
 };
 
 export const BackendsPage = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const { profile, canPerformAction } = useAccess();
   const userEmail = profile.email;
   const canViewProd = canPerformAction("logs", "view_prod");

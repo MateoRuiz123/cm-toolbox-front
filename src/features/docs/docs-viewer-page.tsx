@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
+import { useTransitionNavigate } from "@/shared/lib/use-transition-navigate";
+import { TransitionLink } from "@/shared/ui/transition-link";
 import {
   deleteAdminApi,
   DocsApiError,
@@ -37,7 +39,7 @@ const ManageApiModal = ({
   onClose,
   onPublished,
 }: ManageApiModalProps) => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const initialTab: ManageTab = canManage
     ? "config"
     : showPublish
@@ -378,12 +380,12 @@ export const DocsViewerPage = ({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6">
-        <Link
+        <TransitionLink
           to={basePath}
           className="text-sm font-medium text-[var(--color-primary)] hover:underline"
         >
           Volver al catálogo
-        </Link>
+        </TransitionLink>
       </div>
 
       {loading ? (

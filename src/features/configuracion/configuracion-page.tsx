@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { SmoothTitleAccent } from "@/shared/ui/smoothui";
+import { TransitionLink } from "@/shared/ui/transition-link";
 import { useTheme } from "../../app/theme-context";
 import { useAccess } from "../../shared/auth/access-context";
 import type { ModoHubLayout } from "../../shared/lib/ui-preferences";
@@ -220,13 +220,13 @@ export const ConfiguracionPage = () => {
               Se guarda por usuario. Al activarla, verás la bienvenida animada
               COORDINADORA después del inicio de sesión.
             </span>
-            <Link
+            <TransitionLink
               to="/bienvenida"
               className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline"
             >
               <span>Ver pantalla de bienvenida</span>
               <span aria-hidden="true">&rarr;</span>
-            </Link>
+            </TransitionLink>
           </div>
 
           <button
