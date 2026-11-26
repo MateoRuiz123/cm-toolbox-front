@@ -8,7 +8,7 @@ import { ThemeProvider } from './app/theme-provider'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter useTransitions={false}>
         <App />
       </BrowserRouter>
     </ThemeProvider>

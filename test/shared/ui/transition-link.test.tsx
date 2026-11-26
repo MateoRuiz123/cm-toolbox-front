@@ -100,7 +100,7 @@ describe("TransitionLink y View Transitions", () => {
     vi.restoreAllMocks();
   });
 
-  it("navega sin errores cuando document.startViewTransition no existe (jsdom/Firefox)", async () => {
+  it("navega sin errores cuando document.startViewTransition no existe (jsdom o navegadores sin soporte)", async () => {
     const user = userEvent.setup();
     expect(supportsViewTransitions()).toBe(false);
 
