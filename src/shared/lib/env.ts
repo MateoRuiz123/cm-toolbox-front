@@ -7,6 +7,7 @@ const DEFAULT_PUBSUB_SUBSCRIPTION =
 interface EnvConfig {
   readonly diagnosticoUrl: string;
   readonly migrarGuiaUrl: string;
+  readonly asignarEquipoDespachoUrl: string;
   readonly pubsubSubscription: string;
   readonly keycloakEnv: "dev" | "test" | "prod";
   readonly keycloakUrl: string;
@@ -17,10 +18,12 @@ interface EnvConfig {
 /** Rutas same-origin. nginx (prod) y Vite (dev) las enrutan a DIAGNOSTICO_API_UPSTREAM. */
 const DIAGNOSTICO_PATH = "/migracion/diagnostico";
 const MIGRAR_GUIA_PATH = "/migracion/guia";
+const ASIGNAR_EQUIPO_DESPACHO_PATH = "/migracion/despacho/equipo";
 
 export const getEnv = (): EnvConfig => ({
   diagnosticoUrl: DIAGNOSTICO_PATH,
   migrarGuiaUrl: MIGRAR_GUIA_PATH,
+  asignarEquipoDespachoUrl: ASIGNAR_EQUIPO_DESPACHO_PATH,
   pubsubSubscription:
     (import.meta.env.VITE_PUBSUB_SUBSCRIPTION ?? "").trim() ||
     DEFAULT_PUBSUB_SUBSCRIPTION,
@@ -40,6 +43,9 @@ export const env: EnvConfig = {
   },
   get migrarGuiaUrl() {
     return getEnv().migrarGuiaUrl;
+  },
+  get asignarEquipoDespachoUrl() {
+    return getEnv().asignarEquipoDespachoUrl;
   },
   get pubsubSubscription() {
     return getEnv().pubsubSubscription;

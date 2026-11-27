@@ -1,5 +1,7 @@
 import { env } from "../../../shared/lib/env";
 import type {
+  AsignarEquipoDespachoInput,
+  AsignarEquipoDespachoOutput,
   DiagnosticoInput,
   DiagnosticoOutput,
   ReintentoResultado,
@@ -152,6 +154,56 @@ export const reintentarMigracionGuia = async (
       success: false,
       message: error instanceof Error ? error.message : "Error al conectar.",
     };
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
+};
+
+/**
+ * Asigna equipo, recibidor y móvil en `agw_despachos` (operación permitida solo en ambiente testing).
+ */
+export const asignarEquipoDespachoTesting = async (
+  input: AsignarEquipoDespachoInput,
+): Promise<AsignarEquipoDespachoOutput> => {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(
+    () => controller.abort(),
+    REINTENTO_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(env.asignarEquipoDespachoUrl, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json().catch(() => ({}))) as {
+      data?: AsignarEquipoDespachoOutput;
+      message?: string;
+    };
+
+    if (!response.ok || !body.data) {
+      throw new DiagnosticoApiError(
+        body.message ||
+          `No fue posible actualizar el despacho en AGW (HTTP ${response.status}).`,
+      );
+    }
+
+    return body.data;
+  } catch (error) {
+    if (error instanceof DiagnosticoApiError) {
+      throw error;
+    }
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new DiagnosticoApiError(
+        "Tiempo de espera agotado al actualizar el despacho.",
+      );
+    }
+    throw new DiagnosticoApiError(
+      "No fue posible conectar con el servicio para actualizar el despacho.",
+    );
   } finally {
     globalThis.clearTimeout(timeoutId);
   }

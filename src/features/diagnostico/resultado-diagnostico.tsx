@@ -1,12 +1,18 @@
 import { useId, useMemo, useState } from 'react'
 import { useAccess } from '../../shared/auth/access-context'
-import { reintentarMigracionGuia } from './api/diagnostico-api'
+import { env } from '../../shared/lib/env'
+import {
+  asignarEquipoDespachoTesting,
+  reintentarMigracionGuia,
+} from './api/diagnostico-api'
 import {
   guardarPreferenciaVista,
   obtenerPreferenciaVista,
   type ModoVista,
 } from '../../shared/lib/ui-preferences'
 import type {
+  AsignarEquipoDespachoInput,
+  AsignarEquipoDespachoOutput,
   DiagnosticoOutput,
   GuiaDiagnostico,
   ItemDiagnostico,
@@ -48,27 +54,35 @@ const Chevron = () => (
   </svg>
 )
 
+const keyDespacho = (idCliente?: number, codigoDespacho?: number) =>
+  idCliente && codigoDespacho ? `${idCliente}:${codigoDespacho}` : null
+
 interface GuiaCardProps {
   guia: GuiaDiagnostico
   item: ItemDiagnostico
   open: boolean
   selected: boolean
   canRemigrate: boolean
+  canEditDespachoTesting: boolean
   reintentoState?: ReintentoItemState
   onToggle: (open: boolean) => void
   onToggleSelect: (selected: boolean) => void
   onReintentar: (codigoRemision: string) => void
+  onOpenAsignarEquipo: () => void
 }
 
 const GuiaCard = ({
   guia,
+  item,
   open,
   selected,
   canRemigrate,
+  canEditDespachoTesting,
   reintentoState,
   onToggle,
   onToggleSelect,
   onReintentar,
+  onOpenAsignarEquipo,
 }: GuiaCardProps) => {
   const fallidos = guia.checks.filter((check) => check.resultado === 'no_cumple').length
   const resumenChecks =
@@ -77,6 +91,17 @@ const GuiaCard = ({
       : fallidos > 0
         ? `${fallidos} de ${guia.checks.length} no cumplen`
         : `${guia.checks.length} checks cumplen`
+
+  const faltaEquipoORecibidor = guia.checks.some(
+    (check) => check.id === 'gate_equipo_recibidor' && check.resultado === 'no_cumple',
+  )
+  const mostrarAsignarEquipo =
+    canEditDespachoTesting &&
+    canRemigrate &&
+    faltaEquipoORecibidor &&
+    Boolean(item.id_cliente) &&
+    item.codigo_despacho !== undefined &&
+    item.codigo_despacho > 0
 
   const esNoOk = guia.veredicto !== 'OK'
   const isLoading = reintentoState?.status === 'loading'
@@ -111,6 +136,15 @@ const GuiaCard = ({
               </h3>
               <CopyButton text={guia.codigo_remision} />
             </div>
+            {item.origen === 'remision' && item.codigo_despacho !== undefined && item.codigo_despacho > 0 && (
+              <span
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-body)]"
+              >
+                <span>Despacho {item.codigo_despacho}</span>
+                <CopyButton text={String(item.codigo_despacho)} />
+              </span>
+            )}
           </div>
           {guia.resumen && (
             <p
@@ -169,6 +203,18 @@ const GuiaCard = ({
 
       <div className="border-t border-[var(--border-default)] px-5 pb-5 sm:px-6 sm:pb-6 animate-accordion-content">
         <p className="pt-3 text-xs sm:text-sm leading-relaxed text-[var(--text-body)]">{guia.resumen}</p>
+
+        {mostrarAsignarEquipo && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={onOpenAsignarEquipo}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-contrast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              Asignar equipo en agw_despachos (Testing)
+            </button>
+          </div>
+        )}
 
         {/* Botón de reintento en móvil */}
         {esNoOk && (
@@ -239,6 +285,7 @@ interface ResultadoDiagnosticoProps {
 export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagnosticoProps) => {
   const { canPerformAction } = useAccess()
   const canRemigrate = canPerformAction('diagnostico', 'remigrate')
+  const esTesting = Boolean(data.es_testing) && env.keycloakEnv !== 'prod'
   const searchInputId = useId()
   const [searchQuery, setSearchQuery] = useState('')
   const [filtroVeredicto, setFiltroVeredicto] = useState<'ALL' | 'OK' | 'BLOQUEADA' | 'PARCIAL'>('ALL')
@@ -246,9 +293,55 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
   const [abiertas, setAbiertas] = useState(() => guiasAbiertasPorDefecto(data))
   const [selectedCodigos, setSelectedCodigos] = useState<Set<string>>(new Set())
   const [reintentosState, setReintentosState] = useState<Record<string, ReintentoItemState>>({})
+  const [despachosOverrides, setDespachosOverrides] = useState<Record<string, AsignarEquipoDespachoOutput>>({})
   const [batchLoading, setBatchLoading] = useState(false)
   const [modalGuia, setModalGuia] = useState<{ guia: GuiaDiagnostico; item: ItemDiagnostico } | null>(null)
   const [copiandoFallidas, setCopiandoFallidas] = useState(false)
+
+  const itemsActualizados = useMemo(
+    () =>
+      data.items.map((item) => {
+        const key = keyDespacho(item.id_cliente, item.codigo_despacho)
+        const override = key ? despachosOverrides[key] : undefined
+        if (!override) return item
+        return {
+          ...item,
+          equipo: override.equipo,
+          recibidor: override.recibidor,
+          movil: override.movil,
+        }
+      }),
+    [data.items, despachosOverrides],
+  )
+
+  const handleAsignarEquipoDespacho = async (input: AsignarEquipoDespachoInput) => {
+    const actualizado = await asignarEquipoDespachoTesting(input)
+    const key = keyDespacho(actualizado.id_cliente, actualizado.codigo_despacho)
+    if (key) {
+      setDespachosOverrides((prev) => ({
+        ...prev,
+        [key]: actualizado,
+      }))
+    }
+    setModalGuia((prev) => {
+      if (
+        !prev ||
+        prev.item.id_cliente !== actualizado.id_cliente ||
+        prev.item.codigo_despacho !== actualizado.codigo_despacho
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        item: {
+          ...prev.item,
+          equipo: actualizado.equipo,
+          recibidor: actualizado.recibidor,
+          movil: actualizado.movil,
+        },
+      }
+    })
+  }
 
   const handleViewChange = (mode: ModoVista) => {
     setViewMode(mode)
@@ -265,7 +358,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
       return veredicto !== 'OK' && veredicto !== 'BLOQUEADA'
     }
 
-    return data.items
+    return itemsActualizados
       .map((item) => {
         const despachoCoincide =
           Boolean(query) &&
@@ -464,14 +557,14 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
   }, [data])
 
   return (
-    <section aria-live="polite" className="space-y-4 sm:space-y-5">
+    <section aria-live="polite" className="space-y-2.5 sm:space-y-3">
       {/* Título de la sección y veredicto general */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Resultado del Lote
           </span>
-          <h2 className="mt-0.5 text-2xl font-bold tracking-tight text-[var(--text-body)]">
+          <h2 className="text-lg font-bold leading-tight tracking-tight text-[var(--text-body)] sm:text-xl">
             Diagnóstico Finalizado
           </h2>
         </div>
@@ -479,24 +572,24 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
       </div>
 
       {/* Tarjetas de Estadísticas Interactivas (filtran por veredicto) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
         <button
           type="button"
           onClick={() => setFiltroVeredicto('ALL')}
           aria-pressed={filtroVeredicto === 'ALL'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border p-3.5 text-left transition ${
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border px-3 py-2 text-left transition ${
             filtroVeredicto === 'ALL'
               ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/40'
               : 'border-[var(--border-default)] hover:border-[var(--color-primary)]'
           }`}
         >
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Total Evaluadas
           </span>
-          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--text-body)]">
+          <div className="mt-0.5 flex items-baseline gap-1 text-lg font-extrabold text-[var(--text-body)] sm:text-xl">
             <AnimatedCounter value={stats.total} />
-            <span className="text-xs font-normal text-[var(--text-muted)]">guías</span>
+            <span className="text-[11px] font-normal text-[var(--text-muted)]">guías</span>
           </div>
         </button>
 
@@ -505,18 +598,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           onClick={() => setFiltroVeredicto((prev) => (prev === 'OK' ? 'ALL' : 'OK'))}
           aria-pressed={filtroVeredicto === 'OK'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-success-bg)]/40 p-3.5 text-left transition ${
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-success-bg)]/40 px-3 py-2 text-left transition ${
             filtroVeredicto === 'OK'
               ? 'border-[var(--state-success)] ring-2 ring-[var(--state-success)]/40'
               : 'border-[var(--state-success)]/30 hover:border-[var(--state-success)]'
           }`}
         >
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-success)]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--state-success)]">
             Conformes (OK)
           </span>
-          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-success)]">
+          <div className="mt-0.5 flex items-baseline gap-1 text-lg font-extrabold text-[var(--state-success)] sm:text-xl">
             <AnimatedCounter value={stats.ok} />
-            <span className="text-xs font-normal opacity-80">listas</span>
+            <span className="text-[11px] font-normal opacity-80">listas</span>
           </div>
         </button>
 
@@ -525,18 +618,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           onClick={() => setFiltroVeredicto((prev) => (prev === 'BLOQUEADA' ? 'ALL' : 'BLOQUEADA'))}
           aria-pressed={filtroVeredicto === 'BLOQUEADA'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-error-bg)]/40 p-3.5 text-left transition ${
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-error-bg)]/40 px-3 py-2 text-left transition ${
             filtroVeredicto === 'BLOQUEADA'
               ? 'border-[var(--state-error)] ring-2 ring-[var(--state-error)]/40'
               : 'border-[var(--state-error)]/30 hover:border-[var(--state-error)]'
           }`}
         >
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-error)]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--state-error)]">
             Bloqueadas
           </span>
-          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-error)]">
+          <div className="mt-0.5 flex items-baseline gap-1 text-lg font-extrabold text-[var(--state-error)] sm:text-xl">
             <AnimatedCounter value={stats.bloqueadas} />
-            <span className="text-xs font-normal opacity-80">fallos</span>
+            <span className="text-[11px] font-normal opacity-80">fallos</span>
           </div>
         </button>
 
@@ -545,18 +638,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           onClick={() => setFiltroVeredicto((prev) => (prev === 'PARCIAL' ? 'ALL' : 'PARCIAL'))}
           aria-pressed={filtroVeredicto === 'PARCIAL'}
           style={{ boxShadow: 'var(--shadow-panel)' }}
-          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-warning-bg)]/40 p-3.5 text-left transition ${
+          className={`surface flex cursor-pointer flex-col justify-between rounded-[var(--radius-2)] border bg-[var(--alert-warning-bg)]/40 px-3 py-2 text-left transition ${
             filtroVeredicto === 'PARCIAL'
               ? 'border-[var(--state-warning)] ring-2 ring-[var(--state-warning)]/40'
               : 'border-[var(--state-warning)]/30 hover:border-[var(--state-warning)]'
           }`}
         >
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--state-warning)]">
             Parciales / Obs.
           </span>
-          <div className="mt-1 flex items-baseline gap-1 text-2xl font-extrabold text-[var(--state-warning)]">
+          <div className="mt-0.5 flex items-baseline gap-1 text-lg font-extrabold text-[var(--state-warning)] sm:text-xl">
             <AnimatedCounter value={stats.parciales} />
-            <span className="text-xs font-normal opacity-80">atención</span>
+            <span className="text-[11px] font-normal opacity-80">atención</span>
           </div>
         </button>
       </div>
@@ -564,7 +657,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
       {/* Barra de Búsqueda estilo SearchField y Alternador de Vista */}
       <div
         style={{ boxShadow: 'var(--shadow-panel)' }}
-        className="surface flex flex-col gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5"
+        className="surface flex flex-col gap-2 rounded-[var(--radius-2)] border border-[var(--border-default)] p-2 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:py-2"
       >
         {/* Barra de búsqueda (SearchField) */}
         <div className="relative flex-1">
@@ -574,7 +667,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
-            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]"
+            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]"
             fill="none"
             stroke="currentColor"
           >
@@ -587,14 +680,14 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por remisión o despacho…"
-            className="h-10 w-full rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] py-2 pl-9 pr-9 text-xs sm:text-sm text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+            className="h-8 w-full rounded-[var(--radius-3)] border border-[var(--border-default)] bg-[var(--surface-card)] py-1.5 pl-8 pr-8 text-xs text-[var(--text-body)] placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] sm:h-9"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Limpiar búsqueda"
-              className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 cursor-pointer place-items-center rounded-full text-xs text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-body)]"
+              className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 cursor-pointer place-items-center rounded-full text-xs text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-body)]"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor">
                 <path d="M18 6 6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -604,7 +697,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
         </div>
 
         {/* Alternador de Vista (Segmented Button) */}
-        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+        <div className="flex shrink-0 items-center justify-between gap-2.5 sm:justify-end">
           <span className="text-xs text-[var(--text-muted)]">
             {searchQuery ? `${totalFiltradas} de ${totalGuias} guías` : `${totalGuias} guías`}
           </span>
@@ -619,7 +712,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
               onClick={() => handleViewChange('list')}
               aria-pressed={viewMode === 'list'}
               title="Vista de lista (acordeón)"
-              className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-1)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+              className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-1)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
                 viewMode === 'list'
                   ? 'bg-[var(--surface-card)] text-[var(--color-primary)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-body)]'
@@ -635,7 +728,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
               onClick={() => handleViewChange('grid')}
               aria-pressed={viewMode === 'grid'}
               title="Vista de cuadrícula"
-              className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-1)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+              className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-1)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
                 viewMode === 'grid'
                   ? 'bg-[var(--surface-card)] text-[var(--color-primary)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-body)]'
@@ -656,9 +749,9 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
       {/* Barra de Selección Masiva y Reintentos */}
       <div
         style={{ boxShadow: 'var(--shadow-panel)' }}
-        className="surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-2)] border border-[var(--border-default)] px-4 py-2.5 text-xs"
+        className="surface flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-2)] border border-[var(--border-default)] px-3 py-2 text-xs"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
@@ -680,7 +773,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
               type="button"
               onClick={handleCopiarFallidas}
               title="Copia el reporte de texto de las guías con inconsistencias"
-              className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-body)] transition-colors hover:bg-[var(--surface-sunken)]"
+              className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--text-body)] transition-colors hover:bg-[var(--surface-sunken)]"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" className="size-3 text-[var(--text-muted)]" fill="none" stroke="currentColor">
                 <rect x="9" y="9" width="13" height="13" rx="2" strokeWidth="2" />
@@ -695,7 +788,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
               type="button"
               onClick={handleExportarCsv}
               title="Descargar las guías visibles en formato CSV"
-              className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-body)] transition-colors hover:bg-[var(--surface-sunken)]"
+              className="flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--text-body)] transition-colors hover:bg-[var(--surface-sunken)]"
             >
               <span>Exportar CSV</span>
             </button>
@@ -711,7 +804,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                 : undefined
             }
             onClick={handleReintentarSeleccionadas}
-            className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+            className={`flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
               selectedCodigos.size === 0 || batchLoading || !canRemigrate
                 ? 'border border-[var(--border-default)] bg-[var(--surface-sunken)] text-[var(--text-disabled)] opacity-50 cursor-not-allowed'
                 : 'bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)] shadow-sm'
@@ -802,18 +895,20 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                 {item.guias.map((guia) => {
                   const id = idGuia(itemIndex, guia)
                   return (
-                    <GuiaCard
-                      key={id}
-                      guia={guia}
-                      item={item}
-                      open={abiertas.has(id)}
-                      selected={selectedCodigos.has(guia.codigo_remision)}
-                      canRemigrate={canRemigrate}
-                      reintentoState={reintentosState[guia.codigo_remision]}
-                      onToggle={(open) => alternarAcordeon(id, open)}
-                      onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
-                      onReintentar={handleReintentarIndividual}
-                    />
+                      <GuiaCard
+                        key={id}
+                        guia={guia}
+                        item={item}
+                        open={abiertas.has(id)}
+                        selected={selectedCodigos.has(guia.codigo_remision)}
+                        canRemigrate={canRemigrate}
+                        canEditDespachoTesting={esTesting}
+                        reintentoState={reintentosState[guia.codigo_remision]}
+                        onToggle={(open) => alternarAcordeon(id, open)}
+                        onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
+                        onReintentar={handleReintentarIndividual}
+                        onOpenAsignarEquipo={() => setModalGuia({ guia, item })}
+                      />
                   )
                 })}
               </div>
@@ -854,6 +949,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                           item={item}
                           selected={selectedCodigos.has(guia.codigo_remision)}
                           canRemigrate={canRemigrate}
+                          canEditDespachoTesting={esTesting}
                           reintentoState={reintentosState[guia.codigo_remision]}
                           onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
                           onReintentar={handleReintentarIndividual}
@@ -882,6 +978,7 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
                           item={item}
                           selected={selectedCodigos.has(guia.codigo_remision)}
                           canRemigrate={canRemigrate}
+                          canEditDespachoTesting={esTesting}
                           reintentoState={reintentosState[guia.codigo_remision]}
                           onToggleSelect={(sel) => toggleSelectGuia(guia.codigo_remision, sel)}
                           onReintentar={handleReintentarIndividual}
@@ -903,8 +1000,18 @@ export const ResultadoDiagnostico = ({ data, onRediagnosticar }: ResultadoDiagno
           guia={modalGuia.guia}
           item={modalGuia.item}
           canRemigrate={canRemigrate}
+          canEditDespachoTesting={esTesting}
           reintentoState={reintentosState[modalGuia.guia.codigo_remision]}
           onReintentar={handleReintentarIndividual}
+          onAsignarEquipoDespacho={handleAsignarEquipoDespacho}
+          onRediagnosticar={
+            onRediagnosticar
+              ? () => {
+                  setModalGuia(null)
+                  onRediagnosticar()
+                }
+              : undefined
+          }
           onClose={() => setModalGuia(null)}
         />
       )}

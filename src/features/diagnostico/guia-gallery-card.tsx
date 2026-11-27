@@ -8,6 +8,7 @@ interface GuiaGalleryCardProps {
   item: ItemDiagnostico
   selected: boolean
   canRemigrate?: boolean
+  canEditDespachoTesting?: boolean
   reintentoState?: ReintentoItemState
   onToggleSelect: (selected: boolean) => void
   onReintentar: (codigoRemision: string) => void
@@ -20,12 +21,23 @@ export const GuiaGalleryCard = ({
   item,
   selected,
   canRemigrate = true,
+  canEditDespachoTesting = false,
   reintentoState,
   onToggleSelect,
   onReintentar,
   onOpenDetalle,
 }: GuiaGalleryCardProps) => {
   const fallidos = guia.checks.filter((check) => check.resultado === 'no_cumple').length
+  const faltaEquipoORecibidor = guia.checks.some(
+    (check) => check.id === 'gate_equipo_recibidor' && check.resultado === 'no_cumple',
+  )
+  const mostrarAsignarEquipo =
+    canEditDespachoTesting &&
+    canRemigrate &&
+    faltaEquipoORecibidor &&
+    Boolean(item.id_cliente) &&
+    item.codigo_despacho !== undefined &&
+    item.codigo_despacho > 0
   const esNoOk = guia.veredicto !== 'OK'
   const isLoading = reintentoState?.status === 'loading'
   const isSuccess = reintentoState?.status === 'success'
@@ -42,6 +54,11 @@ export const GuiaGalleryCard = ({
   const handleReintentarClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     onReintentar(guia.codigo_remision)
+  }
+
+  const handleAsignarClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onOpenDetalle()
   }
 
   return (
@@ -77,9 +94,16 @@ export const GuiaGalleryCard = ({
           <VeredictoBadge veredicto={guia.veredicto} />
         </div>
 
-        {/* Origen y cuenta */}
-        <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-          <span className="font-semibold">{item.origen === 'despacho' ? `Despacho ${item.codigo_despacho}` : 'Remisión suelta'}</span>
+        {/* Origen (despacho asociado si existe) y cuenta */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+          {item.codigo_despacho !== undefined && item.codigo_despacho > 0 ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-[var(--text-body)]">
+              <span>Despacho {item.codigo_despacho}</span>
+              <CopyButton text={String(item.codigo_despacho)} />
+            </span>
+          ) : (
+            <span className="font-semibold">Remisión suelta</span>
+          )}
           {item.cuenta && (
             <>
               <span aria-hidden="true">·</span>
@@ -118,6 +142,18 @@ export const GuiaGalleryCard = ({
             Detalle →
           </button>
         </div>
+
+        {mostrarAsignarEquipo && (
+          <div className="mt-2.5">
+            <button
+              type="button"
+              onClick={handleAsignarClick}
+              className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)] hover:text-[var(--color-primary-contrast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+            >
+              Asignar equipo (Testing)
+            </button>
+          </div>
+        )}
 
         {/* Botón individual de reintento si no es OK (Naranja Coordinadora) */}
         {esNoOk && (

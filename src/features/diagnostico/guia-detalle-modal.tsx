@@ -1,5 +1,11 @@
-import { useEffect, useRef } from 'react'
-import type { GuiaDiagnostico, ItemDiagnostico, ReintentoItemState } from './api/types'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
+import type {
+  AsignarEquipoDespachoInput,
+  GuiaDiagnostico,
+  ItemDiagnostico,
+  ReintentoItemState,
+} from './api/types'
 import { VeredictoBadge } from './veredicto-badge'
 import { CopyButton } from '../../shared/ui/copy-button'
 import { CheckRow } from './check-row'
@@ -8,8 +14,11 @@ interface GuiaDetalleModalProps {
   guia: GuiaDiagnostico
   item: ItemDiagnostico
   canRemigrate?: boolean
+  canEditDespachoTesting?: boolean
   reintentoState?: ReintentoItemState
-  onReintentar?: (codigoRemision: string) => void
+  onReintentar?: (codigoRemision: string) => void | Promise<void>
+  onAsignarEquipoDespacho?: (input: AsignarEquipoDespachoInput) => Promise<void>
+  onRediagnosticar?: () => void
   onClose: () => void
 }
 
@@ -18,12 +27,37 @@ export const GuiaDetalleModal = ({
   guia,
   item,
   canRemigrate = true,
+  canEditDespachoTesting = false,
   reintentoState,
   onReintentar,
+  onAsignarEquipoDespacho,
+  onRediagnosticar,
   onClose,
 }: GuiaDetalleModalProps) => {
   const dialogRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const equipoInputId = useId()
+  const recibidorInputId = useId()
+  const movilInputId = useId()
+
+  const [equipo, setEquipo] = useState(item.equipo ?? '')
+  const [recibidor, setRecibidor] = useState(
+    item.recibidor !== null && item.recibidor !== undefined ? String(item.recibidor) : '',
+  )
+  const [movil, setMovil] = useState(item.movil ?? '')
+  const [guardandoEquipo, setGuardandoEquipo] = useState(false)
+  const [errorEquipo, setErrorEquipo] = useState<string | null>(null)
+  const [exitoEquipo, setExitoEquipo] = useState<string | null>(null)
+
+  useEffect(() => {
+    setEquipo(item.equipo ?? '')
+    setRecibidor(
+      item.recibidor !== null && item.recibidor !== undefined ? String(item.recibidor) : '',
+    )
+    setMovil(item.movil ?? '')
+    setErrorEquipo(null)
+    setExitoEquipo(null)
+  }, [item.codigo_despacho, item.id_cliente, item.equipo, item.recibidor, item.movil])
 
   // Scroll lock en el body
   useEffect(() => {
@@ -72,8 +106,59 @@ export const GuiaDetalleModal = ({
   const isLoading = reintentoState?.status === 'loading'
   const isSuccess = reintentoState?.status === 'success'
   const isError = reintentoState?.status === 'error'
+  const tieneDespacho = item.codigo_despacho !== undefined && item.codigo_despacho > 0
+  const puedeEditarDespacho =
+    canEditDespachoTesting &&
+    canRemigrate &&
+    Boolean(onAsignarEquipoDespacho) &&
+    Boolean(item.id_cliente) &&
+    tieneDespacho
 
-  return (
+  const handleGuardarEquipo = async (e: FormEvent, reintentarLuego: boolean) => {
+    e.preventDefault()
+    if (!puedeEditarDespacho || !onAsignarEquipoDespacho || !item.id_cliente || !item.codigo_despacho) {
+      return
+    }
+    const equipoTrim = equipo.trim()
+    const recibidorNum = Number(recibidor.trim())
+    if (!equipoTrim) {
+      setErrorEquipo('Ingresa un código de equipo válido.')
+      return
+    }
+    if (!Number.isInteger(recibidorNum) || recibidorNum <= 0) {
+      setErrorEquipo('El recibidor debe ser un número entero positivo.')
+      return
+    }
+
+    setGuardandoEquipo(true)
+    setErrorEquipo(null)
+    setExitoEquipo(null)
+    let guardado = false
+    try {
+      await onAsignarEquipoDespacho({
+        id_cliente: item.id_cliente,
+        codigo_despacho: item.codigo_despacho,
+        equipo: equipoTrim,
+        recibidor: recibidorNum,
+        movil: movil.trim() || null,
+      })
+      guardado = true
+      setExitoEquipo('Equipo, recibidor y móvil guardados en agw_despachos.')
+    } catch (err) {
+      setErrorEquipo(
+        err instanceof Error ? err.message : 'No fue posible actualizar el despacho.',
+      )
+    } finally {
+      setGuardandoEquipo(false)
+    }
+
+    // El reintento se dispara sin bloquear el formulario: su estado se muestra en reintentoState.
+    if (guardado && reintentarLuego && onReintentar) {
+      void onReintentar(guia.codigo_remision)
+    }
+  }
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -86,15 +171,22 @@ export const GuiaDetalleModal = ({
       <section
         ref={dialogRef}
         style={{ boxShadow: 'var(--shadow-24)' }}
-        className="surface flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-2)] border border-[var(--border-default)] animate-modal-dialog"
+        className="surface flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-2)] border border-[var(--border-default)] animate-modal-dialog"
       >
         {/* Cabecera del modal (Title bar gris de diálogo) */}
         <header className="flex items-start justify-between border-b border-[var(--border-default)] bg-[var(--surface-sunken)] p-4 sm:px-6 sm:py-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                {item.origen === 'despacho' ? `Despacho ${item.codigo_despacho}` : 'Remisión suelta'}
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {tieneDespacho && item.codigo_despacho !== undefined ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-body)]">
+                  <span>Despacho {item.codigo_despacho}</span>
+                  <CopyButton text={String(item.codigo_despacho)} />
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  Remisión suelta
+                </span>
+              )}
               {item.cuenta && (
                 <>
                   <span aria-hidden="true" className="text-[var(--text-muted)]">
@@ -139,6 +231,163 @@ export const GuiaDetalleModal = ({
             <p className="mt-1 text-[var(--text-body)]">{guia.resumen || 'Sin resumen registrado.'}</p>
           </section>
 
+          {/* Asignación de equipo, recibidor y móvil en agw_despachos (solo ambiente testing) */}
+          {puedeEditarDespacho && (
+            <form
+              onSubmit={(e) => void handleGuardarEquipo(e, true)}
+              className="rounded-[var(--radius-2)] border border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)]/35 p-4 space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
+                    Asignar equipo en agw_despachos
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Solo ambiente Testing &bull; Despacho {item.codigo_despacho} (CI {item.id_cliente})
+                  </p>
+                </div>
+                <span className="rounded-[var(--radius-pill)] border border-[var(--color-primary)]/35 bg-[var(--surface-card)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
+                  Testing
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label
+                    htmlFor={equipoInputId}
+                    className="block text-[11px] font-bold text-[var(--text-body)]"
+                  >
+                    Equipo *
+                  </label>
+                  <input
+                    id={equipoInputId}
+                    type="text"
+                    value={equipo}
+                    onChange={(e) => setEquipo(e.target.value)}
+                    placeholder="Ej. E001"
+                    disabled={guardandoEquipo}
+                    className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 font-mono text-xs text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={recibidorInputId}
+                    className="block text-[11px] font-bold text-[var(--text-body)]"
+                  >
+                    Recibidor *
+                  </label>
+                  <input
+                    id={recibidorInputId}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={recibidor}
+                    onChange={(e) => setRecibidor(e.target.value)}
+                    placeholder="Ej. 1234"
+                    disabled={guardandoEquipo}
+                    className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 font-mono text-xs text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={movilInputId}
+                    className="block text-[11px] font-bold text-[var(--text-body)]"
+                  >
+                    Móvil
+                  </label>
+                  <input
+                    id={movilInputId}
+                    type="text"
+                    value={movil}
+                    onChange={(e) => setMovil(e.target.value)}
+                    placeholder="Opcional"
+                    disabled={guardandoEquipo}
+                    className="mt-1 w-full rounded-[var(--radius-1)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3 py-1.5 font-mono text-xs text-[var(--text-body)] focus:border-[var(--color-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                  />
+                </div>
+              </div>
+
+              {errorEquipo && (
+                <p
+                  role="alert"
+                  className="rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-3 py-2 text-xs text-[var(--state-error)]"
+                >
+                  {errorEquipo}
+                </p>
+              )}
+              {exitoEquipo && (
+                <p
+                  role="status"
+                  className="rounded-[var(--radius-1)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-3 py-2 text-xs text-[var(--state-success)]"
+                >
+                  {exitoEquipo}
+                </p>
+              )}
+              {isLoading && (
+                <p
+                  role="status"
+                  className="flex items-center gap-2 rounded-[var(--radius-1)] border border-[var(--color-primary)]/30 bg-[var(--surface-card)] px-3 py-2 text-xs text-[var(--text-body)]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="size-3 shrink-0 animate-spin rounded-full border-2 border-[var(--color-primary)]/30 border-t-[var(--color-primary)]"
+                  />
+                  Reintentando migración… puede tardar hasta 30 segundos.
+                </p>
+              )}
+              {isSuccess && (
+                <div
+                  role="status"
+                  className="space-y-2 rounded-[var(--radius-1)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] px-3 py-2 text-xs text-[var(--state-success)]"
+                >
+                  <p>
+                    {reintentoState?.error ||
+                      'Solicitud de migración enviada correctamente. Re-diagnostica para confirmar el nuevo estado.'}
+                  </p>
+                  {onRediagnosticar && (
+                    <button
+                      type="button"
+                      onClick={onRediagnosticar}
+                      className="cursor-pointer rounded-[var(--radius-pill)] border border-[var(--state-success)]/40 bg-[var(--surface-card)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--state-success)] transition hover:bg-[var(--state-success)]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                    >
+                      Cerrar y re-diagnosticar
+                    </button>
+                  )}
+                </div>
+              )}
+              {isError && (
+                <p
+                  role="alert"
+                  className="rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] px-3 py-2 text-xs text-[var(--state-error)]"
+                >
+                  {reintentoState?.error || 'No fue posible forzar la migración.'}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={guardandoEquipo || isLoading}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--color-accent-contrast)] shadow-xs transition hover:bg-[var(--color-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {guardandoEquipo
+                    ? 'Guardando…'
+                    : isLoading
+                      ? 'Reintentando…'
+                      : 'Guardar y reintentar migración'}
+                </button>
+                <button
+                  type="button"
+                  disabled={guardandoEquipo || isLoading}
+                  onClick={(e) => void handleGuardarEquipo(e, false)}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border-default)] bg-[var(--surface-card)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text-body)] transition hover:border-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:cursor-wait disabled:opacity-60"
+                >
+                  Solo guardar
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Soluciones si existen */}
           {guia.solucion && guia.solucion.length > 0 && (
             <section className="rounded-[var(--radius-2)] border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-xs">
@@ -175,12 +424,12 @@ export const GuiaDetalleModal = ({
           </section>
 
           {/* Mensajes de feedback de reintento */}
-          {isSuccess && (
+          {isSuccess && !puedeEditarDespacho && (
             <div className="rounded-[var(--radius-1)] border border-[var(--state-success)]/30 bg-[var(--alert-success-bg)] p-3 text-xs leading-relaxed text-[var(--state-success)]">
               Solicitud de migración enviada a la cola. Los cambios pueden tardar unos segundos en procesarse.
             </div>
           )}
-          {isError && (
+          {isError && !puedeEditarDespacho && (
             <div className="rounded-[var(--radius-1)] border border-[var(--state-error)]/30 bg-[var(--alert-error-bg)] p-3 text-xs leading-relaxed text-[var(--state-error)]">
               {reintentoState?.error || 'No fue posible forzar la migración.'}
             </div>
@@ -222,6 +471,7 @@ export const GuiaDetalleModal = ({
           </button>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }

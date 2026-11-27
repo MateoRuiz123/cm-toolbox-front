@@ -24,6 +24,10 @@ export interface ItemDiagnostico {
   origen: 'despacho' | 'remision'
   codigo_despacho?: number
   codigo_remision?: string
+  id_cliente?: number
+  equipo?: string | null
+  recibidor?: number | null
+  movil?: string | null
   enviado?: boolean
   estado?: number
   entra_polling?: boolean
@@ -36,7 +40,24 @@ export interface ItemDiagnostico {
 
 export interface DiagnosticoOutput {
   veredicto: Veredicto
+  es_testing?: boolean
   items: ItemDiagnostico[]
+}
+
+export interface AsignarEquipoDespachoInput {
+  id_cliente: number
+  codigo_despacho: number
+  equipo: string
+  recibidor: number
+  movil?: string | null
+}
+
+export interface AsignarEquipoDespachoOutput {
+  id_cliente: number
+  codigo_despacho: number
+  equipo: string
+  recibidor: number
+  movil: string | null
 }
 
 export interface DiagnosticoInput {

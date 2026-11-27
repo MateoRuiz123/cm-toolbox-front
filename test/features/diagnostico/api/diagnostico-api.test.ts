@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  asignarEquipoDespachoTesting,
   diagnosticarMigracion,
   reintentarMigracionGuia,
 } from "../../../../src/features/diagnostico/api/diagnostico-api";
@@ -223,5 +224,72 @@ describe("diagnosticarMigracion", () => {
     await vi.advanceTimersByTimeAsync(120_000);
 
     await expectation;
+  });
+});
+
+describe("asignarEquipoDespachoTesting", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it("envía PATCH a /migracion/despacho/equipo y devuelve el despacho actualizado", async () => {
+    let capturedUrl = "";
+    let capturedInit: RequestInit | undefined;
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(async (url: string, init?: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              id_cliente: 1,
+              codigo_despacho: 56727471,
+              equipo: "EQ01",
+              recibidor: 12,
+              movil: "MOV01",
+            },
+          }),
+        } as unknown as Response;
+      });
+
+    const res = await asignarEquipoDespachoTesting({
+      id_cliente: 1,
+      codigo_despacho: 56727471,
+      equipo: "EQ01",
+      recibidor: 12,
+      movil: "MOV01",
+    });
+
+    expect(capturedUrl).toBe("/migracion/despacho/equipo");
+    expect(capturedInit?.method).toBe("PATCH");
+    expect(res.equipo).toBe("EQ01");
+    expect(res.recibidor).toBe(12);
+    expect(res.movil).toBe("MOV01");
+  });
+
+  it("lanza DiagnosticoApiError si el backend rechaza la petición (ej. 403 fuera de testing)", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({
+        message: "Esta operación solo está disponible en ambiente de testing.",
+      }),
+    } as unknown as Response);
+
+    await expect(
+      asignarEquipoDespachoTesting({
+        id_cliente: 1,
+        codigo_despacho: 56727471,
+        equipo: "EQ01",
+        recibidor: 12,
+      }),
+    ).rejects.toThrow("Esta operación solo está disponible en ambiente de testing.");
   });
 });
